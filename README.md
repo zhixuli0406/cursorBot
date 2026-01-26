@@ -167,7 +167,56 @@ CURSOR_WORKSPACE_PATH=/path/to/your/projects
 
 > ⚠️ 需要 Cursor Pro 訂閱才能使用 Background Agent
 
-#### 5. 啟動服務
+#### 5. 設定 AI 提供者（Agent Loop 功能）
+
+`/agent` 指令需要 AI API 才能運作。支援兩種提供者：
+
+**方案一：OpenRouter（推薦）**
+
+OpenRouter 整合多種 AI 模型，包括免費模型，配額較寬鬆。
+
+1. 前往 [OpenRouter](https://openrouter.ai/keys) 註冊並獲取 API Key
+2. 在 `.env` 中設定：
+
+```env
+OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxx
+OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
+```
+
+**可用的免費模型：**
+
+| 模型 | 說明 |
+|------|------|
+| `google/gemini-2.0-flash-exp:free` | Google Gemini 2.0，推薦 |
+| `meta-llama/llama-3.2-3b-instruct:free` | Meta Llama 3.2 |
+| `qwen/qwen-2-7b-instruct:free` | 阿里通義千問 |
+
+**付費模型（效果更好）：**
+
+| 模型 | 說明 |
+|------|------|
+| `anthropic/claude-3.5-sonnet` | Claude 3.5 Sonnet |
+| `openai/gpt-4o` | GPT-4o |
+| `google/gemini-pro-1.5` | Gemini 1.5 Pro |
+
+**方案二：Google Gemini**
+
+直接使用 Google AI API，但免費配額較少。
+
+1. 前往 [Google AI Studio](https://aistudio.google.com/apikey) 獲取 API Key
+2. 在 `.env` 中設定：
+
+```env
+GOOGLE_GENERATIVE_AI_API_KEY=AIzaSyxxxxxxxxxx
+```
+
+> ⚠️ Google Gemini 免費版有較嚴格的配額限制（每分鐘請求數、每日 token 數），超過會報 429 錯誤。建議使用 OpenRouter。
+
+**優先順序：** 系統會自動選擇可用的提供者
+1. OpenRouter（如果設定了 `OPENROUTER_API_KEY`）
+2. Google Gemini（如果設定了 `GOOGLE_GENERATIVE_AI_API_KEY`）
+
+#### 6. 啟動服務
 
 **Windows (CMD):**
 ```cmd
@@ -268,17 +317,34 @@ python -m src.main
 
 | 指令 | 說明 |
 |------|------|
-| `/ask <問題>` | 發送問題給 AI Agent |
+| `/ask <問題>` | 發送問題給 Cursor Background Agent |
+| `/agent <任務>` | 啟動 Agent Loop 執行複雜任務（使用 OpenRouter/Gemini） |
 | `/repo <owner/repo>` | 切換 GitHub 倉庫 |
 | `/repos` | 查看帳號中所有的 GitHub 倉庫 |
 | `/tasks` | 查看我的任務列表 |
 | `/result <ID>` | 查看任務結果 |
 | `/cancel_task <ID>` | 取消執行中的任務 |
 
+**`/ask` vs `/agent` 的差別：**
+
+| | `/ask` | `/agent` |
+|---|--------|----------|
+| 後端 | Cursor Background Agent | OpenRouter / Google Gemini |
+| 用途 | 程式碼相關任務 | 通用 AI 對話和分析 |
+| 需要 | Cursor Pro 訂閱 | OpenRouter 或 Gemini API Key |
+| 特點 | 可直接修改 GitHub 倉庫 | 多步驟推理、通用問答 |
+
 **倉庫切換範例：**
 ```
 /repo lizhixu/cursorBot
 /repo https://github.com/facebook/react
+```
+
+**Agent Loop 範例：**
+```
+/agent 幫我分析這個系統的架構
+/agent 寫一份專案規劃書
+/agent 解釋什麼是 RAG
 ```
 
 ### 檔案操作
@@ -411,7 +477,8 @@ DISCORD_ALLOWED_GUILDS=your_guild_id
 | `/start` | 開始使用 |
 | `/help` | 顯示說明 |
 | `/status` | 系統狀態 |
-| `/ask <問題>` | 發送問題給 AI |
+| `/ask <問題>` | 發送問題給 Cursor Agent |
+| `/agent <任務>` | 啟動 Agent Loop（OpenRouter/Gemini） |
 | `/repo <owner/repo>` | 設定倉庫 |
 | `/tasks` | 查看任務 |
 | `/memory` | 記憶管理 |
