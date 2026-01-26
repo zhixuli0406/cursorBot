@@ -4,7 +4,7 @@ Integrates memory, skills, approvals, and other core features
 """
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CommandHandler
+from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 
 from ..core import (
     get_memory_manager,
@@ -506,6 +506,146 @@ async def agent_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 # Model Selection Commands
 # ============================================
 
+# Provider display names and emojis
+_PROVIDER_NAMES = {
+    "openai": "OpenAI",
+    "google": "Google Gemini",
+    "anthropic": "Anthropic Claude",
+    "openrouter": "OpenRouter",
+    "ollama": "Ollama (本地)",
+    "custom": "自訂端點",
+}
+
+_PROVIDER_EMOJIS = {
+    "openai": "🤖",
+    "google": "🔷",
+    "anthropic": "🟠",
+    "openrouter": "🌐",
+    "ollama": "🦙",
+    "custom": "⚙️",
+}
+
+
+def _create_model_provider_view(
+    models: dict,
+    providers: list,
+    current_provider: str = None,
+    current_model: str = None,
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Create provider selection view with model counts."""
+    text = "📋 <b>選擇 AI 模型提供者</b>\n\n"
+    text += "點擊下方按鈕選擇提供者，然後選擇模型。\n\n"
+    
+    total_models = 0
+    for provider in providers:
+        name = _PROVIDER_NAMES.get(provider, provider)
+        emoji = _PROVIDER_EMOJIS.get(provider, "•")
+        model_list = models.get(provider, [])
+        count = len(model_list)
+        total_models += count
+        
+        is_current = provider == current_provider
+        marker = " ✓" if is_current else ""
+        text += f"{emoji} <b>{name}</b>{marker} ({count} 個模型)\n"
+    
+    text += f"\n<b>共 {total_models} 個模型可用</b>\n"
+    
+    if current_provider and current_model:
+        text += f"\n目前使用: <code>{current_provider}/{current_model}</code>"
+    
+    # Create provider buttons
+    keyboard = []
+    row = []
+    for i, provider in enumerate(providers):
+        emoji = _PROVIDER_EMOJIS.get(provider, "•")
+        name = _PROVIDER_NAMES.get(provider, provider)
+        is_current = provider == current_provider
+        
+        # Shorten name for button
+        short_name = name.split()[0] if len(name) > 10 else name
+        label = f"{emoji} {short_name}" + (" ✓" if is_current else "")
+        
+        row.append(InlineKeyboardButton(label, callback_data=f"model_provider:{provider}"))
+        
+        # 2 buttons per row
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
+    
+    if row:
+        keyboard.append(row)
+    
+    # Add refresh and close buttons
+    keyboard.append([
+        InlineKeyboardButton("🔄 重新整理", callback_data="model_refresh"),
+        InlineKeyboardButton("❌ 關閉", callback_data="model_close"),
+    ])
+    
+    return text, InlineKeyboardMarkup(keyboard)
+
+
+def _create_model_list_view(
+    provider: str,
+    models: list,
+    page: int = 0,
+    page_size: int = 8,
+    current_provider: str = None,
+    current_model: str = None,
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Create paginated model list view for a specific provider."""
+    name = _PROVIDER_NAMES.get(provider, provider)
+    emoji = _PROVIDER_EMOJIS.get(provider, "•")
+    
+    total = len(models)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(0, min(page, total_pages - 1))
+    
+    start = page * page_size
+    end = min(start + page_size, total)
+    page_models = models[start:end]
+    
+    text = f"{emoji} <b>{name} 模型</b>\n\n"
+    text += f"共 {total} 個模型（第 {page + 1}/{total_pages} 頁）\n"
+    text += "點擊按鈕切換模型：\n\n"
+    
+    # Create model buttons
+    keyboard = []
+    for model in page_models:
+        is_current = provider == current_provider and model == current_model
+        # Truncate long model names
+        display_name = model if len(model) <= 35 else model[:32] + "..."
+        label = f"{'✓ ' if is_current else ''}{display_name}"
+        
+        # Encode model in callback data (URL-safe)
+        callback_data = f"model_set:{provider}:{model}"
+        
+        # Telegram callback_data limit is 64 bytes
+        if len(callback_data.encode('utf-8')) > 64:
+            # Use index instead
+            callback_data = f"model_idx:{provider}:{page}:{page_models.index(model)}"
+        
+        keyboard.append([InlineKeyboardButton(label, callback_data=callback_data)])
+    
+    # Navigation buttons
+    nav_row = []
+    if page > 0:
+        nav_row.append(InlineKeyboardButton("◀️ 上一頁", callback_data=f"model_page:{provider}:{page - 1}"))
+    
+    nav_row.append(InlineKeyboardButton(f"📄 {page + 1}/{total_pages}", callback_data="model_noop"))
+    
+    if page < total_pages - 1:
+        nav_row.append(InlineKeyboardButton("下一頁 ▶️", callback_data=f"model_page:{provider}:{page + 1}"))
+    
+    keyboard.append(nav_row)
+    
+    # Back and close buttons
+    keyboard.append([
+        InlineKeyboardButton("⬅️ 返回提供者", callback_data="model_back"),
+        InlineKeyboardButton("❌ 關閉", callback_data="model_close"),
+    ])
+    
+    return text, InlineKeyboardMarkup(keyboard)
+
 
 @authorized_only
 async def model_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -576,7 +716,7 @@ async def model_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     
     elif args[0] == "list":
-        # List all models - fetch from APIs
+        # List all models with interactive buttons
         status = manager.get_current_status(user_id)
         
         if not status["available_providers"]:
@@ -591,71 +731,26 @@ async def model_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         
         # Fetch models from APIs
         try:
-            fetched_models = await manager.fetch_all_models(max_per_provider=15)
+            fetched_models = await manager.fetch_all_models(max_per_provider=50)
         except Exception as e:
             logger.error(f"Error fetching models: {e}")
             fetched_models = status["available_models"]
         
-        text = "📋 <b>可用 AI 模型列表</b>\n\n"
+        # Cache the fetched models in context for pagination
+        if not context.user_data:
+            context.user_data = {}
+        context.user_data["model_list_cache"] = fetched_models
+        context.user_data["model_list_providers"] = status["available_providers"]
         
-        provider_names = {
-            "openai": "OpenAI",
-            "google": "Google Gemini",
-            "anthropic": "Anthropic Claude",
-            "openrouter": "OpenRouter",
-            "ollama": "Ollama (本地)",
-            "custom": "自訂端點",
-        }
+        # Show provider selection first
+        text, keyboard = _create_model_provider_view(
+            fetched_models, 
+            status["available_providers"],
+            status.get("current_provider"),
+            status.get("current_model"),
+        )
         
-        provider_emojis = {
-            "openai": "🤖",
-            "google": "🔷",
-            "anthropic": "🟠",
-            "openrouter": "🌐",
-            "ollama": "🦙",
-            "custom": "⚙️",
-        }
-        
-        total_models = 0
-        for provider in status["available_providers"]:
-            name = provider_names.get(provider, provider)
-            emoji = provider_emojis.get(provider, "•")
-            models = fetched_models.get(provider, [])
-            total_models += len(models)
-            
-            # Current selection indicator
-            current = status.get("current_provider")
-            is_current = provider == current
-            
-            if is_current:
-                text += f"{emoji} <b>{name}</b> ✓\n"
-            else:
-                text += f"{emoji} <b>{name}</b>\n"
-            
-            if models:
-                # Show up to 10 models, indicate if more
-                display_models = models[:10]
-                for model in display_models:
-                    # Mark current model
-                    if is_current and model == status.get("current_model"):
-                        text += f"  • <code>{model}</code> ← 目前使用\n"
-                    else:
-                        text += f"  • <code>{model}</code>\n"
-                
-                if len(models) > 10:
-                    text += f"  <i>...還有 {len(models) - 10} 個模型</i>\n"
-            else:
-                text += "  <i>（無法取得模型列表）</i>\n"
-            text += "\n"
-        
-        text += f"<b>共 {total_models} 個模型可用</b>\n\n"
-        text += "<b>切換方式：</b>\n"
-        text += "<code>/model set openai gpt-4o</code>\n"
-        text += "<code>/model set anthropic claude-3-5-sonnet-20241022</code>\n"
-        text += "<code>/model set openrouter google/gemini-2.0-flash-exp:free</code>\n"
-        
-        # Edit the loading message with results
-        await loading_msg.edit_text(text, parse_mode="HTML")
+        await loading_msg.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
         return
     
     elif args[0] == "set" and len(args) >= 2:
@@ -712,6 +807,205 @@ async def model_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
 
 
+@authorized_only
+async def model_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle model selection callbacks from inline keyboard.
+    """
+    from ..core.llm_providers import get_llm_manager
+    
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    user_id = str(update.effective_user.id)
+    manager = get_llm_manager()
+    
+    # Get cached models from context
+    if not context.user_data:
+        context.user_data = {}
+    
+    cached_models = context.user_data.get("model_list_cache", {})
+    providers = context.user_data.get("model_list_providers", [])
+    
+    # Get current selection
+    status = manager.get_current_status(user_id)
+    current_provider = status.get("current_provider")
+    current_model = status.get("current_model")
+    
+    if data == "model_close":
+        await query.message.delete()
+        return
+    
+    elif data == "model_noop":
+        # Do nothing (page indicator button)
+        return
+    
+    elif data == "model_refresh":
+        # Refresh model list
+        await query.message.edit_text(
+            "🔄 <b>正在重新獲取模型列表...</b>",
+            parse_mode="HTML",
+        )
+        
+        try:
+            fetched_models = await manager.fetch_all_models(max_per_provider=50)
+            context.user_data["model_list_cache"] = fetched_models
+            providers = manager.list_available_providers()
+            context.user_data["model_list_providers"] = providers
+        except Exception as e:
+            logger.error(f"Error fetching models: {e}")
+            fetched_models = manager.list_available_models()
+            context.user_data["model_list_cache"] = fetched_models
+        
+        status = manager.get_current_status(user_id)
+        text, keyboard = _create_model_provider_view(
+            fetched_models,
+            providers,
+            status.get("current_provider"),
+            status.get("current_model"),
+        )
+        await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
+        return
+    
+    elif data == "model_back":
+        # Go back to provider view
+        if not cached_models:
+            cached_models = manager.list_available_models()
+        if not providers:
+            providers = manager.list_available_providers()
+        
+        text, keyboard = _create_model_provider_view(
+            cached_models,
+            providers,
+            current_provider,
+            current_model,
+        )
+        await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
+        return
+    
+    elif data.startswith("model_provider:"):
+        # Show models for selected provider
+        provider = data.split(":", 1)[1]
+        
+        if not cached_models:
+            # Fetch if not cached
+            await query.message.edit_text(
+                "🔄 <b>正在獲取模型列表...</b>",
+                parse_mode="HTML",
+            )
+            try:
+                cached_models = await manager.fetch_all_models(max_per_provider=50)
+                context.user_data["model_list_cache"] = cached_models
+            except Exception:
+                cached_models = manager.list_available_models()
+        
+        models = cached_models.get(provider, [])
+        
+        if not models:
+            await query.answer("此提供者沒有可用模型", show_alert=True)
+            return
+        
+        text, keyboard = _create_model_list_view(
+            provider,
+            models,
+            page=0,
+            current_provider=current_provider,
+            current_model=current_model,
+        )
+        await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
+        return
+    
+    elif data.startswith("model_page:"):
+        # Handle pagination
+        parts = data.split(":")
+        provider = parts[1]
+        page = int(parts[2])
+        
+        models = cached_models.get(provider, [])
+        
+        text, keyboard = _create_model_list_view(
+            provider,
+            models,
+            page=page,
+            current_provider=current_provider,
+            current_model=current_model,
+        )
+        await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
+        return
+    
+    elif data.startswith("model_set:"):
+        # Set model directly
+        parts = data.split(":", 2)
+        provider = parts[1]
+        model = parts[2] if len(parts) > 2 else None
+        
+        if manager.set_user_model(user_id, provider, model):
+            current = manager.get_user_model(user_id)
+            status = manager.get_current_status(user_id)
+            
+            # Update the view to show new selection
+            models = cached_models.get(provider, [])
+            page = 0
+            
+            # Find current page
+            if model and model in models:
+                idx = models.index(model)
+                page = idx // 8
+            
+            text, keyboard = _create_model_list_view(
+                provider,
+                models,
+                page=page,
+                current_provider=status.get("current_provider"),
+                current_model=status.get("current_model"),
+            )
+            
+            # Add success message
+            success_text = f"✅ 已切換至 <code>{provider}/{model}</code>\n\n" + text
+            
+            await query.message.edit_text(success_text, parse_mode="HTML", reply_markup=keyboard)
+            await query.answer("✅ 模型已切換")
+        else:
+            await query.answer("❌ 切換失敗", show_alert=True)
+        return
+    
+    elif data.startswith("model_idx:"):
+        # Set model by index (for long model names)
+        parts = data.split(":")
+        provider = parts[1]
+        page = int(parts[2])
+        idx = int(parts[3])
+        
+        models = cached_models.get(provider, [])
+        page_size = 8
+        model_idx = page * page_size + idx
+        
+        if 0 <= model_idx < len(models):
+            model = models[model_idx]
+            
+            if manager.set_user_model(user_id, provider, model):
+                status = manager.get_current_status(user_id)
+                
+                text, keyboard = _create_model_list_view(
+                    provider,
+                    models,
+                    page=page,
+                    current_provider=status.get("current_provider"),
+                    current_model=status.get("current_model"),
+                )
+                
+                success_text = f"✅ 已切換至 <code>{provider}/{model}</code>\n\n" + text
+                await query.message.edit_text(success_text, parse_mode="HTML", reply_markup=keyboard)
+                await query.answer("✅ 模型已切換")
+            else:
+                await query.answer("❌ 切換失敗", show_alert=True)
+        return
+    
+    else:
+        logger.warning(f"Unknown model callback: {data}")
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -724,6 +1018,12 @@ def setup_core_handlers(app) -> None:
     
     # Model selection command
     app.add_handler(CommandHandler("model", model_handler))
+    
+    # Model selection callback handler
+    app.add_handler(CallbackQueryHandler(
+        model_callback_handler,
+        pattern=r"^model_"
+    ))
     
     # Memory commands
     app.add_handler(CommandHandler("memory", memory_handler))
@@ -754,6 +1054,7 @@ def setup_core_handlers(app) -> None:
 __all__ = [
     "agent_handler",
     "model_handler",
+    "model_callback_handler",
     "memory_handler",
     "skills_handler",
     "schedule_handler",
