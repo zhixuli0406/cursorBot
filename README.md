@@ -415,6 +415,8 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/start` | 啟動 Bot |
 | `/help` | 顯示說明 |
 | `/status` | 系統狀態 |
+| `/doctor` | 系統診斷 |
+| `/sessions` | 會話管理 |
 
 ### AI 對話
 
@@ -431,6 +433,25 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/tasks` | 查看我的任務列表 |
 | `/result <ID>` | 查看任務結果 |
 | `/cancel_task <ID>` | 取消執行中的任務 |
+| `/tts <文字>` | 文字轉語音 |
+
+### 系統管理（v0.3）
+
+| 指令 | 說明 |
+|------|------|
+| `/doctor` | 系統診斷，檢查配置與健康狀態 |
+| `/doctor quick` | 快速健康檢查 |
+| `/sessions` | 顯示會話統計 |
+| `/sessions list` | 列出活躍會話 |
+| `/sessions prune` | 清理過期會話 |
+| `/patch` | 查看補丁管理說明 |
+| `/patch create` | 從當前變更建立補丁 |
+| `/patch list` | 查看補丁歷史 |
+| `/policy` | 顯示工具策略狀態 |
+| `/policy list` | 列出所有策略 |
+| `/policy audit` | 查看審計日誌 |
+| `/tts <文字>` | 文字轉語音 |
+| `/tts providers` | 列出可用 TTS 服務 |
 
 **模型切換範例：**
 

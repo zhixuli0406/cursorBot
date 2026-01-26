@@ -266,17 +266,22 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • <b>Discord</b> - 相同功能，斜線指令
 
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>✨ v0.3 新功能</b>
+<b>✨ v0.3 新功能指令</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-• <b>Thinking Mode</b> - Claude 深度思考模式
-• <b>TTS 語音輸出</b> - 文字轉語音
+/doctor - 系統診斷，檢查配置與健康狀態
+/sessions - 會話管理，統計與清理
+/patch - Git 補丁建立與管理
+/policy - 工具存取策略控制
+/tts &lt;文字&gt; - 文字轉語音
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🛠️ v0.3 功能特色</b>
+━━━━━━━━━━━━━━━━━━━━━━
+• <b>Thinking Mode</b> - Claude 深度思考
 • <b>Subagents</b> - 子代理任務分解
 • <b>Sandbox</b> - 安全沙盒執行程式碼
 • <b>Compaction</b> - 對話壓縮省 Token
 • <b>OAuth</b> - GitHub/Google 認證
-• <b>Doctor</b> - 系統診斷工具
-• <b>Apply Patch</b> - Git 補丁管理
-• <b>Tool Policy</b> - 工具存取控制
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>💡 使用提示</b>
@@ -286,6 +291,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • 發送語音會自動轉錄為文字
 • 發送圖片會附加到任務中
 • 長對話會自動壓縮以節省 Token
+• /doctor 可快速診斷系統問題
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 

@@ -1001,6 +1001,432 @@ async def model_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         logger.warning(f"Unknown model callback: {data}")
 
 
+# ============================================
+# Doctor - System Diagnostics
+# ============================================
+
+
+@authorized_only
+async def doctor_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /doctor command.
+    Run system diagnostics.
+    
+    Usage:
+        /doctor - Run full diagnostics
+        /doctor quick - Quick health check
+    """
+    args = context.args or []
+    
+    await update.message.reply_text("🩺 正在執行系統診斷...")
+    
+    try:
+        from ..core.doctor import get_doctor
+        doctor = get_doctor()
+        
+        if args and args[0] == "quick":
+            # Quick check
+            results = []
+            for name in ["python_version", "telegram_config", "llm_providers"]:
+                result = await doctor.run_check(name)
+                if result:
+                    icon = {"ok": "✅", "warning": "⚠️", "error": "❌", "critical": "☠️", "info": "ℹ️"}
+                    results.append(f"{icon.get(result.level.value, '•')} {result.name}: {result.message}")
+            
+            text = "🩺 <b>快速診斷結果</b>\n\n" + "\n".join(results)
+        else:
+            # Full diagnostics
+            report = await doctor.run_all_checks()
+            
+            # Format report
+            lines = [
+                f"🩺 <b>系統診斷報告</b>",
+                f"📅 {report.timestamp.strftime('%Y-%m-%d %H:%M:%S')}",
+                f"📊 整體狀態: <b>{report.overall_status.value.upper()}</b>",
+                "",
+            ]
+            
+            # Group by level
+            for level_name, icon in [("critical", "☠️"), ("error", "❌"), ("warning", "⚠️"), ("ok", "✅")]:
+                level_results = [r for r in report.results if r.level.value == level_name]
+                if level_results:
+                    for r in level_results[:5]:  # Limit to 5 per level
+                        lines.append(f"{icon} <b>{r.name}</b>: {r.message}")
+                        if r.recommendation:
+                            lines.append(f"   → {r.recommendation}")
+            
+            # Summary
+            lines.append("")
+            lines.append(f"📈 <b>統計</b>: {report.summary.get('ok', 0)} 通過 / "
+                        f"{report.summary.get('warnings', 0)} 警告 / "
+                        f"{report.summary.get('errors', 0)} 錯誤")
+            
+            text = "\n".join(lines)
+        
+        await update.message.reply_text(text, parse_mode="HTML")
+        
+    except Exception as e:
+        logger.error(f"Doctor error: {e}")
+        await update.message.reply_text(f"❌ 診斷失敗: {e}")
+
+
+# ============================================
+# Sessions - Session Management
+# ============================================
+
+
+@authorized_only
+async def sessions_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /sessions command.
+    Manage conversation sessions.
+    
+    Usage:
+        /sessions - Show session stats
+        /sessions list - List active sessions
+        /sessions prune - Clean expired sessions
+        /sessions clear - Clear all sessions
+    """
+    args = context.args or []
+    ctx_manager = get_context_manager()
+    
+    if not args or args[0] == "stats":
+        # Show stats
+        stats = ctx_manager.get_session_stats()
+        
+        text = f"""📊 <b>會話統計</b>
+
+• 總會話數: <b>{stats['total_sessions']}</b>
+• 總訊息數: <b>{stats['total_messages']}</b>
+• 平均訊息/會話: <b>{stats['avg_messages_per_session']:.1f}</b>
+
+<b>按類型:</b>
+"""
+        for ct, count in stats.get("by_chat_type", {}).items():
+            text += f"  • {ct}: {count}\n"
+        
+        text += "\n<b>按狀態:</b>\n"
+        for status, count in stats.get("by_status", {}).items():
+            text += f"  • {status}: {count}\n"
+        
+        if stats.get("oldest_session"):
+            text += f"\n🕐 最舊會話: {stats['oldest_session']['age_minutes']:.0f} 分鐘前"
+        
+        await update.message.reply_text(text, parse_mode="HTML")
+        
+    elif args[0] == "list":
+        # List sessions
+        contexts = list(ctx_manager._contexts.items())[:10]
+        
+        if not contexts:
+            await update.message.reply_text("📭 目前沒有活躍會話")
+            return
+        
+        lines = ["📋 <b>活躍會話</b> (前 10 個)\n"]
+        for key, ctx in contexts:
+            status = "🔴 過期" if ctx.is_expired else "🟢 活躍"
+            lines.append(f"• <code>{key}</code> {status}")
+            lines.append(f"  訊息: {len(ctx.messages)} | 類型: {ctx.chat_type}")
+        
+        await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+    elif args[0] == "prune":
+        # Prune expired sessions
+        result = ctx_manager.prune_expired_sessions()
+        
+        await update.message.reply_text(
+            f"🧹 <b>會話清理完成</b>\n\n"
+            f"• 已清理: <b>{result['pruned_count']}</b> 個會話\n"
+            f"• 剩餘: <b>{result['remaining_count']}</b> 個會話",
+            parse_mode="HTML"
+        )
+        
+    elif args[0] == "clear":
+        # Clear all sessions (admin only)
+        ctx_manager._contexts.clear()
+        await update.message.reply_text("🗑️ 已清除所有會話")
+        
+    else:
+        await update.message.reply_text(
+            "📖 <b>會話管理</b>\n\n"
+            "<code>/sessions</code> - 顯示統計\n"
+            "<code>/sessions list</code> - 列出會話\n"
+            "<code>/sessions prune</code> - 清理過期\n"
+            "<code>/sessions clear</code> - 清除全部",
+            parse_mode="HTML"
+        )
+
+
+# ============================================
+# Patch - Git Patch Management
+# ============================================
+
+
+@authorized_only
+async def patch_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /patch command.
+    Manage Git patches.
+    
+    Usage:
+        /patch - Show patch help
+        /patch create - Create patch from changes
+        /patch list - List patch history
+        /patch apply <content> - Apply a patch
+    """
+    args = context.args or []
+    
+    try:
+        from ..core.patch import get_patch_manager
+        pm = get_patch_manager()
+        
+        if not args:
+            await update.message.reply_text(
+                "📝 <b>補丁管理</b>\n\n"
+                "<code>/patch create</code> - 從當前變更建立補丁\n"
+                "<code>/patch create --staged</code> - 從暫存區建立\n"
+                "<code>/patch list</code> - 顯示補丁歷史\n"
+                "<code>/patch stats</code> - 顯示統計\n"
+                "<code>/patch check</code> - 檢查補丁（回覆補丁內容）",
+                parse_mode="HTML"
+            )
+            return
+        
+        if args[0] == "create":
+            staged = "--staged" in args
+            patch_content = await pm.create_patch(staged=staged)
+            
+            if patch_content:
+                # Truncate if too long
+                if len(patch_content) > 3500:
+                    patch_content = patch_content[:3500] + "\n... (已截斷)"
+                
+                await update.message.reply_text(
+                    f"📝 <b>已建立補丁</b>\n\n<pre>{patch_content}</pre>",
+                    parse_mode="HTML"
+                )
+            else:
+                await update.message.reply_text("📭 沒有變更可建立補丁")
+        
+        elif args[0] == "list":
+            history = pm.get_history(limit=10)
+            
+            if not history:
+                await update.message.reply_text("📭 沒有補丁歷史")
+                return
+            
+            lines = ["📋 <b>補丁歷史</b>\n"]
+            for p in history:
+                status_icon = {"applied": "✅", "failed": "❌", "reverted": "↩️", "pending": "⏳"}
+                lines.append(f"• <code>{p['id']}</code> {status_icon.get(p['status'], '•')} {p['status']}")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        elif args[0] == "stats":
+            stats = pm.get_stats()
+            await update.message.reply_text(
+                f"📊 <b>補丁統計</b>\n\n"
+                f"• 總數: {stats['total_patches']}\n"
+                f"• 已套用: {stats['applied']}\n"
+                f"• 失敗: {stats['failed']}\n"
+                f"• 已還原: {stats['reverted']}",
+                parse_mode="HTML"
+            )
+        
+        elif args[0] == "check":
+            # Check if replying to a message with patch content
+            if update.message.reply_to_message:
+                patch_content = update.message.reply_to_message.text
+                result = await pm.check_patch(patch_content)
+                
+                if result.success:
+                    await update.message.reply_text(
+                        f"✅ 補丁可套用\n\n"
+                        f"影響檔案: {len(result.affected_files)}\n"
+                        f"新增: +{result.diff_stats.get('additions', 0)}\n"
+                        f"刪除: -{result.diff_stats.get('deletions', 0)}"
+                    )
+                else:
+                    await update.message.reply_text(f"❌ 補丁無法套用: {result.error}")
+            else:
+                await update.message.reply_text("請回覆包含補丁內容的訊息")
+        
+        else:
+            await update.message.reply_text("❓ 未知的子命令，使用 /patch 查看說明")
+            
+    except Exception as e:
+        logger.error(f"Patch error: {e}")
+        await update.message.reply_text(f"❌ 補丁操作失敗: {e}")
+
+
+# ============================================
+# Policy - Tool Policy Management
+# ============================================
+
+
+@authorized_only
+async def policy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /policy command.
+    Manage tool access policies.
+    
+    Usage:
+        /policy - Show policy status
+        /policy list - List all policies
+        /policy audit - Show audit log
+        /policy set <tool> <on|off> - Enable/disable tool
+    """
+    args = context.args or []
+    
+    try:
+        from ..core.tool_policy import get_tool_policy_manager
+        pm = get_tool_policy_manager()
+        
+        if not args or args[0] == "status":
+            stats = pm.get_stats()
+            
+            await update.message.reply_text(
+                f"🔒 <b>工具策略狀態</b>\n\n"
+                f"• 全域啟用: {'✅ 是' if stats['global_enabled'] else '❌ 否'}\n"
+                f"• 策略總數: {stats['total_policies']}\n"
+                f"• 已啟用: {stats['enabled_policies']}\n"
+                f"• 管理員數: {stats['admin_users']}\n"
+                f"• 審計記錄: {stats['audit_log_entries']}",
+                parse_mode="HTML"
+            )
+        
+        elif args[0] == "list":
+            policies = pm.get_all_policies()
+            
+            if not policies:
+                await update.message.reply_text("📭 沒有設定任何策略")
+                return
+            
+            lines = ["📋 <b>工具策略清單</b>\n"]
+            for p in policies:
+                status = "✅" if p['enabled'] else "❌"
+                lines.append(f"• {status} <code>{p['tool_name']}</code> [{p['permission_level']}]")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        elif args[0] == "audit":
+            entries = pm.get_audit_log(limit=10)
+            
+            if not entries:
+                await update.message.reply_text("📭 沒有審計記錄")
+                return
+            
+            lines = ["📋 <b>審計日誌</b> (最近 10 筆)\n"]
+            for e in entries:
+                icon = "✅" if e['allowed'] else "❌"
+                lines.append(f"• {icon} {e['tool_name']} - {e['action']} (用戶 {e['user_id']})")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        elif args[0] == "set" and len(args) >= 3:
+            tool_name = args[1]
+            action = args[2].lower()
+            
+            from ..core.tool_policy import ToolPolicy
+            
+            if action in ("on", "enable", "1"):
+                policy = pm.get_policy(tool_name) or ToolPolicy(tool_name=tool_name)
+                policy.enabled = True
+                pm.set_policy(policy)
+                await update.message.reply_text(f"✅ 已啟用工具: {tool_name}")
+            elif action in ("off", "disable", "0"):
+                policy = pm.get_policy(tool_name) or ToolPolicy(tool_name=tool_name)
+                policy.enabled = False
+                pm.set_policy(policy)
+                await update.message.reply_text(f"❌ 已停用工具: {tool_name}")
+            else:
+                await update.message.reply_text("❓ 請使用 on 或 off")
+        
+        else:
+            await update.message.reply_text(
+                "🔒 <b>工具策略管理</b>\n\n"
+                "<code>/policy</code> - 顯示狀態\n"
+                "<code>/policy list</code> - 列出策略\n"
+                "<code>/policy audit</code> - 審計日誌\n"
+                "<code>/policy set &lt;tool&gt; on|off</code> - 啟用/停用",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Policy error: {e}")
+        await update.message.reply_text(f"❌ 策略操作失敗: {e}")
+
+
+# ============================================
+# TTS - Text to Speech
+# ============================================
+
+
+@authorized_only
+async def tts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /tts command.
+    Convert text to speech.
+    
+    Usage:
+        /tts <text> - Convert text to speech
+        /tts providers - List available providers
+    """
+    args = context.args or []
+    
+    if not args:
+        await update.message.reply_text(
+            "🔊 <b>語音合成</b>\n\n"
+            "<code>/tts &lt;文字&gt;</code> - 將文字轉為語音\n"
+            "<code>/tts providers</code> - 查看可用服務\n\n"
+            "或直接回覆訊息使用 /tts",
+            parse_mode="HTML"
+        )
+        return
+    
+    if args[0] == "providers":
+        from ..core.tts import TTSProvider
+        providers = [p.value for p in TTSProvider]
+        await update.message.reply_text(
+            f"🔊 <b>可用 TTS 服務</b>\n\n" +
+            "\n".join(f"• {p}" for p in providers),
+            parse_mode="HTML"
+        )
+        return
+    
+    # Get text to convert
+    text = " ".join(args)
+    if not text and update.message.reply_to_message:
+        text = update.message.reply_to_message.text
+    
+    if not text:
+        await update.message.reply_text("請提供要轉換的文字")
+        return
+    
+    try:
+        from ..core.tts import text_to_speech
+        
+        await update.message.reply_text("🔊 正在合成語音...")
+        
+        result = await text_to_speech(text)
+        
+        if result.success and result.audio_data:
+            from io import BytesIO
+            audio_file = BytesIO(result.audio_data)
+            audio_file.name = "speech.mp3"
+            
+            await update.message.reply_voice(
+                voice=audio_file,
+                caption=f"🔊 TTS ({result.provider})"
+            )
+        else:
+            await update.message.reply_text(f"❌ 語音合成失敗: {result.error}")
+            
+    except Exception as e:
+        logger.error(f"TTS error: {e}")
+        await update.message.reply_text(f"❌ TTS 錯誤: {e}")
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -1042,6 +1468,13 @@ def setup_core_handlers(app) -> None:
     skill_commands = ["translate", "tr", "summarize", "sum", "calc", "calculate", "remind", "reminder"]
     for cmd in skill_commands:
         app.add_handler(CommandHandler(cmd, skill_command_handler))
+    
+    # v0.3 New feature commands
+    app.add_handler(CommandHandler("doctor", doctor_handler))
+    app.add_handler(CommandHandler("sessions", sessions_handler))
+    app.add_handler(CommandHandler("patch", patch_handler))
+    app.add_handler(CommandHandler("policy", policy_handler))
+    app.add_handler(CommandHandler("tts", tts_handler))
 
     logger.info("Core handlers configured")
 
@@ -1056,5 +1489,10 @@ __all__ = [
     "clear_context_handler",
     "stats_handler",
     "settings_handler",
+    "doctor_handler",
+    "sessions_handler",
+    "patch_handler",
+    "policy_handler",
+    "tts_handler",
     "setup_core_handlers",
 ]
