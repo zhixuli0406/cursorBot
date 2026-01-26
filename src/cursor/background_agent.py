@@ -372,6 +372,154 @@ class CursorBackgroundAgent:
                 "success": False,
                 "message": str(e),
             }
+    
+    async def list_repositories(self) -> dict:
+        """
+        List all GitHub repositories connected to the Cursor account.
+        
+        Returns:
+            dict with list of repositories
+        """
+        try:
+            client = await self._get_client()
+            
+            # Try the repositories endpoint
+            response = await client.get(f"/{self.API_VERSION}/repositories")
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Handle different response formats
+                if isinstance(data, list):
+                    repos = data
+                else:
+                    repos = data.get("repositories", data.get("repos", []))
+                
+                # Format repository information
+                formatted_repos = []
+                for repo in repos:
+                    repo_info = {
+                        "id": repo.get("id", ""),
+                        "name": repo.get("name", repo.get("full_name", "").split("/")[-1]),
+                        "full_name": repo.get("full_name", ""),
+                        "owner": repo.get("owner", {}).get("login", "") if isinstance(repo.get("owner"), dict) else repo.get("owner", ""),
+                        "url": repo.get("html_url", repo.get("url", "")),
+                        "description": repo.get("description", ""),
+                        "private": repo.get("private", False),
+                        "default_branch": repo.get("default_branch", "main"),
+                    }
+                    formatted_repos.append(repo_info)
+                
+                logger.info(f"Found {len(formatted_repos)} repositories")
+                
+                return {
+                    "success": True,
+                    "repositories": formatted_repos,
+                    "count": len(formatted_repos),
+                }
+            elif response.status_code == 401:
+                return {
+                    "success": False,
+                    "message": "API Key invalid or expired",
+                    "repositories": [],
+                }
+            elif response.status_code == 404:
+                # Try alternative endpoint
+                return await self._list_repositories_alternative()
+            else:
+                return {
+                    "success": False,
+                    "message": f"Failed: {response.status_code} - {response.text[:200]}",
+                    "repositories": [],
+                }
+                
+        except Exception as e:
+            logger.error(f"Error listing repositories: {e}")
+            return {
+                "success": False,
+                "message": str(e),
+                "repositories": [],
+            }
+    
+    async def _list_repositories_alternative(self) -> dict:
+        """
+        Alternative method to get repositories using different API endpoints.
+        
+        Returns:
+            dict with list of repositories
+        """
+        try:
+            client = await self._get_client()
+            
+            # Try fetching from github integrations endpoint
+            response = await client.get(f"/{self.API_VERSION}/github/repositories")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    repos = data
+                else:
+                    repos = data.get("repositories", data.get("repos", []))
+                
+                formatted_repos = []
+                for repo in repos:
+                    repo_info = {
+                        "id": repo.get("id", ""),
+                        "name": repo.get("name", ""),
+                        "full_name": repo.get("full_name", ""),
+                        "owner": repo.get("owner", {}).get("login", "") if isinstance(repo.get("owner"), dict) else repo.get("owner", ""),
+                        "url": repo.get("html_url", repo.get("url", "")),
+                        "description": repo.get("description", ""),
+                        "private": repo.get("private", False),
+                        "default_branch": repo.get("default_branch", "main"),
+                    }
+                    formatted_repos.append(repo_info)
+                
+                return {
+                    "success": True,
+                    "repositories": formatted_repos,
+                    "count": len(formatted_repos),
+                }
+            else:
+                # If this also fails, try user endpoint
+                response = await client.get(f"/{self.API_VERSION}/user/repos")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    repos = data if isinstance(data, list) else data.get("repos", [])
+                    
+                    formatted_repos = []
+                    for repo in repos:
+                        repo_info = {
+                            "id": repo.get("id", ""),
+                            "name": repo.get("name", ""),
+                            "full_name": repo.get("full_name", ""),
+                            "owner": repo.get("owner", {}).get("login", "") if isinstance(repo.get("owner"), dict) else repo.get("owner", ""),
+                            "url": repo.get("html_url", repo.get("url", "")),
+                            "description": repo.get("description", ""),
+                            "private": repo.get("private", False),
+                            "default_branch": repo.get("default_branch", "main"),
+                        }
+                        formatted_repos.append(repo_info)
+                    
+                    return {
+                        "success": True,
+                        "repositories": formatted_repos,
+                        "count": len(formatted_repos),
+                    }
+                
+                return {
+                    "success": False,
+                    "message": "Unable to fetch repositories from API",
+                    "repositories": [],
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in alternative repositories fetch: {e}")
+            return {
+                "success": False,
+                "message": str(e),
+                "repositories": [],
+            }
 
 
 # Task tracking for Telegram integration
