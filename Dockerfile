@@ -1,6 +1,6 @@
 # CursorBot Dockerfile
-# Use Python 3.12 slim image for smaller size
-FROM python:3.12-slim
+# Use Python 3.12 image (Debian Trixie based)
+FROM python:3.12-trixie
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
