@@ -365,19 +365,22 @@ async def _poll_task_completion(
             output = result.get("output", "（無輸出）")
             if len(output) > 3500:
                 output = output[:3500] + "\n\n... (內容過長已截斷)"
+            output = _escape_html(output)
 
             await update.effective_chat.send_message(
                 f"✅ <b>任務完成</b>\n\n"
-                f"🆔 <code>{composer_id[:8]}</code>\n\n"
+                f"🆔 <code>{_escape_html(composer_id[:8])}</code>\n\n"
                 f"📝 <b>結果:</b>\n{output}",
                 parse_mode="HTML",
             )
         else:
+            status = _escape_html(result.get('status', 'unknown'))
+            message = _escape_html(result.get('message', 'Unknown'))
             await update.effective_chat.send_message(
                 f"❌ <b>任務失敗</b>\n\n"
-                f"🆔 <code>{composer_id[:8]}</code>\n"
-                f"狀態: {result.get('status', 'unknown')}\n"
-                f"原因: {result.get('message', 'Unknown')}",
+                f"🆔 <code>{_escape_html(composer_id[:8])}</code>\n"
+                f"狀態: {status}\n"
+                f"原因: {message}",
                 parse_mode="HTML",
             )
 
@@ -607,6 +610,15 @@ async def pending_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await update.message.reply_text("\n".join(lines), parse_mode="HTML")
 
 
+def _escape_html(text: str) -> str:
+    """Escape HTML special characters."""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
 @authorized_only
 async def tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -632,7 +644,7 @@ async def tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not all_tasks:
         await update.message.reply_text(
             "📋 <b>沒有任務記錄</b>\n\n"
-            "使用 /ask <問題> 建立新任務",
+            "使用 /ask 問題 建立新任務",
             parse_mode="HTML",
         )
         return
@@ -647,29 +659,35 @@ async def tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if running:
         lines.append(f"\n<b>🔄 執行中 ({len(running)})</b>")
         for t in running[:5]:
-            prompt_preview = t['prompt'][:40] + '...' if len(t['prompt']) > 40 else t['prompt']
+            prompt_text = t.get('prompt', '')[:40]
+            prompt_preview = _escape_html(prompt_text) + ('...' if len(t.get('prompt', '')) > 40 else '')
+            task_id = _escape_html(t.get('composer_id', '')[:8])
             lines.append(
-                f"• <code>{t['composer_id'][:8]}</code>\n"
+                f"• <code>{task_id}</code>\n"
                 f"  {prompt_preview}"
             )
 
     if completed:
         lines.append(f"\n<b>✅ 已完成 ({len(completed)})</b>")
         for t in completed:
-            prompt_preview = t['prompt'][:40] + '...' if len(t['prompt']) > 40 else t['prompt']
+            prompt_text = t.get('prompt', '')[:40]
+            prompt_preview = _escape_html(prompt_text) + ('...' if len(t.get('prompt', '')) > 40 else '')
+            task_id = _escape_html(t.get('composer_id', '')[:8])
             lines.append(
-                f"• <code>{t['composer_id'][:8]}</code>: {prompt_preview}"
+                f"• <code>{task_id}</code>: {prompt_preview}"
             )
 
     if failed:
         lines.append(f"\n<b>❌ 失敗 ({len(failed)})</b>")
         for t in failed:
-            prompt_preview = t['prompt'][:40] + '...' if len(t['prompt']) > 40 else t['prompt']
+            prompt_text = t.get('prompt', '')[:40]
+            prompt_preview = _escape_html(prompt_text) + ('...' if len(t.get('prompt', '')) > 40 else '')
+            task_id = _escape_html(t.get('composer_id', '')[:8])
             lines.append(
-                f"• <code>{t['composer_id'][:8]}</code>: {prompt_preview}"
+                f"• <code>{task_id}</code>: {prompt_preview}"
             )
 
-    lines.append("\n💡 使用 /result <ID> 查看詳細結果")
+    lines.append("\n💡 使用 /result ID 查看詳細結果")
 
     await update.message.reply_text("\n".join(lines), parse_mode="HTML")
 
@@ -740,11 +758,18 @@ async def result_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if len(prompt) > 200:
         prompt = prompt[:200] + "..."
 
+    # Escape HTML special characters
+    prompt = _escape_html(prompt)
+    output = _escape_html(output)
+    task_id = _escape_html(matching_task.get('composer_id', ''))
+    status = _escape_html(matching_task.get('status', 'unknown'))
+    created_at = _escape_html(matching_task.get('created_at', '')[:16])
+
     await update.message.reply_text(
         f"<b>📋 任務詳情</b>\n\n"
-        f"🆔 ID: <code>{matching_task['composer_id']}</code>\n"
-        f"{status_emoji} 狀態: {matching_task.get('status', 'unknown')}\n"
-        f"⏰ 建立: {matching_task.get('created_at', '')[:16]}\n\n"
+        f"🆔 ID: <code>{task_id}</code>\n"
+        f"{status_emoji} 狀態: {status}\n"
+        f"⏰ 建立: {created_at}\n\n"
         f"<b>❓ 問題:</b>\n{prompt}\n\n"
         f"<b>📝 結果:</b>\n{output}",
         parse_mode="HTML",
