@@ -1,0 +1,33 @@
+# Telegram Bot
+python-telegram-bot[webhooks]==21.3
+
+# Web Framework
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+
+# WebSocket
+websockets==12.0
+
+# Async HTTP Client
+httpx==0.27.0
+aiohttp==3.9.5
+
+# Configuration & Environment
+python-dotenv==1.0.1
+pydantic==2.7.4
+pydantic-settings==2.3.4
+
+# Database (optional, for persistence)
+aiosqlite==0.20.0
+
+# Logging & Monitoring
+loguru==0.7.2
+
+# Security
+cryptography==42.0.8
+
+# Development
+pytest==8.2.2
+pytest-asyncio==0.23.7
+black==24.4.2
+isort==5.13.2

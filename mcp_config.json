@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "cursorbot": {
+      "command": "python",
+      "args": ["-m", "src.cursor.mcp_server"],
+      "cwd": "/Users/lizhixu/Project/cursorBot",
+      "env": {
+        "PYTHONPATH": "/Users/lizhixu/Project/cursorBot"
+      }
+    }
+  }
+}
