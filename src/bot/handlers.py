@@ -85,39 +85,29 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     Handle /help command.
     Display detailed help information.
     """
-    # Check mode for different help text
-    mode_info = ""
+    # Check if Background Agent is configured
     if is_background_agent_enabled():
-        mode_info = """
-<b>🤖 目前模式: Background Agent (自動)</b>
-問題會自動由雲端 Agent 處理，無需開啟 IDE！
-"""
+        status_info = "🟢 Background Agent 已啟用"
     else:
-        mode_info = """
-<b>📡 目前模式: MCP Server (手動)</b>
-需要在 Cursor IDE 中處理問題。
-💡 設定 CURSOR_SESSION_TOKEN 啟用自動模式！
-"""
+        status_info = "⚠️ 請設定 CURSOR_API_KEY 和 BACKGROUND_AGENT_ENABLED"
 
     help_text = f"""
 <b>📖 CursorBot 指令說明</b>
-{mode_info}
+
+<b>{status_info}</b>
+
 <b>🔹 基礎指令</b>
 • /start - 啟動並顯示歡迎訊息
 • /help - 顯示此說明
 • /status - 查看系統狀態
 
-<b>🔹 AI 對話 (Background Agent)</b>
+<b>🔹 AI 對話</b>
 • /ask &lt;問題&gt; - 發送問題給 AI Agent
 • /repo &lt;owner/repo&gt; - 切換 GitHub 倉庫
-• /repos - 查看我的倉庫
+• /repos - 查看帳號中的倉庫
 • /tasks - 查看我的任務列表
 • /result &lt;ID&gt; - 查看任務結果
 • /cancel_task &lt;ID&gt; - 取消執行中的任務
-
-<b>🔹 MCP 模式 (需 IDE)</b>
-• /check - 檢查 Cursor IDE 的回覆
-• /pending - 查看待處理問題
 
 <b>🔹 檔案操作</b>
 • /file read &lt;路徑&gt; - 讀取檔案內容
@@ -149,13 +139,8 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /status command.
-    Display system and MCP status.
+    Display system status.
     """
-    # Check pending questions (MCP mode)
-    from ..cursor.mcp_server import get_pending_questions, get_new_answers
-    pending = get_pending_questions()
-    answers = get_new_answers()
-
     # Get workspace info
     agent = get_cursor_agent()
     ws_info = await agent.get_workspace_info()
@@ -167,12 +152,14 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         running_tasks = tracker.get_pending_tasks()
         bg_tasks_info = f"🔄 <b>執行中任務:</b> {len(running_tasks)}"
         
-        # Show repo info
-        if settings.cursor_github_repo:
-            repo_name = settings.cursor_github_repo.split("/")[-1]
-            bg_status += f"\n📁 倉庫: {repo_name}"
+        # Show current repo
+        user_id = update.effective_user.id
+        current_repo = get_user_repo(user_id)
+        if current_repo:
+            repo_name = current_repo.split("/")[-1]
+            bg_status += f"\n📁 目前倉庫: {repo_name}"
         else:
-            bg_status += "\n⚠️ 未設定 GitHub 倉庫"
+            bg_status += "\n⚠️ 未設定 GitHub 倉庫 (使用 /repo 設定)"
         
         # Test connection
         try:
@@ -185,10 +172,8 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         except Exception as e:
             bg_status += f"\n❌ 錯誤: {str(e)[:30]}"
     else:
-        bg_status = "⚪ Background Agent 未啟用"
+        bg_status = "⚪ Background Agent 未啟用\n\n請設定:\n• CURSOR_API_KEY\n• BACKGROUND_AGENT_ENABLED=true"
         bg_tasks_info = ""
-
-    mcp_status = "🟢 MCP Server 已啟用"
 
     message = f"""
 <b>📊 系統狀態</b>
@@ -197,20 +182,15 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 {bg_status}
 {bg_tasks_info}
 
-<b>📡 MCP Server</b>
-{mcp_status}
-📝 待處理問題: {len(pending)}
-💬 新回覆: {len(answers)}
-
 <b>📂 工作區</b>
 • 名稱: {ws_info['name']}
 • 檔案數: {ws_info['total_files']}
 • 路徑: <code>{ws_info['path']}</code>
 
 <b>💡 使用方式</b>
-{"• /ask 發送問題 → 自動執行" if is_background_agent_enabled() else "• /ask 發送問題 → Cursor IDE 處理"}
+• /repo 設定 GitHub 倉庫
+• /ask 發送問題給 AI
 • /tasks 查看任務狀態
-• /check 檢查回覆
 """
     await update.message.reply_text(message, parse_mode="HTML")
 
@@ -219,15 +199,25 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def ask_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /ask command.
-    Send a question to Cursor Background Agent or MCP.
+    Send a question to Cursor Background Agent.
     """
     if not context.args:
-        mode = "Background Agent 自動處理" if is_background_agent_enabled() else "Cursor IDE 手動處理"
         await update.message.reply_text(
-            f"⚠️ 請提供問題!\n\n"
-            f"用法: /ask <問題>\n"
-            f"例: /ask 如何實作快速排序?\n\n"
-            f"💡 目前模式: {mode}"
+            "⚠️ 請提供問題!\n\n"
+            "用法: /ask <問題>\n"
+            "例: /ask 如何實作快速排序?"
+        )
+        return
+
+    # Check if Background Agent is enabled
+    if not is_background_agent_enabled():
+        await update.message.reply_text(
+            "⚠️ <b>Background Agent 未啟用</b>\n\n"
+            "請在 .env 中設定:\n"
+            "<code>CURSOR_API_KEY=你的API金鑰</code>\n"
+            "<code>BACKGROUND_AGENT_ENABLED=true</code>\n\n"
+            "API Key 從 cursor.com/dashboard 取得",
+            parse_mode="HTML",
         )
         return
 
@@ -237,11 +227,7 @@ async def ask_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     chat_id = update.effective_chat.id
     logger.info(f"User {user_id} asking: {question}")
 
-    # Check if Background Agent is enabled
-    if is_background_agent_enabled():
-        await _handle_background_agent_ask(update, question, user_id, username, chat_id)
-    else:
-        await _handle_mcp_ask(update, question, user_id, username)
+    await _handle_background_agent_ask(update, question, user_id, username, chat_id)
 
 
 async def _handle_background_agent_ask(
@@ -388,68 +374,6 @@ async def _poll_task_completion(
         logger.error(f"Poll error: {e}")
 
 
-async def _handle_mcp_ask(
-    update: Update,
-    question: str,
-    user_id: int,
-    username: str,
-) -> None:
-    """Handle ask command using MCP (fallback mode)."""
-    from ..cursor.mcp_server import add_question
-    import uuid
-
-    question_id = str(uuid.uuid4())[:8]
-    add_question(question_id, user_id, username, question)
-
-    await update.message.reply_text(
-        f"✅ <b>問題已發送到 Cursor IDE</b>\n\n"
-        f"📝 ID: <code>{question_id}</code>\n"
-        f"❓ 問題: {question[:100]}{'...' if len(question) > 100 else ''}\n\n"
-        f"<b>下一步：</b>\n"
-        f"1. 在 Cursor IDE 中呼叫 <code>get_telegram_questions</code> 工具\n"
-        f"2. 或使用 /check 檢查是否有回覆\n\n"
-        f"💡 提示: 設定 CURSOR_API_KEY 啟用自動模式",
-        parse_mode="HTML",
-    )
-
-
-@authorized_only
-async def code_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle /code command.
-    Send code instruction to Cursor IDE via MCP.
-    """
-    if not context.args:
-        await update.message.reply_text(
-            "⚠️ 請提供程式碼指令!\n\n"
-            "用法: /code <指令>\n"
-            "例: /code 建立一個 hello world 函數\n\n"
-            "💡 指令會發送到 Cursor IDE"
-        )
-        return
-
-    instruction = " ".join(context.args)
-    user_id = update.effective_user.id
-    username = update.effective_user.username or update.effective_user.first_name
-    logger.info(f"User {user_id} code instruction: {instruction}")
-
-    # Add as a question for Cursor IDE (with code prefix)
-    from ..cursor.mcp_server import add_question
-    import uuid
-    
-    question_id = str(uuid.uuid4())[:8]
-    code_prompt = f"[程式碼指令] {instruction}"
-    add_question(question_id, user_id, username, code_prompt)
-
-    await update.message.reply_text(
-        f"✅ <b>程式碼指令已發送到 Cursor IDE</b>\n\n"
-        f"📝 ID: <code>{question_id}</code>\n"
-        f"⚙️ 指令: {instruction[:80]}{'...' if len(instruction) > 80 else ''}\n\n"
-        f"使用 /check 檢查回覆",
-        parse_mode="HTML",
-    )
-
-
 @authorized_only
 async def file_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -544,70 +468,6 @@ async def project_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(result)
     else:
         await update.message.reply_text("❌ 未知操作或缺少參數")
-
-
-@authorized_only
-async def check_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle /check command.
-    Check for answers from Cursor IDE.
-    """
-    from ..cursor.mcp_server import get_new_answers, get_pending_questions
-
-    answers = get_new_answers()
-    
-    if answers:
-        for ans in answers:
-            response = ans.get("answer", "")
-            if len(response) > 4000:
-                response = response[:4000] + "\n\n... (回覆過長已截斷)"
-            
-            await update.message.reply_text(
-                f"🤖 <b>Cursor 回覆</b>\n\n{response}",
-                parse_mode="HTML",
-            )
-    else:
-        pending = get_pending_questions()
-        if pending:
-            await update.message.reply_text(
-                f"⏳ 尚無新回覆\n\n"
-                f"還有 {len(pending)} 個問題待處理\n\n"
-                f"請在 Cursor IDE 中處理問題"
-            )
-        else:
-            await update.message.reply_text(
-                "✅ 沒有待處理的問題\n\n"
-                "使用 /ask <問題> 發送新問題"
-            )
-
-
-@authorized_only
-async def pending_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle /pending command.
-    Show pending questions.
-    """
-    from ..cursor.mcp_server import get_pending_questions
-
-    pending = get_pending_questions()
-    
-    if not pending:
-        await update.message.reply_text(
-            "✅ 沒有待處理的問題\n\n"
-            "使用 /ask <問題> 發送新問題"
-        )
-        return
-
-    lines = [f"<b>📋 待處理問題 ({len(pending)})</b>\n"]
-    
-    for q in pending[:10]:
-        question_preview = q['question'][:50] + '...' if len(q['question']) > 50 else q['question']
-        lines.append(
-            f"• <code>{q['id']}</code>: {question_preview}\n"
-            f"  👤 {q['username']} | ⏰ {q['created_at'][:16]}"
-        )
-
-    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
 
 
 def _escape_html(text: str) -> str:
@@ -992,7 +852,7 @@ async def cancel_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle regular text messages.
-    Send to Background Agent or Cursor IDE as a question.
+    Send to Background Agent as a question.
     """
     message_text = update.message.text
     user_id = update.effective_user.id
@@ -1000,21 +860,14 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     chat_id = update.effective_chat.id
     logger.info(f"User {user_id} message: {message_text[:50]}...")
 
-    # Use Background Agent if enabled
+    # Check if Background Agent is enabled
     if is_background_agent_enabled():
         await _handle_background_agent_ask(update, message_text, user_id, username, chat_id)
     else:
-        # Fallback to MCP mode
-        from ..cursor.mcp_server import add_question
-        import uuid
-        
-        question_id = str(uuid.uuid4())[:8]
-        add_question(question_id, user_id, username, message_text)
-
         await update.message.reply_text(
-            f"📝 已發送到 Cursor IDE\n\n"
-            f"ID: <code>{question_id}</code>\n"
-            f"使用 /check 檢查回覆",
+            "⚠️ <b>Background Agent 未啟用</b>\n\n"
+            "請設定 CURSOR_API_KEY 和 BACKGROUND_AGENT_ENABLED=true\n\n"
+            "或使用 /help 查看其他可用指令",
             parse_mode="HTML",
         )
 
@@ -1038,24 +891,23 @@ def setup_handlers(app: Application) -> None:
     Args:
         app: Telegram Application instance
     """
-    # Command handlers
+    # Basic command handlers
     app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(CommandHandler("help", help_handler))
     app.add_handler(CommandHandler("status", status_handler))
-    app.add_handler(CommandHandler("ask", ask_handler))
-    app.add_handler(CommandHandler("check", check_handler))
-    app.add_handler(CommandHandler("pending", pending_handler))
-    app.add_handler(CommandHandler("code", code_handler))
-    app.add_handler(CommandHandler("file", file_handler))
-    app.add_handler(CommandHandler("search", search_handler))
-    app.add_handler(CommandHandler("project", project_handler))
 
     # Background Agent handlers
+    app.add_handler(CommandHandler("ask", ask_handler))
+    app.add_handler(CommandHandler("repo", repo_handler))
+    app.add_handler(CommandHandler("repos", repos_handler))
     app.add_handler(CommandHandler("tasks", tasks_handler))
     app.add_handler(CommandHandler("result", result_handler))
     app.add_handler(CommandHandler("cancel_task", cancel_task_handler))
-    app.add_handler(CommandHandler("repo", repo_handler))
-    app.add_handler(CommandHandler("repos", repos_handler))
+
+    # Workspace handlers
+    app.add_handler(CommandHandler("file", file_handler))
+    app.add_handler(CommandHandler("search", search_handler))
+    app.add_handler(CommandHandler("project", project_handler))
 
     # Message handler for regular text
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
@@ -1069,9 +921,9 @@ def setup_handlers(app: Application) -> None:
 
     # Log Background Agent status
     if is_background_agent_enabled():
-        logger.info("Background Agent integration enabled")
+        logger.info("Background Agent enabled")
     else:
-        logger.info("Background Agent disabled (MCP mode)")
+        logger.warning("Background Agent NOT configured - set CURSOR_API_KEY")
 
     logger.info("Bot handlers configured successfully")
 

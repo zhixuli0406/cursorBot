@@ -1,13 +1,11 @@
 # CursorBot
 
-透過 Telegram 遠端控制 Cursor IDE Agent。
+透過 Telegram 遠端控制 Cursor Background Agent。
 
-## 運作模式
-
-### 模式一：Background Agent（推薦）
+## 運作原理
 
 ```
-Telegram → CursorBot → Cursor Cloud Agent → 自動執行 → 回傳結果
+Telegram → CursorBot → Cursor Background Agent API → 自動執行 → 回傳結果
 ```
 
 **完全遠端操作，無需開啟 IDE！**
@@ -16,17 +14,6 @@ Telegram → CursorBot → Cursor Cloud Agent → 自動執行 → 回傳結果
 2. CursorBot 呼叫 Cursor Background Agent API
 3. Cursor 雲端 Agent 自動執行任務
 4. 完成後自動回傳結果到 Telegram
-
-### 模式二：MCP Server（備用）
-
-```
-Telegram → CursorBot → MCP Server ← Cursor IDE（手動）
-```
-
-1. 你在 Telegram 發送問題
-2. CursorBot 將問題存入佇列
-3. 在 Cursor IDE 中手動呼叫 MCP 工具
-4. 使用 `/check` 獲取回覆
 
 ## 快速開始
 
@@ -48,22 +35,22 @@ cp env.example .env
 編輯 `.env`：
 
 ```env
-# 必填
+# 必填 - Telegram
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_ALLOWED_USERS=your_user_id
-CURSOR_WORKSPACE_PATH=/path/to/your/projects
 
-# Background Agent（推薦啟用）
+# 必填 - Background Agent
 BACKGROUND_AGENT_ENABLED=true
 CURSOR_API_KEY=your_api_key_here
 
-# 可選：指定 GitHub 倉庫
+# 可選 - 預設 GitHub 倉庫
 CURSOR_GITHUB_REPO=https://github.com/your-username/your-repo
+
+# 可選 - 工作區路徑
+CURSOR_WORKSPACE_PATH=/path/to/your/projects
 ```
 
 ### 3. 取得 Cursor API Key
-
-要啟用 Background Agent 模式，需要取得 Cursor API Key：
 
 1. 前往 [Cursor Dashboard](https://cursor.com/dashboard?tab=background-agents)
 2. 登入你的 Cursor 帳號
@@ -73,63 +60,44 @@ CURSOR_GITHUB_REPO=https://github.com/your-username/your-repo
 
 > ⚠️ 需要 Cursor Pro 訂閱才能使用 Background Agent
 
-### 4. 設定 Cursor IDE（MCP 模式，可選）
-
-在 Cursor 設定中加入 MCP Server。
-
-建立或編輯 `~/.cursor/mcp.json`：
-
-```json
-{
-  "mcpServers": {
-    "cursorbot": {
-      "command": "python",
-      "args": ["-m", "src.cursor.mcp_server"],
-      "cwd": "/Users/lizhixu/Project/cursorBot"
-    }
-  }
-}
-```
-
-> ⚠️ 請將 `cwd` 路徑改為你的 CursorBot 安裝路徑
-
 ### 4. 啟動服務
 
 ```bash
+./run.sh
+# 或
 python -m src.main
 ```
 
-### 5. 重啟 Cursor IDE
-
-重啟後，Cursor 會載入 MCP Server，你就可以在 Cursor 中使用以下工具：
-
-- `get_telegram_questions` - 獲取 Telegram 待處理問題
-- `answer_telegram_question` - 回答問題（自動發送到 Telegram）
-
 ## 使用流程
 
-### 在 Telegram
+### 設定倉庫
 
 ```
-/ask 如何實作快速排序？
-→ ✅ 問題已發送到 Cursor IDE (ID: abc12345)
-
-/check
-→ 🤖 Cursor 回覆: ...
+/repo lizhixu/my-project
+→ ✅ 已切換倉庫: my-project
 ```
 
-### 在 Cursor IDE
-
-在 Cursor 中對 Agent 說：
+### 發送問題
 
 ```
-請檢查並回答 Telegram 的問題
+/ask 幫我實作一個快速排序函數
+→ 🚀 正在啟動 Background Agent...
+→ ✅ 任務已建立
+→ ⏳ 正在執行中...
 ```
 
-或直接呼叫 MCP 工具：
+### 查看結果
 
 ```
-使用 get_telegram_questions 工具獲取問題
+/tasks
+→ 📋 我的任務
+→ 🔄 執行中 (1)
+→ • abc12345: 幫我實作一個快速排序函數...
+
+/result abc12345
+→ 📋 任務詳情
+→ ✅ 狀態: completed
+→ 📝 結果: ...
 ```
 
 ## 指令說明
@@ -142,11 +110,11 @@ python -m src.main
 | `/help` | 顯示說明 |
 | `/status` | 系統狀態 |
 
-### AI 對話（Background Agent）
+### AI 對話
 
 | 指令 | 說明 |
 |------|------|
-| `/ask <問題>` | 發送問題給 AI Agent（自動執行） |
+| `/ask <問題>` | 發送問題給 AI Agent |
 | `/repo <owner/repo>` | 切換 GitHub 倉庫 |
 | `/repos` | 查看帳號中所有的 GitHub 倉庫 |
 | `/tasks` | 查看我的任務列表 |
@@ -158,14 +126,6 @@ python -m src.main
 /repo lizhixu/cursorBot
 /repo https://github.com/facebook/react
 ```
-
-### MCP 模式（需 IDE）
-
-| 指令 | 說明 |
-|------|------|
-| `/check` | 檢查 Cursor IDE 回覆 |
-| `/pending` | 查看待處理問題 |
-| `/code <指令>` | 發送程式碼指令 |
 
 ### 檔案操作
 
@@ -200,38 +160,25 @@ python -m src.main
 ```
 cursorBot/
 ├── src/
-│   ├── bot/               # Telegram Bot
-│   │   ├── handlers.py
+│   ├── bot/                  # Telegram Bot
+│   │   ├── handlers.py       # 指令處理
 │   │   └── handlers_extended.py
-│   ├── cursor/            # Cursor 整合
-│   │   ├── agent.py       # 工作區管理
-│   │   ├── mcp_server.py  # MCP Server
+│   ├── cursor/               # Cursor 整合
+│   │   ├── agent.py          # 工作區管理
+│   │   ├── background_agent.py  # Background Agent API
 │   │   ├── file_operations.py
 │   │   └── terminal.py
-│   ├── server/            # API Server
-│   └── utils/             # 工具模組
-├── data/                  # 問題與回答儲存
-├── cursor_mcp_config.json # MCP 設定範例
+│   ├── server/               # API Server
+│   └── utils/                # 工具模組
+├── data/                     # 任務資料儲存
 └── README.md
 ```
 
 ## 注意事項
 
-### Background Agent 模式
-
 1. **需要 Cursor Pro** - Background Agent 使用 Max Mode，需要訂閱
 2. **費用較高** - Background Agent 每次任務都會消耗額度
 3. **API Key** - 從 Cursor Dashboard 取得，不會過期
 4. **完全遠端** - 不需要開啟 Cursor IDE
-5. **GitHub 整合** - 可以指定 GitHub 倉庫進行操作
-
-### MCP 模式
-
-1. **需要 Cursor Pro** - MCP 功能需要 Cursor Pro 訂閱
-2. **需要重啟 Cursor** - 修改 `mcp.json` 後需要重啟 Cursor
-3. **需要 IDE** - 必須在 Cursor IDE 中手動處理問題
-
-### 通用
-
-1. **本地運作** - 問題和回答存在本地 `data/` 目錄
-2. **安全性** - 只有 `TELEGRAM_ALLOWED_USERS` 中的用戶可以使用
+5. **GitHub 整合** - 必須指定 GitHub 倉庫才能使用
+6. **安全性** - 只有 `TELEGRAM_ALLOWED_USERS` 中的用戶可以使用
