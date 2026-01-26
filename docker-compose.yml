@@ -19,6 +19,12 @@ services:
     env_file:
       - .env
     
+    # Additional environment variables for Docker
+    environment:
+      - RUNNING_IN_DOCKER=true
+      # Use /workspace as default in Docker
+      - DOCKER_WORKSPACE_PATH=/workspace
+    
     # Persistent data storage and workspace access
     volumes:
       # Data persistence
@@ -26,7 +32,12 @@ services:
       
       # Workspace mounting (reads from .env CURSOR_WORKSPACE_PATH)
       # This allows /run commands to access your project files
-      - ${CURSOR_WORKSPACE_PATH:-./workspace}:/workspace
+      # If CURSOR_WORKSPACE_PATH is not set, creates a local ./workspace folder
+      - ${CURSOR_WORKSPACE_PATH:-./workspace}:/workspace:rw
+      
+      # Optional: Mount SSH keys for git operations (read-only for security)
+      # Uncomment the following line if you need git SSH authentication:
+      # - ~/.ssh:/home/cursorbot/.ssh:ro
     
     # Port mapping (for API server)
     ports:
@@ -34,6 +45,10 @@ services:
     
     # Working directory for terminal commands
     working_dir: /app
+    
+    # Run as user 1000 (matches cursorbot user in container)
+    # This helps with file permission issues on mounted volumes
+    user: "1000:1000"
     
     # Resource limits (optional, adjust as needed)
     deploy:
@@ -57,6 +72,14 @@ services:
     dns:
       - 8.8.8.8
       - 8.8.4.4
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 # Named volume for data persistence
 volumes:

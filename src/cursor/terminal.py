@@ -1,11 +1,15 @@
 """
 Terminal execution module for CursorBot
 Provides safe command execution with output streaming
+
+Supports both local and Docker environments with automatic detection
+and appropriate error handling for each environment.
 """
 
 import asyncio
 import os
 import shlex
+import shutil
 import signal
 import sys
 from dataclasses import dataclass, field
@@ -15,6 +19,21 @@ from pathlib import Path
 from typing import AsyncGenerator, Callable, Optional
 
 from ..utils.logger import logger
+
+
+def is_running_in_docker() -> bool:
+    """Check if running inside a Docker container."""
+    # Method 1: Check for .dockerenv file
+    if os.path.exists("/.dockerenv"):
+        return True
+    # Method 2: Check cgroup
+    try:
+        with open("/proc/1/cgroup", "r") as f:
+            return "docker" in f.read()
+    except Exception:
+        pass
+    # Method 3: Check environment variable
+    return os.environ.get("RUNNING_IN_DOCKER", "").lower() == "true"
 
 
 class CommandStatus(Enum):
@@ -76,6 +95,8 @@ class TerminalManager:
     """
     Terminal command execution manager.
     Handles safe command execution with output streaming and timeout.
+    
+    Automatically detects Docker environment and adjusts behavior accordingly.
     """
 
     # Commands that are blocked for security
@@ -121,10 +142,17 @@ class TerminalManager:
         self.max_output_size = max_output_size
         self.default_timeout = default_timeout
         self.allowed_shells = allowed_shells or ["/bin/bash", "/bin/sh", "/bin/zsh"]
+        self.is_docker = is_running_in_docker()
 
         self._running_commands: dict[str, RunningCommand] = {}
         self._command_history: list[CommandResult] = []
         self._next_id = 1
+        
+        # Log environment info on initialization
+        if self.is_docker:
+            logger.info(f"Terminal running in Docker container, workspace: {self.workspace_path}")
+        else:
+            logger.info(f"Terminal running on host, workspace: {self.workspace_path}")
 
     def _get_next_id(self) -> str:
         """Generate next command ID."""
@@ -159,6 +187,35 @@ class TerminalManager:
             truncated = output[: self.max_output_size]
             return truncated + f"\n... (truncated, {len(output)} total bytes)"
         return output
+
+    def _get_docker_env_info(self) -> str:
+        """Get Docker environment diagnostic information."""
+        info_lines = []
+        
+        # Check workspace directory
+        if self.workspace_path.exists():
+            info_lines.append(f"Workspace exists: {self.workspace_path}")
+            try:
+                # Check if we can list contents
+                contents = list(self.workspace_path.iterdir())[:5]
+                info_lines.append(f"Workspace contents: {len(contents)} items")
+            except PermissionError:
+                info_lines.append("Workspace: Permission denied")
+        else:
+            info_lines.append(f"Workspace NOT FOUND: {self.workspace_path}")
+        
+        # Check common tools availability
+        common_tools = ["git", "node", "npm", "python", "pip"]
+        available_tools = []
+        for tool in common_tools:
+            if shutil.which(tool):
+                available_tools.append(tool)
+        info_lines.append(f"Available tools: {', '.join(available_tools)}")
+        
+        # Check user info
+        info_lines.append(f"User: {os.getuid()}:{os.getgid()}")
+        
+        return "\n".join(info_lines)
 
     async def execute(
         self,
@@ -197,10 +254,21 @@ class TerminalManager:
             work_dir = self.workspace_path / work_dir
 
         if not work_dir.exists():
+            # Provide more helpful error message in Docker environment
+            error_msg = f"Working directory not found: {work_dir}"
+            if self.is_docker:
+                error_msg += (
+                    "\n\n[Docker Environment]\n"
+                    "Possible solutions:\n"
+                    "1. Ensure CURSOR_WORKSPACE_PATH is set in .env file\n"
+                    "2. Check that the path exists on your host machine\n"
+                    "3. Verify docker-compose.yml volume mounting is correct\n"
+                    "4. Try running: docker compose down && docker compose up -d --build"
+                )
             return CommandResult(
                 command=command,
                 status=CommandStatus.FAILED,
-                stderr=f"Working directory not found: {work_dir}",
+                stderr=error_msg,
             )
 
         # Prepare environment
@@ -541,4 +609,86 @@ class TerminalManager:
         return cancelled
 
 
-__all__ = ["TerminalManager", "CommandResult", "CommandStatus", "RunningCommand"]
+    async def diagnose_environment(self) -> CommandResult:
+        """
+        Run diagnostic checks on the terminal environment.
+        Useful for troubleshooting Docker or permission issues.
+        
+        Returns:
+            CommandResult with diagnostic information
+        """
+        diagnostics = []
+        
+        # Environment type
+        env_type = "Docker Container" if self.is_docker else "Local Host"
+        diagnostics.append(f"Environment: {env_type}")
+        diagnostics.append(f"Working Directory: {self.workspace_path}")
+        
+        # Check workspace directory
+        if self.workspace_path.exists():
+            diagnostics.append("Workspace Status: EXISTS")
+            try:
+                contents = list(self.workspace_path.iterdir())
+                diagnostics.append(f"  - Contains {len(contents)} items")
+                # Show first few items
+                for item in contents[:5]:
+                    item_type = "DIR" if item.is_dir() else "FILE"
+                    diagnostics.append(f"  - [{item_type}] {item.name}")
+                if len(contents) > 5:
+                    diagnostics.append(f"  - ... and {len(contents) - 5} more")
+            except PermissionError:
+                diagnostics.append("  - Permission DENIED (cannot list contents)")
+            except Exception as e:
+                diagnostics.append(f"  - Error: {e}")
+        else:
+            diagnostics.append("Workspace Status: NOT FOUND")
+            if self.is_docker:
+                diagnostics.append("  - Check CURSOR_WORKSPACE_PATH in .env")
+                diagnostics.append("  - Ensure volume is mounted in docker-compose.yml")
+        
+        # Check available tools
+        diagnostics.append("\nAvailable Tools:")
+        tools_to_check = [
+            ("python", "Python interpreter"),
+            ("pip", "Python package manager"),
+            ("node", "Node.js runtime"),
+            ("npm", "Node.js package manager"),
+            ("git", "Version control"),
+            ("curl", "HTTP client"),
+            ("wget", "File downloader"),
+        ]
+        
+        for tool, description in tools_to_check:
+            path = shutil.which(tool)
+            if path:
+                diagnostics.append(f"  [OK] {tool}: {path}")
+            else:
+                diagnostics.append(f"  [MISSING] {tool}: not found")
+        
+        # Check user/permissions
+        diagnostics.append(f"\nUser Info:")
+        diagnostics.append(f"  - UID: {os.getuid()}")
+        diagnostics.append(f"  - GID: {os.getgid()}")
+        diagnostics.append(f"  - HOME: {os.environ.get('HOME', 'not set')}")
+        
+        # Test basic command execution
+        diagnostics.append("\nCommand Execution Test:")
+        try:
+            test_result = await self.execute("echo 'Terminal test OK'", timeout=5)
+            if test_result.success:
+                diagnostics.append("  [OK] Basic command execution works")
+            else:
+                diagnostics.append(f"  [FAIL] {test_result.stderr}")
+        except Exception as e:
+            diagnostics.append(f"  [ERROR] {e}")
+        
+        return CommandResult(
+            command="diagnose",
+            status=CommandStatus.COMPLETED,
+            exit_code=0,
+            stdout="\n".join(diagnostics),
+            stderr="",
+        )
+
+
+__all__ = ["TerminalManager", "CommandResult", "CommandStatus", "RunningCommand", "is_running_in_docker"]
