@@ -417,6 +417,70 @@ DISCORD_ALLOWED_GUILDS=your_guild_id
 | `/memory` | 記憶管理 |
 | `/skills` | 查看技能 |
 
+## Docker 終端機功能
+
+當 CursorBot 運行在 Docker 容器內時，`/run` 等終端機指令會在**容器內**執行。
+
+### 掛載工作目錄
+
+若需要讓終端機指令存取你的專案檔案，需要在 `docker-compose.yml` 中掛載目錄：
+
+```yaml
+volumes:
+  - cursorbot_data:/app/data
+  # 掛載你的專案目錄
+  - /path/to/your/projects:/workspace
+```
+
+**範例：**
+
+```yaml
+# Windows
+- C:/Users/YourName/Projects:/workspace
+
+# macOS
+- /Users/yourname/projects:/workspace
+
+# Linux
+- /home/yourname/projects:/workspace
+```
+
+### 使用方式
+
+掛載後，可以在 Bot 中這樣使用：
+
+```
+/run ls /workspace
+/run cat /workspace/myproject/README.md
+/cd /workspace/myproject
+/run npm install
+```
+
+### 進入容器終端
+
+如需直接進入容器操作：
+
+```bash
+docker exec -it cursorbot /bin/bash
+```
+
+### 容器內可用工具
+
+Docker 映像已包含：
+- Python 3.12
+- pip
+- Playwright（Chromium）
+- curl
+- 基本 Linux 工具
+
+### 安全注意事項
+
+- 掛載的目錄在容器內可完全存取
+- 避免掛載系統敏感目錄（如 `/`, `C:\Windows`）
+- 建議只掛載專案工作目錄
+
+---
+
 ## 疑難排解
 
 ### Docker 相關
@@ -427,6 +491,7 @@ DISCORD_ALLOWED_GUILDS=your_guild_id
 | 憑證錯誤 | 清除 Windows 憑證管理員中的 docker 憑證 |
 | 映像拉取失敗 | 檢查網路連線，或嘗試使用 VPN |
 | 容器啟動失敗 | 執行 `docker compose logs` 查看錯誤訊息 |
+| 終端指令找不到檔案 | 檢查 `docker-compose.yml` 的 volumes 掛載設定 |
 
 ### Windows 本地安裝
 

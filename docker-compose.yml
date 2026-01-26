@@ -19,23 +19,35 @@ services:
     env_file:
       - .env
     
-    # Alternative: specify environment variables directly
-    # environment:
-    #   - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-    #   - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
-    #   - CURSOR_API_KEY=${CURSOR_API_KEY}
-    #   - DISCORD_ENABLED=${DISCORD_ENABLED:-false}
-    #   - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-    
-    # Persistent data storage
+    # Persistent data storage and workspace access
     volumes:
+      # Data persistence
       - cursorbot_data:/app/data
-      # Optional: mount local data folder instead
-      # - ./data:/app/data
+      
+      # ============================================
+      # WORKSPACE MOUNTING (for terminal commands)
+      # ============================================
+      # Uncomment and modify the line below to mount your project directory
+      # This allows /run commands to access your files
+      #
+      # Format: /path/on/host:/workspace
+      # 
+      # Windows example:
+      # - C:/Users/YourName/Projects:/workspace
+      #
+      # macOS/Linux example:
+      # - /home/yourname/projects:/workspace
+      # - ~/projects:/workspace
+      #
+      # ============================================
+      # - /your/projects/path:/workspace
     
     # Port mapping (for API server)
     ports:
       - "8000:8000"
+    
+    # Working directory for terminal commands
+    working_dir: /app
     
     # Resource limits (optional, adjust as needed)
     deploy:
@@ -53,10 +65,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    
-    # Security options
-    security_opt:
-      - no-new-privileges:true
 
 # Named volume for data persistence
 volumes:
