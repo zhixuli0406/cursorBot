@@ -68,10 +68,13 @@ services:
         max-file: "3"
     
     # Network settings
-    network_mode: bridge
     dns:
       - 8.8.8.8
       - 8.8.4.4
+      - 1.1.1.1
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
+      - "openrouter.ai:104.18.6.192"
     
     # Health check
     healthcheck:
