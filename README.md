@@ -46,16 +46,90 @@
 
 ## 快速開始
 
-### 1. 安裝依賴
+### 方式一：Docker（推薦）
+
+最簡單的方式，無需安裝 Python 或其他依賴。
+
+#### 1. 安裝 Docker
+
+- **Windows / macOS**: 下載 [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- **Linux**: 參考 [Docker 官方文件](https://docs.docker.com/engine/install/)
+
+#### 2. 設定環境變數
+
+```bash
+cp env.example .env
+```
+
+編輯 `.env` 填入你的設定（參考下方說明）。
+
+#### 3. 啟動服務
+
+**Windows:**
+```cmd
+docker-start.bat
+```
+
+**macOS / Linux:**
+```bash
+./docker-start.sh
+```
+
+**或使用 Docker Compose:**
+```bash
+docker compose up -d --build
+```
+
+#### Docker 常用指令
+
+| 指令 | 說明 |
+|------|------|
+| `docker compose up -d` | 啟動服務（背景執行） |
+| `docker compose down` | 停止服務 |
+| `docker compose logs -f` | 查看即時日誌 |
+| `docker compose restart` | 重啟服務 |
+| `docker compose build --no-cache` | 重新建置映像 |
+
+---
+
+### 方式二：本地安裝
+
+#### 1. 環境需求
+
+- **Python 3.10 - 3.12**（不支援 3.13+）
+- Windows / macOS / Linux
+
+> ⚠️ **Windows 用戶注意**: 啟動腳本會自動檢測 Python 版本，若版本過新（3.13+）會自動安裝 Python 3.12。
+
+#### 2. 安裝依賴
+
+**自動安裝（推薦）：**
+
+Windows 啟動腳本會自動：
+- 檢測並安裝 Python 3.12（如果需要）
+- 建立虛擬環境
+- 安裝所有依賴
+- 安裝 Playwright 瀏覽器
+
+```cmd
+# Windows CMD
+start.bat
+
+# Windows PowerShell
+.\start.ps1
+```
+
+**手動安裝：**
 
 ```bash
 cd cursorBot
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+playwright install chromium  # 安裝瀏覽器（可選）
 ```
 
-### 2. 設定環境變數
+#### 3. 設定環境變數
 
 ```bash
 cp env.example .env
@@ -83,7 +157,7 @@ CURSOR_GITHUB_REPO=https://github.com/your-username/your-repo
 CURSOR_WORKSPACE_PATH=/path/to/your/projects
 ```
 
-### 3. 取得 Cursor API Key
+#### 4. 取得 Cursor API Key
 
 1. 前往 [Cursor Dashboard](https://cursor.com/dashboard?tab=background-agents)
 2. 登入你的 Cursor 帳號
@@ -93,7 +167,7 @@ CURSOR_WORKSPACE_PATH=/path/to/your/projects
 
 > ⚠️ 需要 Cursor Pro 訂閱才能使用 Background Agent
 
-### 4. 啟動服務
+#### 5. 啟動服務
 
 **Windows (CMD):**
 ```cmd
@@ -114,6 +188,21 @@ start.bat
 ```bash
 python -m src.main
 ```
+
+---
+
+### Windows 啟動腳本功能
+
+`start.bat` 和 `start.ps1` 提供以下自動化功能：
+
+| 功能 | 說明 |
+|------|------|
+| Python 版本檢測 | 自動檢測 Python 版本，若 3.13+ 則安裝 3.12 |
+| 自動安裝 Python | 透過 winget 或下載安裝程式自動安裝 |
+| 虛擬環境管理 | 自動建立和啟用 venv |
+| 依賴安裝 | 自動安裝所有 requirements |
+| Playwright 安裝 | 自動安裝瀏覽器（用於網頁自動化） |
+| 環境設定 | 自動複製 env.example 並提示編輯 |
 
 ## 使用流程
 
@@ -278,6 +367,15 @@ cursorBot/
 │   └── utils/                   # 工具模組
 ├── data/                        # 資料儲存
 ├── skills/                      # 自訂技能（可選）
+├── Dockerfile                   # Docker 映像定義
+├── docker-compose.yml           # Docker Compose 設定
+├── docker-start.bat             # Windows Docker 啟動腳本
+├── docker-start.sh              # Linux/macOS Docker 啟動腳本
+├── start.bat                    # Windows 本地啟動腳本
+├── start.ps1                    # PowerShell 本地啟動腳本
+├── start.sh                     # Linux/macOS 本地啟動腳本
+├── env.example                  # 環境變數範例
+├── requirements.txt             # Python 依賴
 └── README.md
 ```
 
@@ -319,6 +417,38 @@ DISCORD_ALLOWED_GUILDS=your_guild_id
 | `/memory` | 記憶管理 |
 | `/skills` | 查看技能 |
 
+## 疑難排解
+
+### Docker 相關
+
+| 問題 | 解決方案 |
+|------|----------|
+| `load metadata` 錯誤 | 執行 `docker logout` 然後 `docker login` |
+| 憑證錯誤 | 清除 Windows 憑證管理員中的 docker 憑證 |
+| 映像拉取失敗 | 檢查網路連線，或嘗試使用 VPN |
+| 容器啟動失敗 | 執行 `docker compose logs` 查看錯誤訊息 |
+
+### Windows 本地安裝
+
+| 問題 | 解決方案 |
+|------|----------|
+| Python 3.13+ 不相容 | 啟動腳本會自動安裝 Python 3.12 |
+| `pydantic-core` 編譯失敗 | 安裝 [Rust](https://rustup.rs) 或使用 Python 3.12 |
+| 腳本閃退 | 執行 `debug.bat` 診斷問題 |
+| pip 安裝失敗 | 確保網路連線正常，或使用國內鏡像 |
+
+### 常見錯誤
+
+```
+error: linker `link.exe` not found
+```
+→ 安裝 [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) 或使用 Docker
+
+```
+Pre-built packages not available
+```
+→ Python 版本過新，請使用 Python 3.11 或 3.12
+
 ## 注意事項
 
 1. **需要 Cursor Pro** - Background Agent 使用 Max Mode，需要訂閱
@@ -327,3 +457,5 @@ DISCORD_ALLOWED_GUILDS=your_guild_id
 4. **完全遠端** - 不需要開啟 Cursor IDE
 5. **GitHub 整合** - 必須指定 GitHub 倉庫才能使用
 6. **安全性** - 只有 `TELEGRAM_ALLOWED_USERS` 中的用戶可以使用
+7. **Python 版本** - 建議使用 Python 3.11 或 3.12，不支援 3.13+
+8. **Docker 推薦** - 使用 Docker 可避免所有環境問題
