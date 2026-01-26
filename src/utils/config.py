@@ -155,10 +155,15 @@ class Settings(BaseSettings):
         default="openai/gpt-4.1",
         description="OpenRouter model for AI interactions",
     )
-    google_ai_api_key: str = Field(
+    google_generative_ai_api_key: str = Field(
         default="",
         description="Google Gemini API key for voice transcription and image processing",
     )
+    
+    @property
+    def google_ai_api_key(self) -> str:
+        """Alias for google_generative_ai_api_key."""
+        return self.google_generative_ai_api_key
     custom_prompt: str = Field(
         default="",
         description="Custom instructions to add to AI prompts",
