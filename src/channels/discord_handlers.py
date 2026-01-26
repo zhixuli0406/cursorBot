@@ -96,6 +96,10 @@ CursorBot 是一個多平台 AI 編程助手，支援 **Telegram** 和 **Discord
     buttons = [
         ButtonRow().add("📁 選擇倉庫", callback_data="repos_list")
                    .add("📋 我的任務", callback_data="tasks_list"),
+        ButtonRow().add("🧠 記憶", callback_data="memory_list")
+                   .add("🎯 技能", callback_data="skills_list"),
+        ButtonRow().add("🤖 Agent", callback_data="agent_menu")
+                   .add("🔧 工具", callback_data="tools_menu"),
         ButtonRow().add("📊 狀態", callback_data="status")
                    .add("❓ 幫助", callback_data="help"),
     ]
@@ -506,19 +510,171 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
     # Register button handler
     @channel.on_button
     async def on_button(callback_data: str, ctx: MessageContext):
-        if callback_data == "repos_list":
-            await ctx.reply("使用 `/repo owner/repo-name` 設定倉庫")
-        elif callback_data == "tasks_list":
-            await handle_tasks(ctx)
-        elif callback_data == "status":
-            await handle_status(ctx)
-        elif callback_data == "help":
-            await handle_help(ctx)
-        elif callback_data.startswith("task_refresh:"):
-            task_id = callback_data.split(":")[1]
-            await ctx.reply(f"🔄 正在刷新任務 `{task_id}`...")
+        # Get interaction from context (stored by _button_callback)
+        interaction = getattr(ctx, 'interaction', None)
+        
+        async def send_response(content: str, ephemeral: bool = False):
+            """Helper to send response via interaction or ctx."""
+            if interaction:
+                await interaction.followup.send(content, ephemeral=ephemeral)
+            else:
+                await ctx.reply(content)
+        
+        try:
+            if callback_data == "repos_list":
+                await send_response("使用 `/repo owner/repo-name` 設定倉庫\n\n例如: `/repo microsoft/vscode`")
+            
+            elif callback_data == "tasks_list":
+                await _handle_button_tasks(ctx, interaction)
+            
+            elif callback_data == "status":
+                await _handle_button_status(ctx, interaction)
+            
+            elif callback_data == "help":
+                await _handle_button_help(ctx, interaction)
+            
+            elif callback_data.startswith("task_refresh:"):
+                task_id = callback_data.split(":")[1]
+                await send_response(f"🔄 正在刷新任務 `{task_id}`...")
+
+            elif callback_data == "memory_list":
+                await _handle_button_memory(ctx, interaction)
+
+            elif callback_data == "agent_menu":
+                await send_response(
+                    "**🤖 Agent 功能**\n\n"
+                    "• **Agent Loop** - 自主代理執行\n"
+                    "• **排程任務** - `/remind`, `/schedule`\n"
+                    "• **Webhook** - 外部事件觸發\n\n"
+                    "使用 `/agent <任務>` 啟動 Agent Loop"
+                )
+
+            elif callback_data == "tools_menu":
+                await send_response(
+                    "**🔧 工具箱**\n\n"
+                    "• **Browser** - `/browser navigate <URL>`\n"
+                    "• **檔案操作** - `/file read <路徑>`\n"
+                    "• **終端機** - `/run <命令>`"
+                )
+            
+            else:
+                await send_response(f"未知操作: {callback_data}", ephemeral=True)
+                
+        except Exception as e:
+            logger.error(f"Button handler error: {e}")
+            await send_response(f"❌ 處理失敗: {str(e)[:100]}", ephemeral=True)
 
     logger.info("Discord handlers configured")
+
+
+async def _handle_button_tasks(ctx: MessageContext, interaction) -> None:
+    """Handle tasks button click."""
+    user_id = ctx.user.id
+    tracker = get_task_tracker()
+    all_tasks = tracker.get_user_tasks(int(user_id))
+
+    if not all_tasks:
+        content = "📋 **沒有任務記錄**\n\n直接發送訊息來建立新任務！"
+    else:
+        running = len([t for t in all_tasks if t.get("status") in ["running", "pending", "created"]])
+        completed = len([t for t in all_tasks if t.get("status") == "completed"])
+        failed = len([t for t in all_tasks if t.get("status") in ["failed", "error"]])
+
+        content = f"**📋 我的任務**\n\n🔄 執行中: {running}\n✅ 已完成: {completed}\n❌ 失敗: {failed}\n\n**最近任務:**\n"
+
+        for task in all_tasks[:5]:
+            task_id = task.get("composer_id", "")[:8]
+            status = task.get("status", "unknown")
+            prompt = task.get("prompt", "")[:30] + "..."
+            emoji = {"running": "🔄", "pending": "⏳", "completed": "✅", "failed": "❌"}.get(status, "❓")
+            content += f"\n{emoji} `{task_id}`: {prompt}"
+
+    if interaction:
+        await interaction.followup.send(content)
+    else:
+        await ctx.reply(content)
+
+
+async def _handle_button_status(ctx: MessageContext, interaction) -> None:
+    """Handle status button click."""
+    user_id = ctx.user.id
+    
+    if settings.background_agent_enabled and settings.cursor_api_key:
+        bg_status = "🟢 已啟用"
+        tracker = get_task_tracker()
+        running = len(tracker.get_pending_tasks())
+    else:
+        bg_status = "⚪ 未啟用"
+        running = 0
+
+    current_repo = get_discord_user_repo(user_id)
+    repo_display = current_repo.split("/")[-1] if current_repo else "未設定"
+
+    content = f"**📊 系統狀態**\n\n**Background Agent:** {bg_status}\n**目前倉庫:** {repo_display}\n**執行中任務:** {running}\n**平台:** Discord"
+
+    if interaction:
+        await interaction.followup.send(content)
+    else:
+        await ctx.reply(content)
+
+
+async def _handle_button_help(ctx: MessageContext, interaction) -> None:
+    """Handle help button click."""
+    content = """**📖 快速指令說明**
+
+**🤖 AI 任務**
+`/ask <問題>` - 發送問題給 AI
+`/repo <owner/repo>` - 設定倉庫
+`/tasks` - 查看任務
+
+**🧠 記憶系統**
+`/memory` - 查看記憶
+`/memory add <key> <value>` - 新增
+
+**🎯 技能**
+`/skills` - 查看技能
+`/calc <expr>` - 計算
+
+使用 `/help` 查看完整說明"""
+
+    if interaction:
+        await interaction.followup.send(content, ephemeral=True)
+    else:
+        await ctx.reply(content)
+
+
+async def _handle_button_memory(ctx: MessageContext, interaction) -> None:
+    """Handle memory button click."""
+    user_id = int(ctx.user.id)
+    
+    try:
+        from ..core import get_memory_manager
+        memory = get_memory_manager()
+        memories = await memory.list_memories(user_id, limit=10)
+
+        if not memories:
+            content = """**🧠 我的記憶**
+
+目前沒有儲存任何記憶。
+
+**用法:**
+`/memory add <key> <value>` - 新增記憶
+`/memory get <key>` - 取得記憶
+`/memory del <key>` - 刪除記憶"""
+        else:
+            content = "**🧠 我的記憶**\n\n"
+            for m in memories:
+                v = str(m['value'])[:30] + "..." if len(str(m['value'])) > 30 else m['value']
+                content += f"• `{m['key']}`: {v}\n"
+
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+    except Exception as e:
+        logger.error(f"Memory list error: {e}")
+        if interaction:
+            await interaction.followup.send(f"❌ 讀取記憶失敗: {str(e)[:50]}", ephemeral=True)
 
 
 __all__ = [

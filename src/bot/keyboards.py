@@ -318,9 +318,68 @@ def get_welcome_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("🎯 技能", callback_data="skills_list"),
         ],
         [
+            InlineKeyboardButton("🤖 Agent", callback_data="agent_menu"),
+            InlineKeyboardButton("🔧 工具", callback_data="tools_menu"),
+        ],
+        [
             InlineKeyboardButton("📊 狀態", callback_data="status"),
             InlineKeyboardButton("❓ 幫助", callback_data="help"),
         ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_agent_menu_keyboard() -> InlineKeyboardMarkup:
+    """Get Agent Loop menu keyboard."""
+    keyboard = [
+        [InlineKeyboardButton("🤖 Agent Loop", callback_data="agent_loop")],
+        [InlineKeyboardButton("⏰ 排程任務", callback_data="scheduler_list")],
+        [InlineKeyboardButton("🔔 Webhook", callback_data="webhook_list")],
+        [InlineKeyboardButton("⬅️ 返回", callback_data="back_main")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_tools_menu_keyboard() -> InlineKeyboardMarkup:
+    """Get Tools menu keyboard."""
+    keyboard = [
+        [InlineKeyboardButton("🌐 Browser 工具", callback_data="browser_tool")],
+        [InlineKeyboardButton("📁 檔案操作", callback_data="file_tool")],
+        [InlineKeyboardButton("💻 終端機", callback_data="terminal_tool")],
+        [InlineKeyboardButton("⬅️ 返回", callback_data="back_main")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_scheduler_keyboard(jobs: list = None) -> InlineKeyboardMarkup:
+    """Get scheduler jobs keyboard."""
+    keyboard = []
+    
+    if jobs:
+        for job in jobs[:5]:
+            job_id = job.get("id", "")[:8]
+            name = job.get("name", "未命名")[:15]
+            status = "🟢" if job.get("enabled") else "⚪"
+            keyboard.append([
+                InlineKeyboardButton(f"{status} {name}", callback_data=f"job_view:{job_id}")
+            ])
+    
+    keyboard.append([
+        InlineKeyboardButton("➕ 新增排程", callback_data="scheduler_add"),
+        InlineKeyboardButton("🔄 重整", callback_data="scheduler_refresh"),
+    ])
+    keyboard.append([InlineKeyboardButton("⬅️ 返回", callback_data="agent_menu")])
+    
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_browser_keyboard() -> InlineKeyboardMarkup:
+    """Get browser tool keyboard."""
+    keyboard = [
+        [InlineKeyboardButton("🌐 開啟網頁", callback_data="browser_navigate")],
+        [InlineKeyboardButton("📸 截圖", callback_data="browser_screenshot")],
+        [InlineKeyboardButton("📝 取得內容", callback_data="browser_content")],
+        [InlineKeyboardButton("⬅️ 返回", callback_data="tools_menu")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -399,4 +458,9 @@ __all__ = [
     "get_error_keyboard",
     # Media keyboards
     "get_media_received_keyboard",
+    # Agent & Tools menus
+    "get_agent_menu_keyboard",
+    "get_tools_menu_keyboard",
+    "get_scheduler_keyboard",
+    "get_browser_keyboard",
 ]

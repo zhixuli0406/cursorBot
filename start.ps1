@@ -172,6 +172,31 @@ if ($discordEnabled) {
     }
 }
 
+# Install Playwright (Browser tool)
+Write-Host ""
+Write-Host "[INFO] Checking Playwright..." -ForegroundColor Yellow
+$playwrightInstalled = pip show playwright 2>$null
+if (-not $playwrightInstalled) {
+    Write-Host "[INFO] Installing Playwright..." -ForegroundColor Yellow
+    pip install playwright
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[INFO] Installing Playwright browsers (this may take a while)..." -ForegroundColor Yellow
+        playwright install chromium
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] Playwright installed" -ForegroundColor Green
+        } else {
+            Write-Host "[WARN] Playwright browser installation failed" -ForegroundColor Yellow
+            Write-Host "[INFO] You can manually run: playwright install" -ForegroundColor Cyan
+        }
+    } else {
+        Write-Host "[WARN] Playwright installation failed, skipping..." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[OK] Playwright already installed" -ForegroundColor Green
+}
+
 # Start bot
 Write-Host ""
 Write-Host "========================================"

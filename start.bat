@@ -1,9 +1,5 @@
 @echo off
-setlocal enabledelayedexpansion
-
-:: Set UTF-8 encoding (ignore errors)
 chcp 65001 >nul 2>&1
-
 title CursorBot
 
 echo ========================================
@@ -11,32 +7,29 @@ echo         CursorBot Quick Start
 echo ========================================
 echo.
 
-:: Get script directory and change to it
+:: Change to script directory
 cd /d "%~dp0"
 echo [INFO] Working directory: %CD%
 echo.
 
-:: Check Python
+:: ========== Check Python ==========
 echo [INFO] Checking Python...
-where python >nul 2>&1
-if !errorlevel! neq 0 (
+python --version >nul 2>&1
+if errorlevel 1 (
     echo [ERROR] Python not found. Please install Python 3.10+
     echo.
     pause
     exit /b 1
 )
-
-:: Show Python version
-for /f "tokens=*" %%i in ('python --version 2^>^&1') do echo [OK] %%i
-
-:: Check if venv exists
+python --version
 echo.
+
+:: ========== Create venv if needed ==========
 if not exist "venv" (
     echo [INFO] Creating virtual environment...
     python -m venv venv
-    if !errorlevel! neq 0 (
+    if errorlevel 1 (
         echo [ERROR] Failed to create venv
-        echo.
         pause
         exit /b 1
     )
@@ -44,147 +37,126 @@ if not exist "venv" (
 ) else (
     echo [OK] Virtual environment exists
 )
-
-:: Activate venv
 echo.
+
+:: ========== Activate venv ==========
 echo [INFO] Activating virtual environment...
-if exist "venv\Scripts\activate.bat" (
-    call venv\Scripts\activate.bat
-    echo [OK] Virtual environment activated
-) else (
+if not exist "venv\Scripts\activate.bat" (
     echo [ERROR] venv\Scripts\activate.bat not found
-    echo.
     pause
     exit /b 1
 )
-
-:: Upgrade pip first (important for pre-built wheels)
+call venv\Scripts\activate.bat
+echo [OK] Virtual environment activated
 echo.
-echo [INFO] Upgrading pip to latest version...
-python -m pip install --upgrade pip --quiet
-echo [OK] pip upgraded
 
-:: Check .env file
+:: ========== Upgrade pip ==========
+echo [INFO] Upgrading pip...
+python -m pip install --upgrade pip
+echo [OK] pip upgrade complete
 echo.
+
+:: ========== Check .env ==========
+echo [INFO] Checking .env file...
 if not exist ".env" (
     echo [WARN] .env file not found
     if exist "env.example" (
         echo [INFO] Copying env.example to .env
         copy env.example .env >nul
-        echo [INFO] Please edit .env file with your settings
+        echo [INFO] Please edit .env file and save it
         notepad .env
-        echo.
         pause
     ) else (
         echo [ERROR] No env.example found
-        echo.
         pause
         exit /b 1
     )
 ) else (
     echo [OK] .env file exists
 )
-
-:: Install dependencies
 echo.
+
+:: ========== Install dependencies ==========
 echo [INFO] Checking dependencies...
 pip show python-telegram-bot >nul 2>&1
-if !errorlevel! neq 0 (
-    echo [INFO] Installing dependencies...
+if errorlevel 1 (
+    echo [INFO] Installing dependencies... this may take a while
     echo.
-    
-    :: Install all packages using pre-built wheels only (no compilation)
-    echo [INFO] Installing packages (pre-built only, no compilation)...
-    pip install -r requirements.txt --only-binary :all:
-    
-    if !errorlevel! neq 0 (
+    pip install -r requirements.txt
+    if errorlevel 1 (
         echo.
-        echo [WARN] Some pre-built packages not available.
-        echo [INFO] Trying to install with compilation support...
+        echo ============================================================
+        echo   ERROR: Installation failed
+        echo ============================================================
         echo.
-        
-        :: Check if build tools are available
-        where rustc >nul 2>&1
-        set "HAS_RUST=!errorlevel!"
-        
-        if "!HAS_RUST!"=="0" (
-            echo [OK] Rust found, attempting source build...
-            pip install -r requirements.txt
-        ) else (
-            echo.
-            echo ============================================================
-            echo   ERROR: Cannot install packages
-            echo ============================================================
-            echo.
-            echo   Pre-built packages are not available for your Python
-            echo   version. You need to install build tools:
-            echo.
-            echo   Option 1: Install Rust (recommended)
-            echo   -----------------------------------------
-            echo   1. Open browser: https://rustup.rs
-            echo   2. Download and run rustup-init.exe
-            echo   3. Follow the prompts (default options are fine)
-            echo   4. CLOSE this window and run start.bat again
-            echo.
-            echo   Option 2: Install Visual Studio Build Tools
-            echo   -----------------------------------------
-            echo   1. Open browser: https://visualstudio.microsoft.com/visual-cpp-build-tools/
-            echo   2. Download and install Build Tools
-            echo   3. Select "Desktop development with C++"
-            echo   4. CLOSE this window and run start.bat again
-            echo.
-            echo   Option 3: Use Python 3.11 or 3.12
-            echo   -----------------------------------------
-            echo   Pre-built packages are usually available for
-            echo   Python 3.11 and 3.12.
-            echo.
-            echo ============================================================
-            echo.
-            
-            :: Ask user what to do
-            echo Press 1 to open Rust download page
-            echo Press 2 to open VS Build Tools download page
-            echo Press 3 to exit
-            echo.
-            choice /c 123 /n /m "Your choice: "
-            
-            if !errorlevel! equ 1 (
-                start https://rustup.rs
-            ) else if !errorlevel! equ 2 (
-                start https://visualstudio.microsoft.com/visual-cpp-build-tools/
-            )
-            
-            echo.
-            echo Please install the tools, then run this script again.
-            pause
-            exit /b 1
-        )
-        
-        if !errorlevel! neq 0 (
-            echo [ERROR] Failed to install dependencies
-            echo.
-            pause
-            exit /b 1
-        )
+        echo   Please install Rust first:
+        echo   1. Open browser: https://rustup.rs
+        echo   2. Download and run rustup-init.exe
+        echo   3. Restart your computer
+        echo   4. Run this script again
+        echo.
+        echo   Press 1 to open Rust download page
+        echo   Press 2 to exit
+        echo.
+        choice /c 12 /n /m "Your choice: "
+        if errorlevel 2 goto :exitscript
+        if errorlevel 1 start https://rustup.rs
+        goto :exitscript
     )
-    
     echo [OK] Dependencies installed
 ) else (
     echo [OK] Dependencies already installed
 )
+echo.
 
-:: Start bot
+:: ========== Install Playwright (Browser tool) ==========
+echo [INFO] Checking Playwright...
+pip show playwright >nul 2>&1
+if errorlevel 1 (
+    echo [INFO] Installing Playwright...
+    pip install playwright
+    if errorlevel 1 (
+        echo [WARN] Playwright installation failed, skipping...
+    ) else (
+        echo [INFO] Installing Playwright browsers... this may take a while
+        playwright install chromium
+        if errorlevel 1 (
+            echo [WARN] Playwright browser installation failed
+            echo [INFO] You can manually run: playwright install
+        ) else (
+            echo [OK] Playwright installed
+        )
+    )
+) else (
+    echo [OK] Playwright already installed
+)
+echo.
+
+:: ========== Ready to start ==========
+echo ========================================
+echo   All checks passed!
+echo ========================================
+echo.
+echo Press any key to start CursorBot...
+pause >nul
+
+:: ========== Start bot ==========
 echo.
 echo ========================================
 echo         Starting CursorBot...
 echo ========================================
-echo.
 echo Press Ctrl+C to stop
 echo.
 
 python -m src.main
 
-:: If exited
 echo.
 echo [INFO] CursorBot stopped
 pause
+goto :eof
+
+:exitscript
+echo.
+echo Please install the required tools and try again.
+pause
+exit /b 1

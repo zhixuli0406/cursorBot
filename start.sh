@@ -64,6 +64,25 @@ if grep -q "DISCORD_ENABLED=true" .env 2>/dev/null; then
     fi
 fi
 
+# Check/Install Playwright (Browser tool)
+echo "[INFO] Checking Playwright..."
+if ! pip show playwright &> /dev/null; then
+    echo "[INFO] Installing Playwright..."
+    pip install playwright
+    
+    echo "[INFO] Installing Playwright browsers (this may take a while)..."
+    playwright install chromium
+    
+    if [ $? -eq 0 ]; then
+        echo "[OK] Playwright installed"
+    else
+        echo "[WARN] Playwright browser installation failed"
+        echo "[INFO] You can manually run: playwright install"
+    fi
+else
+    echo "[OK] Playwright already installed"
+fi
+
 # Start bot
 echo ""
 echo "========================================"

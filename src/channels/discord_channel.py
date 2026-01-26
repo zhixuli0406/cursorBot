@@ -81,9 +81,21 @@ class DiscordButtonView(discord.ui.View if DISCORD_AVAILABLE else object):
 
     def _create_callback(self, callback_data: str):
         async def callback(interaction: discord.Interaction):
-            await interaction.response.defer()
-            if self.callback_handler:
-                await self.callback_handler(callback_data, interaction)
+            try:
+                # Defer the response first
+                await interaction.response.defer()
+                
+                if self.callback_handler:
+                    await self.callback_handler(callback_data, interaction)
+                else:
+                    # No handler, just acknowledge
+                    await interaction.followup.send("✅ 已處理", ephemeral=True)
+            except Exception as e:
+                logger.error(f"Button callback error: {e}")
+                try:
+                    await interaction.followup.send(f"❌ 錯誤: {str(e)[:100]}", ephemeral=True)
+                except:
+                    pass
         return callback
 
 
@@ -302,6 +314,8 @@ class DiscordChannel(Channel):
         user = self._convert_user(interaction.user)
         msg = self._convert_message(interaction.message)
         ctx = MessageContext(message=msg, channel=self, user=user)
+        # Store interaction for followup responses
+        ctx.interaction = interaction
         await self._dispatch_button(callback_data, ctx)
 
     async def edit_message(

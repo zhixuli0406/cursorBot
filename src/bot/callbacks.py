@@ -120,6 +120,43 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         elif action == "skills_list":
             await handle_skills_list(query)
 
+        # === Agent & Tools Menu ===
+        elif action == "agent_menu":
+            await handle_agent_menu(query)
+
+        elif action == "tools_menu":
+            await handle_tools_menu(query)
+
+        elif action == "back_main":
+            await handle_back_main(query)
+
+        elif action == "agent_loop":
+            await handle_agent_loop(query)
+
+        elif action == "scheduler_list":
+            await handle_scheduler_list(query)
+
+        elif action == "scheduler_add":
+            await handle_scheduler_add(query)
+
+        elif action == "webhook_list":
+            await handle_webhook_list(query)
+
+        elif action == "browser_tool":
+            await handle_browser_tool(query)
+
+        elif action == "browser_navigate":
+            await handle_browser_navigate(query)
+
+        elif action == "browser_screenshot":
+            await handle_browser_screenshot(query)
+
+        elif action == "file_tool":
+            await handle_file_tool(query)
+
+        elif action == "terminal_tool":
+            await handle_terminal_tool(query)
+
         else:
             logger.warning(f"Unknown callback action: {action}")
 
@@ -496,6 +533,290 @@ async def handle_skills_list(query) -> None:
         text += f"   {skill.description}\n"
         text += f"   {commands}\n\n"
 
+    await query.message.edit_text(text, parse_mode="HTML")
+
+
+# ============================================
+# Agent & Tools Menu Handlers
+# ============================================
+
+
+async def handle_agent_menu(query) -> None:
+    """Show Agent menu."""
+    from .keyboards import get_agent_menu_keyboard
+
+    text = """🤖 <b>Agent 功能</b>
+
+選擇要使用的功能:
+
+• <b>Agent Loop</b> - 自主代理執行循環
+• <b>排程任務</b> - 定時執行任務
+• <b>Webhook</b> - 外部事件觸發
+"""
+    await query.message.edit_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=get_agent_menu_keyboard(),
+    )
+
+
+async def handle_tools_menu(query) -> None:
+    """Show Tools menu."""
+    from .keyboards import get_tools_menu_keyboard
+
+    text = """🔧 <b>工具箱</b>
+
+選擇要使用的工具:
+
+• <b>Browser</b> - 網頁自動化、截圖
+• <b>檔案操作</b> - 讀寫檔案
+• <b>終端機</b> - 執行命令
+"""
+    await query.message.edit_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=get_tools_menu_keyboard(),
+    )
+
+
+async def handle_back_main(query) -> None:
+    """Back to main menu."""
+    from .keyboards import get_welcome_keyboard
+
+    text = """👋 <b>CursorBot 主選單</b>
+
+選擇要使用的功能:
+"""
+    await query.message.edit_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=get_welcome_keyboard(),
+    )
+
+
+async def handle_agent_loop(query) -> None:
+    """Show Agent Loop info."""
+    from ..core import get_agent_loop
+
+    agent = get_agent_loop()
+
+    text = """🤖 <b>Agent Loop</b>
+
+Agent Loop 是一個自主代理執行系統，可以:
+
+• 自動分解複雜任務
+• 多步驟推理和執行
+• 自動調用工具完成任務
+• 追蹤執行狀態
+
+<b>使用方式:</b>
+直接發送訊息，系統會自動判斷是否需要啟動 Agent Loop。
+
+<b>或使用指令:</b>
+<code>/agent &lt;任務描述&gt;</code>
+"""
+    await query.message.edit_text(text, parse_mode="HTML")
+
+
+async def handle_scheduler_list(query) -> None:
+    """Show scheduler jobs."""
+    from ..core import get_scheduler
+    from .keyboards import get_scheduler_keyboard
+
+    scheduler = get_scheduler()
+    jobs = scheduler.list_jobs()
+
+    if not jobs:
+        text = """⏰ <b>排程任務</b>
+
+目前沒有排程任務。
+
+<b>建立排程:</b>
+• <code>/remind 10m 提醒我開會</code> - 10分鐘後提醒
+• <code>/schedule daily 09:00 早安</code> - 每天早上9點
+"""
+    else:
+        text = f"⏰ <b>排程任務</b> ({len(jobs)} 個)\n\n"
+        for job in jobs[:5]:
+            status = "🟢" if job.enabled else "⚪"
+            text += f"{status} {job.name}\n"
+
+    await query.message.edit_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=get_scheduler_keyboard(jobs if jobs else None),
+    )
+
+
+async def handle_scheduler_add(query) -> None:
+    """Show how to add scheduler."""
+    text = """➕ <b>新增排程任務</b>
+
+<b>一次性提醒:</b>
+<code>/remind 10m 提醒內容</code>
+<code>/remind 2h 提醒內容</code>
+
+<b>重複排程:</b>
+<code>/schedule interval 1h 每小時執行</code>
+<code>/schedule daily 09:00 每天執行</code>
+<code>/schedule cron "0 9 * * *" cron格式</code>
+
+<b>時間格式:</b>
+• <code>10m</code> - 10 分鐘
+• <code>2h</code> - 2 小時
+• <code>1d</code> - 1 天
+"""
+    await query.message.edit_text(text, parse_mode="HTML")
+
+
+async def handle_webhook_list(query) -> None:
+    """Show webhook endpoints."""
+    from ..core import get_webhook_manager
+
+    webhooks = get_webhook_manager()
+    endpoints = webhooks.list_endpoints()
+
+    if not endpoints:
+        text = """🔔 <b>Webhook 端點</b>
+
+目前沒有設定 Webhook。
+
+Webhook 可以接收外部事件觸發任務，例如:
+• GitHub push 事件
+• GitLab CI 完成
+• 自訂 HTTP 請求
+
+<b>設定方式:</b>
+請在程式碼中使用 <code>WebhookManager</code> 註冊端點。
+"""
+    else:
+        text = f"🔔 <b>Webhook 端點</b> ({len(endpoints)} 個)\n\n"
+        for ep in endpoints:
+            text += f"• <code>{ep.path}</code> - {ep.description}\n"
+
+    await query.message.edit_text(text, parse_mode="HTML")
+
+
+async def handle_browser_tool(query) -> None:
+    """Show browser tool menu."""
+    from .keyboards import get_browser_keyboard
+    from ..core import PLAYWRIGHT_AVAILABLE
+
+    if not PLAYWRIGHT_AVAILABLE:
+        text = """🌐 <b>Browser 工具</b>
+
+⚠️ Playwright 未安裝
+
+請執行以下指令安裝:
+<code>pip install playwright</code>
+<code>playwright install</code>
+"""
+    else:
+        text = """🌐 <b>Browser 工具</b>
+
+Browser 工具提供網頁自動化功能:
+
+• <b>開啟網頁</b> - 導航到指定 URL
+• <b>截圖</b> - 擷取網頁畫面
+• <b>取得內容</b> - 抓取網頁文字
+
+<b>指令方式:</b>
+<code>/browser navigate https://example.com</code>
+<code>/browser screenshot</code>
+<code>/browser text h1</code>
+"""
+    await query.message.edit_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=get_browser_keyboard() if PLAYWRIGHT_AVAILABLE else None,
+    )
+
+
+async def handle_browser_navigate(query) -> None:
+    """Browser navigate prompt."""
+    text = """🌐 <b>開啟網頁</b>
+
+請輸入要開啟的網址:
+
+<code>/browser navigate https://example.com</code>
+
+或直接發送網址:
+<code>https://github.com</code>
+"""
+    await query.message.edit_text(text, parse_mode="HTML")
+
+
+async def handle_browser_screenshot(query) -> None:
+    """Take browser screenshot."""
+    from ..core import get_browser_tool, PLAYWRIGHT_AVAILABLE
+
+    if not PLAYWRIGHT_AVAILABLE:
+        await query.message.edit_text("⚠️ Playwright 未安裝")
+        return
+
+    browser = get_browser_tool()
+    if not browser or not browser.is_running:
+        await query.message.edit_text(
+            "⚠️ Browser 未啟動\n\n請先使用 <code>/browser navigate URL</code> 開啟網頁",
+            parse_mode="HTML",
+        )
+        return
+
+    await query.message.edit_text("📸 正在截圖...")
+
+    result = await browser.screenshot()
+    if result.success and result.screenshot:
+        await query.message.reply_photo(
+            result.screenshot,
+            caption="📸 網頁截圖",
+        )
+    else:
+        await query.message.edit_text(f"❌ 截圖失敗: {result.error}")
+
+
+async def handle_file_tool(query) -> None:
+    """Show file tool info."""
+    text = """📁 <b>檔案操作</b>
+
+可用指令:
+
+<b>讀取檔案:</b>
+<code>/file read path/to/file</code>
+
+<b>列出目錄:</b>
+<code>/file list .</code>
+
+<b>建立檔案:</b>
+<code>/write path/to/file</code>
+然後輸入內容
+
+<b>刪除檔案:</b>
+<code>/delete path/to/file</code>
+"""
+    await query.message.edit_text(text, parse_mode="HTML")
+
+
+async def handle_terminal_tool(query) -> None:
+    """Show terminal tool info."""
+    text = """💻 <b>終端機</b>
+
+可用指令:
+
+<b>執行命令:</b>
+<code>/run ls -la</code>
+<code>/run git status</code>
+
+<b>背景執行:</b>
+<code>/run_bg npm start</code>
+
+<b>查看執行中:</b>
+<code>/jobs</code>
+
+<b>停止命令:</b>
+<code>/kill &lt;ID&gt;</code>
+
+⚠️ 請小心使用，命令會在伺服器上執行。
+"""
     await query.message.edit_text(text, parse_mode="HTML")
 
 
