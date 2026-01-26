@@ -51,6 +51,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    
+    # Network settings
+    network_mode: bridge
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
 # Named volume for data persistence
 volumes:
