@@ -1,6 +1,6 @@
 # CursorBot Dockerfile
-# Use Python 3.12 image (Debian Trixie based)
-FROM python:3.12-trixie
+# Use official Python 3.12 image (Debian Bookworm based)
+FROM python:3.12-slim-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
