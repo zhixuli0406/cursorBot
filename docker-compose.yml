@@ -1,0 +1,64 @@
+# CursorBot Docker Compose Configuration
+# Usage:
+#   Start:   docker-compose up -d
+#   Stop:    docker-compose down
+#   Logs:    docker-compose logs -f
+#   Rebuild: docker-compose up -d --build
+
+version: '3.8'
+
+services:
+  cursorbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cursorbot
+    restart: unless-stopped
+    
+    # Environment file
+    env_file:
+      - .env
+    
+    # Alternative: specify environment variables directly
+    # environment:
+    #   - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    #   - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+    #   - CURSOR_API_KEY=${CURSOR_API_KEY}
+    #   - DISCORD_ENABLED=${DISCORD_ENABLED:-false}
+    #   - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+    
+    # Persistent data storage
+    volumes:
+      - cursorbot_data:/app/data
+      # Optional: mount local data folder instead
+      # - ./data:/app/data
+    
+    # Port mapping (for API server)
+    ports:
+      - "8000:8000"
+    
+    # Resource limits (optional, adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+# Named volume for data persistence
+volumes:
+  cursorbot_data:
+    driver: local

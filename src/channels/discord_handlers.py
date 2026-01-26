@@ -120,48 +120,58 @@ async def handle_help(ctx: MessageContext, interaction=None) -> None:
 • `/start` - 啟動並顯示歡迎訊息
 • `/help` - 顯示此說明
 • `/status` - 查看系統狀態
-• `/stats` - 使用統計
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**🤖 AI 任務（Background Agent）**
+**🤖 AI 任務**
 ━━━━━━━━━━━━━━━━━━━━━━
 • `/ask <問題>` - 發送問題給 AI Agent
-• `/repo <owner/repo>` - 切換 GitHub 倉庫
-• `/repos` - 查看帳號中的倉庫
-• `/tasks` - 查看我的任務列表
-• `/result <ID>` - 查看任務結果
-
-*💡 直接發送訊息也可以與 AI 對話*
+• `/repo <owner/repo>` - 切換倉庫
+• `/tasks` - 查看任務列表
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **🧠 記憶系統**
 ━━━━━━━━━━━━━━━━━━━━━━
-• `/memory` - 查看我的記憶
-• `/memory add <key> <value>` - 新增記憶
-• `/memory get <key>` - 取得記憶
-• `/memory del <key>` - 刪除記憶
-• `/clear` - 清除對話上下文
+• `/memory` - 查看記憶
+• `/memory add <key> <value>` - 新增
+• `/clear` - 清除上下文
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **🎯 技能系統**
 ━━━━━━━━━━━━━━━━━━━━━━
-• `/skills` - 查看可用技能
-• `/calc <expression>` - 計算表達式
-• `/remind <time> <msg>` - 設定提醒
-• `/translate <lang> <text>` - 翻譯文字
+• `/skills` - 查看技能
+• `/calc <expr>` - 計算
+• `/remind <time> <msg>` - 提醒
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**🌐 多平台支援**
+**🤖 Agent Loop**
 ━━━━━━━━━━━━━━━━━━━━━━
-• **Discord** - 你正在使用
-• **Telegram** - 相同功能
+• `/agent <任務>` - 自主代理執行
+自動分解任務、多步驟推理
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**💡 使用提示**
+**🌐 Browser 工具**
 ━━━━━━━━━━━━━━━━━━━━━━
-• 直接發送訊息即可與 AI 對話
-• 使用按鈕可以快速操作
-• Telegram 和 Discord 功能同步
+• `/browser navigate <URL>` - 開啟網頁
+• `/browser screenshot` - 截圖
+• `/browser text <selector>` - 取得文字
+
+━━━━━━━━━━━━━━━━━━━━━━
+**📁 檔案/終端機**
+━━━━━━━━━━━━━━━━━━━━━━
+• `/file read <路徑>` - 讀取檔案
+• `/run <命令>` - 執行命令
+
+━━━━━━━━━━━━━━━━━━━━━━
+**⏰ 排程系統**
+━━━━━━━━━━━━━━━━━━━━━━
+• `/remind <時間> <訊息>` - 設定提醒
+• `/schedule list` - 查看排程
+
+━━━━━━━━━━━━━━━━━━━━━━
+**💡 提示**
+━━━━━━━━━━━━━━━━━━━━━━
+直接發送訊息與 AI 對話
+點擊按鈕快速存取功能
 """
 
     if interaction:

@@ -202,6 +202,32 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /search &lt;關鍵字&gt; - 搜尋程式碼
 
 ━━━━━━━━━━━━━━━━━━━━━━
+<b>🤖 Agent Loop</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/agent &lt;任務&gt; - 啟動自主代理執行
+自動分解任務、多步驟推理、調用工具
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🌐 Browser 工具</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/browser navigate &lt;URL&gt; - 開啟網頁
+/browser screenshot - 網頁截圖
+/browser text &lt;selector&gt; - 取得文字
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>⏰ 排程系統</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/remind &lt;時間&gt; &lt;訊息&gt; - 設定提醒
+/schedule list - 查看排程
+/schedule cancel &lt;ID&gt; - 取消排程
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🔔 Webhook</b>
+━━━━━━━━━━━━━━━━━━━━━━
+支援 GitHub/GitLab 事件觸發
+透過 API 設定端點
+
+━━━━━━━━━━━━━━━━━━━━━━
 <b>🌐 多平台支援</b>
 ━━━━━━━━━━━━━━━━━━━━━━
 • <b>Telegram</b> - 你正在使用
@@ -213,7 +239,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • 直接發送文字即可與 AI 對話
 • 發送語音會自動轉錄為文字
 • 發送圖片會附加到任務中
-• 使用按鈕可以快速操作
+• 點擊按鈕可快速存取功能
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 
