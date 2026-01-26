@@ -34,26 +34,10 @@ class Settings(BaseSettings):
         description="Comma-separated list of allowed Telegram user IDs",
     )
 
-    # Cursor Agent Settings
+    # Workspace Settings
     cursor_workspace_path: str = Field(
         default="",
-        description="Path to Cursor workspace directory",
-    )
-    cursor_mcp_port: int = Field(
-        default=3000,
-        description="MCP server port for Cursor communication",
-    )
-    cursor_executable_path: Optional[str] = Field(
-        default=None,
-        description="Path to Cursor executable",
-    )
-    cursor_api_key: str = Field(
-        default="",
-        description="Cursor API key from https://cursor.com/settings",
-    )
-    cursor_default_repo: str = Field(
-        default="",
-        description="Default GitHub repository for Cursor Cloud Agents",
+        description="Path to local workspace directory",
     )
 
     # Server Settings
@@ -96,26 +80,26 @@ class Settings(BaseSettings):
         description="Log file path",
     )
 
-    # AI Provider Settings
-    openai_api_key: str = Field(
+    # Cursor Background Agent Settings
+    cursor_api_key: str = Field(
         default="",
-        description="OpenAI API key for GPT models",
+        description="Cursor API key from https://cursor.com/dashboard?tab=background-agents",
     )
-    openai_model: str = Field(
-        default="gpt-4o",
-        description="OpenAI model to use",
+    background_agent_enabled: bool = Field(
+        default=False,
+        description="Enable Background Agent integration (requires valid API key)",
     )
-    openai_base_url: Optional[str] = Field(
-        default=None,
-        description="Custom OpenAI API base URL (for Azure or proxies)",
+    background_agent_timeout: int = Field(
+        default=300,
+        description="Timeout for background agent tasks in seconds",
     )
-    claude_api_key: str = Field(
+    background_agent_poll_interval: int = Field(
+        default=5,
+        description="Poll interval for checking task status in seconds",
+    )
+    cursor_github_repo: str = Field(
         default="",
-        description="Anthropic Claude API key",
-    )
-    claude_model: str = Field(
-        default="claude-sonnet-4-20250514",
-        description="Claude model to use",
+        description="Optional GitHub repository URL for Background Agent tasks",
     )
 
     @property

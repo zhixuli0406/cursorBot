@@ -1,196 +1,42 @@
 """
-Cursor Agent interface
-Manages communication and command execution with Cursor IDE
+Workspace Agent for CursorBot
+Manages workspace navigation and local file operations
 """
 
-import asyncio
 import time
 from pathlib import Path
 from typing import Any, Optional
 
 from ..utils.config import settings
 from ..utils.logger import logger
-from .mcp_client import MCPClient, MockMCPClient
 
 
-class CursorAgent:
+class WorkspaceAgent:
     """
-    Main interface for communicating with Cursor Agent.
-    Handles all operations including code generation, file management,
-    and AI conversation.
+    Workspace management agent.
+    Handles workspace navigation, file listing, and project switching.
     """
 
-    def __init__(self, use_mock: bool = False):
-        """
-        Initialize the Cursor Agent interface.
+    def __init__(self):
+        """Initialize the Workspace Agent."""
+        root_path = settings.cursor_workspace_path
+        if not root_path:
+            root_path = str(Path.cwd())
+            logger.warning(f"CURSOR_WORKSPACE_PATH not set, using: {root_path}")
 
-        Args:
-            use_mock: If True, use MockMCPClient for testing without real Cursor connection
-        """
-        self.workspace_path = Path(settings.cursor_workspace_path)
-        self.use_mock = use_mock or settings.debug
-
-        if self.use_mock:
-            logger.info("Using MockMCPClient (debug/test mode)")
-            self.mcp_client = MockMCPClient(
-                host="localhost",
-                port=settings.cursor_mcp_port,
-            )
-        else:
-            self.mcp_client = MCPClient(
-                host="localhost",
-                port=settings.cursor_mcp_port,
-            )
-
-        self._connected = False
+        self.root_workspace = Path(root_path)
+        self.workspace_path = self.root_workspace
         self._commands_executed = 0
         self._last_activity: Optional[float] = None
-
-    async def connect(self) -> bool:
-        """
-        Establish connection to Cursor Agent.
-
-        Returns:
-            True if connection successful, False otherwise
-        """
-        try:
-            self._connected = await self.mcp_client.connect()
-            if self._connected:
-                logger.info("Connected to Cursor Agent")
-                self._last_activity = time.time()
-            return self._connected
-        except Exception as e:
-            logger.error(f"Failed to connect to Cursor Agent: {e}")
-            return False
-
-    async def disconnect(self) -> None:
-        """Disconnect from Cursor Agent."""
-        await self.mcp_client.disconnect()
-        self._connected = False
-        logger.info("Disconnected from Cursor Agent")
-
-    async def get_status(self) -> dict[str, Any]:
-        """
-        Get current status of Cursor Agent connection.
-
-        Returns:
-            Dictionary containing status information
-        """
-        latency = None
-        if self._connected:
-            start = time.time()
-            try:
-                await self.mcp_client.ping()
-                latency = int((time.time() - start) * 1000)
-            except Exception:
-                self._connected = False
-
-        last_activity_str = "N/A"
-        if self._last_activity:
-            elapsed = int(time.time() - self._last_activity)
-            if elapsed < 60:
-                last_activity_str = f"{elapsed} 秒前"
-            elif elapsed < 3600:
-                last_activity_str = f"{elapsed // 60} 分鐘前"
-            else:
-                last_activity_str = f"{elapsed // 3600} 小時前"
-
-        return {
-            "connected": self._connected,
-            "workspace": str(self.workspace_path),
-            "latency": latency,
-            "commands_executed": self._commands_executed,
-            "last_activity": last_activity_str,
-        }
-
-    async def _ensure_connected(self) -> bool:
-        """Ensure connection is established before operations."""
-        if not self._connected:
-            return await self.connect()
-        return True
 
     async def _update_activity(self) -> None:
         """Update last activity timestamp."""
         self._last_activity = time.time()
         self._commands_executed += 1
 
-    async def ask(self, question: str) -> str:
-        """
-        Ask a question to Cursor Agent.
-
-        Args:
-            question: The question to ask
-
-        Returns:
-            Agent's response as string
-        """
-        logger.info(f"Asking Cursor Agent: {question[:50]}...")
-
-        if not await self._ensure_connected():
-            return "❌ 無法連接到 Cursor Agent,請確認 Cursor IDE 正在運行"
-
-        try:
-            response = await self.mcp_client.send_message({
-                "type": "ask",
-                "content": question,
-            })
-            await self._update_activity()
-            return response.get("content", "No response received")
-        except Exception as e:
-            logger.error(f"Error asking Cursor Agent: {e}")
-            return f"❌ 錯誤: {str(e)}"
-
-    async def chat(self, message: str) -> str:
-        """
-        Send a chat message to Cursor Agent.
-
-        Args:
-            message: The message to send
-
-        Returns:
-            Agent's response
-        """
-        logger.info(f"Chat with Cursor Agent: {message[:50]}...")
-
-        if not await self._ensure_connected():
-            return "❌ 無法連接到 Cursor Agent"
-
-        try:
-            response = await self.mcp_client.send_message({
-                "type": "chat",
-                "content": message,
-            })
-            await self._update_activity()
-            return response.get("content", "No response received")
-        except Exception as e:
-            logger.error(f"Error in chat: {e}")
-            return f"❌ 錯誤: {str(e)}"
-
-    async def execute_code_instruction(self, instruction: str) -> str:
-        """
-        Execute a code-related instruction.
-
-        Args:
-            instruction: The code instruction to execute
-
-        Returns:
-            Execution result
-        """
-        logger.info(f"Executing code instruction: {instruction[:50]}...")
-
-        if not await self._ensure_connected():
-            return "❌ 無法連接到 Cursor Agent"
-
-        try:
-            response = await self.mcp_client.send_message({
-                "type": "code",
-                "instruction": instruction,
-            })
-            await self._update_activity()
-            return response.get("result", "No result")
-        except Exception as e:
-            logger.error(f"Error executing code instruction: {e}")
-            return f"❌ 錯誤: {str(e)}"
+    # ============================================
+    # File Operations
+    # ============================================
 
     async def read_file(self, file_path: str) -> str:
         """
@@ -276,46 +122,9 @@ class CursorAgent:
         Returns:
             Formatted search results
         """
-        logger.info(f"Searching code: {query}")
-
-        if not await self._ensure_connected():
-            # Fallback to local search if not connected
-            return await self._local_search(query)
-
-        try:
-            response = await self.mcp_client.send_message({
-                "type": "search",
-                "query": query,
-            })
-            await self._update_activity()
-
-            results = response.get("results", [])
-            if not results:
-                return "🔍 未找到匹配結果"
-
-            formatted = []
-            for r in results[:10]:
-                formatted.append(
-                    f"📄 <code>{r['file']}:{r['line']}</code>\n"
-                    f"   {r['content'][:80]}"
-                )
-
-            return "\n\n".join(formatted)
-        except Exception as e:
-            logger.error(f"Error searching: {e}")
-            return f"❌ 搜尋錯誤: {str(e)}"
-
-    async def _local_search(self, query: str) -> str:
-        """
-        Perform local file search when agent is not connected.
-
-        Args:
-            query: Search query
-
-        Returns:
-            Search results
-        """
         import re
+
+        logger.info(f"Searching code: {query}")
 
         results = []
         pattern = re.compile(re.escape(query), re.IGNORECASE)
@@ -324,9 +133,9 @@ class CursorAgent:
             for file_path in self.workspace_path.rglob("*"):
                 if not file_path.is_file():
                     continue
-                if file_path.suffix not in [".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".java"]:
+                if file_path.suffix not in [".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".java", ".md"]:
                     continue
-                if any(p in str(file_path) for p in ["node_modules", ".git", "__pycache__", "venv"]):
+                if any(p in str(file_path) for p in ["node_modules", ".git", "__pycache__", "venv", ".venv"]):
                     continue
 
                 try:
@@ -361,7 +170,7 @@ class CursorAgent:
             return "\n\n".join(formatted)
 
         except Exception as e:
-            return f"❌ 本地搜尋錯誤: {str(e)}"
+            return f"❌ 搜尋錯誤: {str(e)}"
 
     async def list_projects(self) -> str:
         """
@@ -413,11 +222,7 @@ class CursorAgent:
 
     def get_root_workspace(self) -> Path:
         """Get the root workspace path from settings."""
-        path = settings.cursor_workspace_path
-        if not path:
-            logger.warning("CURSOR_WORKSPACE_PATH is not set, using current directory")
-            return Path.cwd()
-        return Path(path)
+        return self.root_workspace
 
     def get_current_workspace(self) -> str:
         """Get current workspace path as string."""
@@ -429,7 +234,7 @@ class CursorAgent:
 
     async def list_workspaces(self) -> list[dict]:
         """
-        List all available workspaces (folders) in CURSOR_WORKSPACE_PATH.
+        List all available workspaces (folders) in root workspace.
 
         Returns:
             List of workspace info dictionaries
@@ -446,7 +251,7 @@ class CursorAgent:
         try:
             for item in sorted(root.iterdir()):
                 if item.is_dir() and not item.name.startswith("."):
-                    # Quick check for project indicators (don't count all files)
+                    # Quick check for project indicators
                     has_git = (item / ".git").exists()
                     has_package = (item / "package.json").exists()
                     has_requirements = (item / "requirements.txt").exists()
@@ -460,7 +265,7 @@ class CursorAgent:
                     if has_requirements:
                         project_type = "🐍"  # Python
 
-                    # Quick file count - only count direct children, not recursive
+                    # Quick file count - only count direct children
                     try:
                         file_count = sum(1 for f in item.iterdir() if f.is_file())
                     except PermissionError:
@@ -506,7 +311,7 @@ class CursorAgent:
 
     async def switch_workspace(self, workspace_name: str) -> str:
         """
-        Switch to a different workspace from CURSOR_WORKSPACE_PATH.
+        Switch to a different workspace from root workspace.
 
         Args:
             workspace_name: Name of the workspace folder
@@ -557,6 +362,10 @@ class CursorAgent:
                     total_files += 1
                     ext = f.suffix.lower() or "(無副檔名)"
                     file_types[ext] = file_types.get(ext, 0) + 1
+
+                    # Limit iteration for large directories
+                    if total_files > 1000:
+                        break
         except Exception:
             pass
 
@@ -575,4 +384,7 @@ class CursorAgent:
         }
 
 
-__all__ = ["CursorAgent"]
+# Alias for backward compatibility
+CursorAgent = WorkspaceAgent
+
+__all__ = ["WorkspaceAgent", "CursorAgent"]

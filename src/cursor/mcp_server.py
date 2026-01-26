@@ -1,218 +1,286 @@
+#!/usr/bin/env python3
 """
-Simple MCP Server for bridging Telegram commands to local operations
-This server can run independently and handle requests from CursorBot
+MCP Server for CursorBot
+Allows Cursor IDE to receive questions from Telegram and send answers back
+
+This server provides tools that Cursor Agent can use to:
+1. Get pending questions from Telegram users
+2. Answer questions (automatically sent back to Telegram)
 """
 
 import asyncio
 import json
-import subprocess
+import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-import websockets
-from websockets.server import WebSocketServerProtocol
+# Data storage path
+DATA_DIR = Path(__file__).parent.parent.parent / "data"
+QUESTIONS_FILE = DATA_DIR / "pending_questions.json"
+ANSWERS_FILE = DATA_DIR / "answers.json"
 
-from ..utils.config import settings
-from ..utils.logger import logger
 
+def ensure_data_dir():
+    """Ensure data directory exists."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if not QUESTIONS_FILE.exists():
+        QUESTIONS_FILE.write_text("[]")
+    if not ANSWERS_FILE.exists():
+        ANSWERS_FILE.write_text("[]")
+
+
+def load_questions() -> list[dict]:
+    """Load pending questions."""
+    ensure_data_dir()
+    try:
+        return json.loads(QUESTIONS_FILE.read_text())
+    except Exception:
+        return []
+
+
+def save_questions(questions: list[dict]):
+    """Save questions to file."""
+    ensure_data_dir()
+    QUESTIONS_FILE.write_text(json.dumps(questions, ensure_ascii=False, indent=2))
+
+
+def load_answers() -> list[dict]:
+    """Load answers."""
+    ensure_data_dir()
+    try:
+        return json.loads(ANSWERS_FILE.read_text())
+    except Exception:
+        return []
+
+
+def save_answers(answers: list[dict]):
+    """Save answers to file."""
+    ensure_data_dir()
+    ANSWERS_FILE.write_text(json.dumps(answers, ensure_ascii=False, indent=2))
+
+
+def add_question(question_id: str, user_id: int, username: str, question: str) -> dict:
+    """Add a new question from Telegram."""
+    questions = load_questions()
+    
+    q = {
+        "id": question_id,
+        "user_id": user_id,
+        "username": username,
+        "question": question,
+        "status": "pending",
+        "created_at": datetime.now().isoformat(),
+    }
+    
+    questions.append(q)
+    save_questions(questions)
+    return q
+
+
+def get_pending_questions() -> list[dict]:
+    """Get all pending questions."""
+    questions = load_questions()
+    return [q for q in questions if q.get("status") == "pending"]
+
+
+def answer_question(question_id: str, answer: str) -> bool:
+    """Answer a question."""
+    questions = load_questions()
+    
+    for q in questions:
+        if q["id"] == question_id:
+            q["status"] = "answered"
+            q["answered_at"] = datetime.now().isoformat()
+            break
+    
+    save_questions(questions)
+    
+    # Save answer
+    answers = load_answers()
+    answers.append({
+        "question_id": question_id,
+        "answer": answer,
+        "created_at": datetime.now().isoformat(),
+    })
+    save_answers(answers)
+    
+    return True
+
+
+def get_new_answers() -> list[dict]:
+    """Get answers that haven't been sent to Telegram yet."""
+    answers = load_answers()
+    # Return answers and clear them
+    save_answers([])
+    return answers
+
+
+# ============================================
+# MCP Protocol Implementation
+# ============================================
 
 class MCPServer:
     """
-    Simple MCP-compatible WebSocket server.
-    Handles requests from CursorBot and executes local operations.
+    MCP Server using stdio transport.
+    Implements the Model Context Protocol for Cursor IDE.
     """
 
-    def __init__(self, host: str = "localhost", port: int = 3000):
-        self.host = host
-        self.port = port
-        self.workspace_path = Path(settings.cursor_workspace_path)
-        self._clients: set[WebSocketServerProtocol] = set()
-
-    async def handle_client(self, websocket: WebSocketServerProtocol) -> None:
-        """Handle a client connection."""
-        self._clients.add(websocket)
-        client_info = f"{websocket.remote_address}"
-        logger.info(f"MCP client connected: {client_info}")
-
-        try:
-            async for message in websocket:
-                try:
-                    data = json.loads(message)
-                    response = await self.handle_message(data)
-                    await websocket.send(json.dumps(response))
-                except json.JSONDecodeError:
-                    await websocket.send(json.dumps({
-                        "error": "Invalid JSON"
-                    }))
-                except Exception as e:
-                    logger.error(f"Error handling message: {e}")
-                    await websocket.send(json.dumps({
-                        "id": data.get("id"),
-                        "error": str(e)
-                    }))
-
-        except websockets.ConnectionClosed:
-            logger.info(f"MCP client disconnected: {client_info}")
-        finally:
-            self._clients.discard(websocket)
-
-    async def handle_message(self, data: dict) -> dict:
-        """
-        Handle incoming MCP message.
-
-        Args:
-            data: Parsed message data
-
-        Returns:
-            Response dictionary
-        """
-        msg_id = data.get("id")
-        msg_type = data.get("type")
-
-        logger.debug(f"Received message type: {msg_type}")
-
-        if msg_type == "ping":
-            return {"id": msg_id, "type": "pong"}
-
-        if msg_type == "ask":
-            return await self._handle_ask(msg_id, data)
-
-        if msg_type == "chat":
-            return await self._handle_chat(msg_id, data)
-
-        if msg_type == "code":
-            return await self._handle_code(msg_id, data)
-
-        if msg_type == "search":
-            return await self._handle_search(msg_id, data)
-
-        return {
-            "id": msg_id,
-            "error": f"Unknown message type: {msg_type}"
+    def __init__(self):
+        self.tools = {
+            "get_telegram_questions": {
+                "description": "獲取來自 Telegram 的待處理問題。返回所有 status 為 pending 的問題列表。請定期呼叫此工具檢查新問題。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                },
+            },
+            "answer_telegram_question": {
+                "description": "回答一個 Telegram 問題。提供問題 ID 和你的回答，答案會自動發送回 Telegram。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "question_id": {
+                            "type": "string",
+                            "description": "問題的 ID",
+                        },
+                        "answer": {
+                            "type": "string",
+                            "description": "你的回答內容，可以包含 markdown 格式",
+                        },
+                    },
+                    "required": ["question_id", "answer"],
+                },
+            },
         }
 
-    async def _handle_ask(self, msg_id: str, data: dict) -> dict:
-        """Handle ask message - forward to AI or return placeholder."""
-        content = data.get("content", "")
+    async def handle_request(self, request: dict) -> dict:
+        """Handle an MCP request."""
+        method = request.get("method", "")
+        req_id = request.get("id")
+        params = request.get("params", {})
 
-        # In a real implementation, you would call an AI API here
-        # For now, return a helpful placeholder
-        response_content = (
-            f"收到您的問題：「{content[:100]}」\n\n"
-            "（此為本地 MCP Server 回應。如需 AI 功能，請整合 OpenAI/Claude API）"
-        )
+        if method == "initialize":
+            return self._response(req_id, {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {},
+                },
+                "serverInfo": {
+                    "name": "cursorbot",
+                    "version": "1.0.0",
+                },
+            })
 
+        elif method == "tools/list":
+            tools_list = []
+            for name, info in self.tools.items():
+                tools_list.append({
+                    "name": name,
+                    "description": info["description"],
+                    "inputSchema": info["inputSchema"],
+                })
+            return self._response(req_id, {"tools": tools_list})
+
+        elif method == "tools/call":
+            tool_name = params.get("name")
+            arguments = params.get("arguments", {})
+            
+            result = await self._call_tool(tool_name, arguments)
+            return self._response(req_id, {
+                "content": [{"type": "text", "text": result}],
+            })
+
+        elif method == "notifications/initialized":
+            # No response needed for notifications
+            return None
+
+        else:
+            return self._error(req_id, -32601, f"Method not found: {method}")
+
+    async def _call_tool(self, name: str, arguments: dict) -> str:
+        """Execute a tool and return the result."""
+        if name == "get_telegram_questions":
+            questions = get_pending_questions()
+            if not questions:
+                return "目前沒有待處理的問題。"
+            
+            result = f"找到 {len(questions)} 個待處理問題：\n\n"
+            for q in questions:
+                result += f"---\n"
+                result += f"ID: {q['id']}\n"
+                result += f"用戶: {q['username']} (ID: {q['user_id']})\n"
+                result += f"時間: {q['created_at']}\n"
+                result += f"問題: {q['question']}\n\n"
+            
+            result += "請使用 answer_telegram_question 工具回答問題。"
+            return result
+
+        elif name == "answer_telegram_question":
+            question_id = arguments.get("question_id")
+            answer = arguments.get("answer")
+            
+            if not question_id or not answer:
+                return "錯誤：需要提供 question_id 和 answer"
+            
+            success = answer_question(question_id, answer)
+            if success:
+                return f"✅ 已回答問題 {question_id}，答案將發送到 Telegram。"
+            else:
+                return f"❌ 找不到問題 {question_id}"
+
+        else:
+            return f"未知工具: {name}"
+
+    def _response(self, req_id: Any, result: dict) -> dict:
+        """Create a success response."""
         return {
-            "id": msg_id,
-            "content": response_content
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": result,
         }
 
-    async def _handle_chat(self, msg_id: str, data: dict) -> dict:
-        """Handle chat message."""
-        content = data.get("content", "")
-
+    def _error(self, req_id: Any, code: int, message: str) -> dict:
+        """Create an error response."""
         return {
-            "id": msg_id,
-            "content": f"[MCP Server] 收到訊息：{content[:100]}"
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "error": {"code": code, "message": message},
         }
 
-    async def _handle_code(self, msg_id: str, data: dict) -> dict:
-        """Handle code instruction."""
-        instruction = data.get("instruction", "")
-
-        return {
-            "id": msg_id,
-            "result": (
-                f"指令：{instruction[:100]}\n\n"
-                "（程式碼生成功能需整合 AI API）"
-            )
-        }
-
-    async def _handle_search(self, msg_id: str, data: dict) -> dict:
-        """Handle search request - perform local grep."""
-        query = data.get("query", "")
-
-        if not query:
-            return {"id": msg_id, "results": []}
-
-        results = []
-
-        try:
-            # Use grep for searching
-            process = await asyncio.create_subprocess_exec(
-                "grep",
-                "-rn",
-                "--include=*.py",
-                "--include=*.js",
-                "--include=*.ts",
-                "--include=*.tsx",
-                "--include=*.jsx",
-                query,
-                str(self.workspace_path),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-
-            stdout, _ = await asyncio.wait_for(
-                process.communicate(),
-                timeout=10.0
-            )
-
-            for line in stdout.decode("utf-8", errors="replace").split("\n")[:20]:
+    async def run_stdio(self):
+        """Run the server using stdio transport."""
+        while True:
+            try:
+                line = await asyncio.get_event_loop().run_in_executor(
+                    None, sys.stdin.readline
+                )
+                
+                if not line:
+                    break
+                
+                line = line.strip()
                 if not line:
                     continue
 
-                parts = line.split(":", 2)
-                if len(parts) >= 3:
-                    file_path = parts[0]
-                    try:
-                        rel_path = Path(file_path).relative_to(self.workspace_path)
-                    except ValueError:
-                        rel_path = file_path
+                request = json.loads(line)
+                response = await self.handle_request(request)
+                
+                if response:
+                    sys.stdout.write(json.dumps(response) + "\n")
+                    sys.stdout.flush()
 
-                    results.append({
-                        "file": str(rel_path),
-                        "line": int(parts[1]) if parts[1].isdigit() else 0,
-                        "content": parts[2][:100] if len(parts) > 2 else ""
-                    })
-
-        except asyncio.TimeoutError:
-            logger.warning("Search timed out")
-        except Exception as e:
-            logger.error(f"Search error: {e}")
-
-        return {"id": msg_id, "results": results}
-
-    async def start(self) -> None:
-        """Start the MCP server."""
-        logger.info(f"Starting MCP Server on ws://{self.host}:{self.port}")
-
-        async with websockets.serve(
-            self.handle_client,
-            self.host,
-            self.port,
-        ):
-            logger.info(f"MCP Server running at ws://{self.host}:{self.port}")
-            await asyncio.Future()  # Run forever
-
-    async def stop(self) -> None:
-        """Stop the server and disconnect all clients."""
-        for client in self._clients:
-            await client.close()
-        self._clients.clear()
+            except json.JSONDecodeError as e:
+                sys.stderr.write(f"JSON decode error: {e}\n")
+            except Exception as e:
+                sys.stderr.write(f"Error: {e}\n")
 
 
-async def run_mcp_server():
-    """Run the MCP server as standalone."""
-    server = MCPServer(
-        host="localhost",
-        port=settings.cursor_mcp_port,
-    )
-    await server.start()
+async def main():
+    """Main entry point."""
+    server = MCPServer()
+    await server.run_stdio()
 
 
 if __name__ == "__main__":
-    asyncio.run(run_mcp_server())
-
-
-__all__ = ["MCPServer", "run_mcp_server"]
+    asyncio.run(main())

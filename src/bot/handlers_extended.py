@@ -24,7 +24,7 @@ def get_cursor_agent() -> CursorAgent:
     """Get or create cursor agent instance."""
     global cursor_agent
     if cursor_agent is None:
-        cursor_agent = CursorAgent(use_mock=settings.debug)
+        cursor_agent = CursorAgent()
     return cursor_agent
 
 
@@ -695,187 +695,6 @@ async def cd_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.message.reply_text(result, parse_mode="HTML")
 
 
-# ============================================
-# Cursor Cloud Agent Handlers
-# ============================================
-
-
-@authorized_only
-async def repo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle /repo command to set default GitHub repository.
-    
-    Usage:
-        /repo <github_url>
-        /repo - Show current repo
-    """
-    from ..cursor.cursor_api import get_cursor_ai
-    cursor = get_cursor_ai()
-
-    if not context.args:
-        # Show current repo
-        repo = cursor._default_repo
-        if repo:
-            await update.message.reply_text(
-                f"📦 <b>目前預設倉庫</b>\n\n"
-                f"<code>{repo}</code>\n\n"
-                f"使用 /repo <url> 更改",
-                parse_mode="HTML",
-            )
-        else:
-            await update.message.reply_text(
-                "❌ 尚未設定預設倉庫\n\n"
-                "用法: /repo <github_url>\n"
-                "例: /repo https://github.com/user/repo"
-            )
-        return
-
-    repo_url = context.args[0]
-    
-    # Validate URL
-    if not repo_url.startswith("https://github.com/"):
-        await update.message.reply_text(
-            "❌ 請提供有效的 GitHub 倉庫 URL\n\n"
-            "例: https://github.com/username/repository"
-        )
-        return
-
-    cursor.set_default_repo(repo_url)
-
-    await update.message.reply_text(
-        f"✅ 已設定預設倉庫\n\n"
-        f"<code>{repo_url}</code>\n\n"
-        f"現在可以使用 /ask 發問了！",
-        parse_mode="HTML",
-    )
-
-
-@authorized_only
-async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle /agents command to list all agents.
-    """
-    from ..cursor.cursor_api import get_cursor_ai
-    cursor = get_cursor_ai()
-
-    if not cursor.is_configured:
-        await update.message.reply_text(
-            "❌ Cursor API 未設定\n\n"
-            "請在 .env 設定 CURSOR_API_KEY"
-        )
-        return
-
-    await update.message.chat.send_action("typing")
-    
-    user_id = update.effective_user.id
-    result = await cursor.list_user_agents(user_id)
-    
-    await update.message.reply_text(result, parse_mode="HTML")
-
-
-@authorized_only
-async def agent_status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle /agent command to check agent status.
-    
-    Usage:
-        /agent <agent_id>
-    """
-    if not context.args:
-        await update.message.reply_text(
-            "⚠️ 用法: /agent <agent_id>\n\n"
-            "例: /agent bc_abc123"
-        )
-        return
-
-    agent_id = context.args[0]
-
-    from ..cursor.cursor_api import get_cursor_ai
-    cursor = get_cursor_ai()
-
-    if not cursor.is_configured:
-        await update.message.reply_text("❌ Cursor API 未設定")
-        return
-
-    await update.message.chat.send_action("typing")
-    
-    result = await cursor.get_agent_status(agent_id)
-    await update.message.reply_text(result, parse_mode="HTML")
-
-
-@authorized_only
-async def models_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle /models command to list available Cursor models.
-    """
-    from ..cursor.cursor_api import get_cursor_ai
-    cursor = get_cursor_ai()
-
-    if not cursor.is_configured:
-        await update.message.reply_text("❌ Cursor API 未設定")
-        return
-
-    await update.message.chat.send_action("typing")
-
-    try:
-        models = await cursor.list_models()
-        
-        if models:
-            models_text = "\n".join(f"• {m}" for m in models)
-            await update.message.reply_text(
-                f"<b>🧠 可用模型</b>\n\n{models_text}",
-                parse_mode="HTML",
-            )
-        else:
-            await update.message.reply_text("📋 無可用模型資訊")
-    except Exception as e:
-        await update.message.reply_text(f"❌ 錯誤: {str(e)}")
-
-
-@authorized_only
-async def cursor_info_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle /cursor command to show Cursor API status.
-    """
-    from ..cursor.cursor_api import get_cursor_ai
-    cursor = get_cursor_ai()
-
-    if not cursor.is_configured:
-        await update.message.reply_text(
-            "<b>🔧 Cursor Cloud Agent 設定</b>\n\n"
-            "❌ API Key 未設定\n\n"
-            "<b>設定步驟:</b>\n"
-            "1. 前往 https://cursor.com/settings\n"
-            "2. 複製 API Key\n"
-            "3. 在 .env 中設定:\n"
-            "<code>CURSOR_API_KEY=your_key</code>\n\n"
-            "<b>也需要設定 GitHub 倉庫:</b>\n"
-            "/repo https://github.com/user/repo",
-            parse_mode="HTML",
-        )
-        return
-
-    await update.message.chat.send_action("typing")
-
-    try:
-        info = await cursor.verify_api_key()
-        repo = cursor._default_repo or "（未設定）"
-
-        await update.message.reply_text(
-            f"<b>🤖 Cursor Cloud Agent</b>\n\n"
-            f"✅ <b>狀態:</b> 已連接\n"
-            f"👤 <b>帳號:</b> {info.get('userEmail', 'N/A')}\n"
-            f"🔑 <b>Key 名稱:</b> {info.get('apiKeyName', 'N/A')}\n"
-            f"📦 <b>預設倉庫:</b> {repo}\n\n"
-            f"<b>指令:</b>\n"
-            f"• /ask - 詢問 Cursor Agent\n"
-            f"• /repo - 設定 GitHub 倉庫\n"
-            f"• /agents - 列出 Agents\n"
-            f"• /models - 列出可用模型",
-            parse_mode="HTML",
-        )
-    except Exception as e:
-        await update.message.reply_text(f"❌ API 錯誤: {str(e)}")
 
 
 def setup_extended_handlers(app) -> None:
@@ -910,13 +729,6 @@ def setup_extended_handlers(app) -> None:
     app.add_handler(CommandHandler("ws", ws_handler))
     app.add_handler(CommandHandler("pwd", pwd_handler))
     app.add_handler(CommandHandler("cd", cd_handler))
-
-    # Cursor Cloud Agent handlers
-    app.add_handler(CommandHandler("repo", repo_handler))
-    app.add_handler(CommandHandler("agents", agents_handler))
-    app.add_handler(CommandHandler("agent", agent_status_handler))
-    app.add_handler(CommandHandler("models", models_handler))
-    app.add_handler(CommandHandler("cursor", cursor_info_handler))
 
     # Callback handlers for inline keyboards
     app.add_handler(CallbackQueryHandler(

@@ -1,20 +1,15 @@
 """
-Cursor Agent communication module
+Cursor module for CursorBot
+Provides workspace management and MCP server for Cursor IDE integration
 """
 
-from .agent import CursorAgent
-from .mcp_client import MCPClient, MockMCPClient
-from .mcp_protocol import MCPProtocolClient, StdioTransport, HTTPTransport
+from .agent import WorkspaceAgent, CursorAgent
 from .file_operations import FileOperations, EditResult
 from .terminal import TerminalManager, CommandResult, CommandStatus
 
 __all__ = [
+    "WorkspaceAgent",
     "CursorAgent",
-    "MCPClient",
-    "MockMCPClient",
-    "MCPProtocolClient",
-    "StdioTransport",
-    "HTTPTransport",
     "FileOperations",
     "EditResult",
     "TerminalManager",
