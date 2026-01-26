@@ -1,73 +1,89 @@
 @echo off
-chcp 65001 >nul
+setlocal enabledelayedexpansion
+
+:: Set UTF-8 encoding (ignore errors)
+chcp 65001 >nul 2>&1
+
 title CursorBot
 
 echo ========================================
-echo         CursorBot 快速啟動
+echo         CursorBot Quick Start
 echo ========================================
 echo.
 
+:: Get script directory and change to it
+cd /d "%~dp0"
+echo [INFO] Working directory: %CD%
+echo.
+
 :: Check Python
+echo [INFO] Checking Python...
 where python >nul 2>&1
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo [ERROR] Python not found. Please install Python 3.10+
+    echo.
     pause
     exit /b 1
 )
 
+:: Show Python version
+for /f "tokens=*" %%i in ('python --version 2^>^&1') do echo [OK] %%i
+
 :: Check/Install Rust (required for pydantic-core compilation)
+echo.
 echo [INFO] Checking Rust installation...
 where rustc >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [WARN] Rust not found. Attempting to install...
-    echo [INFO] Downloading rustup-init.exe...
-    
-    :: Download rustup-init.exe using PowerShell
-    powershell -Command "Invoke-WebRequest -Uri 'https://win.rustup.rs/x86_64' -OutFile 'rustup-init.exe'"
-    
-    if exist "rustup-init.exe" (
-        echo [INFO] Installing Rust (this may take a few minutes)...
-        rustup-init.exe -y --default-toolchain stable
-        del rustup-init.exe
-        
-        :: Add Rust to current PATH
-        set "PATH=%USERPROFILE%\.cargo\bin;%PATH%"
-        
-        echo [OK] Rust installed successfully
-        echo [INFO] Please restart this script to ensure Rust is properly loaded
-        pause
-        exit /b 0
-    ) else (
-        echo [WARN] Could not download Rust installer
-        echo [INFO] You can manually install from: https://rustup.rs
-        echo [INFO] Continuing with pre-built packages...
-    )
+if !errorlevel! neq 0 (
+    echo [WARN] Rust not found.
+    echo [INFO] Will try to use pre-built packages first.
+    echo [INFO] If that fails, install Rust from: https://rustup.rs
+    set "RUST_INSTALLED=0"
 ) else (
-    for /f "tokens=*" %%i in ('rustc --version') do echo [OK] %%i
+    for /f "tokens=*" %%i in ('rustc --version 2^>^&1') do echo [OK] %%i
+    set "RUST_INSTALLED=1"
 )
 
 :: Check if venv exists
+echo.
 if not exist "venv" (
     echo [INFO] Creating virtual environment...
     python -m venv venv
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo [ERROR] Failed to create venv
+        echo.
         pause
         exit /b 1
     )
     echo [OK] Virtual environment created
+) else (
+    echo [OK] Virtual environment exists
 )
 
 :: Activate venv
+echo.
 echo [INFO] Activating virtual environment...
-call venv\Scripts\activate.bat
+if exist "venv\Scripts\activate.bat" (
+    call venv\Scripts\activate.bat
+    echo [OK] Virtual environment activated
+) else (
+    echo [ERROR] venv\Scripts\activate.bat not found
+    echo.
+    pause
+    exit /b 1
+)
 
 :: Upgrade pip first (important for pre-built wheels)
+echo.
 echo [INFO] Upgrading pip...
-python -m pip install --upgrade pip >nul 2>&1
-echo [OK] pip upgraded
+python -m pip install --upgrade pip
+if !errorlevel! neq 0 (
+    echo [WARN] Failed to upgrade pip, continuing anyway...
+) else (
+    echo [OK] pip upgraded
+)
 
 :: Check .env file
+echo.
 if not exist ".env" (
     echo [WARN] .env file not found
     if exist "env.example" (
@@ -75,31 +91,53 @@ if not exist ".env" (
         copy env.example .env >nul
         echo [INFO] Please edit .env file with your settings
         notepad .env
+        echo.
         pause
     ) else (
         echo [ERROR] No env.example found
+        echo.
         pause
         exit /b 1
     )
+) else (
+    echo [OK] .env file exists
 )
 
 :: Install dependencies
+echo.
 echo [INFO] Checking dependencies...
 pip show python-telegram-bot >nul 2>&1
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo [INFO] Installing dependencies...
+    echo.
     
     :: Try pre-built packages first (avoid compilation)
-    echo [INFO] Attempting to install pydantic with pre-built packages...
-    pip install pydantic pydantic-core --only-binary :all: >nul 2>&1
-    if %errorlevel% neq 0 (
+    echo [INFO] Step 1: Installing pydantic with pre-built packages...
+    pip install pydantic pydantic-core --only-binary :all:
+    if !errorlevel! neq 0 (
         echo [WARN] Pre-built packages not available, trying source build...
         pip install pydantic pydantic-core
+        if !errorlevel! neq 0 (
+            echo.
+            echo [ERROR] Failed to install pydantic-core
+            echo.
+            echo ============================================
+            echo   Please install Rust manually:
+            echo   1. Visit: https://rustup.rs
+            echo   2. Download and run rustup-init.exe
+            echo   3. Restart this script
+            echo ============================================
+            echo.
+            pause
+            exit /b 1
+        )
     )
     
     :: Install remaining dependencies
+    echo.
+    echo [INFO] Step 2: Installing remaining dependencies...
     pip install -r requirements.txt
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo [ERROR] Failed to install dependencies
         echo.
         echo Possible solutions:
@@ -110,6 +148,9 @@ if %errorlevel% neq 0 (
         pause
         exit /b 1
     )
+    echo [OK] Dependencies installed
+) else (
+    echo [OK] Dependencies already installed
 )
 
 :: Start bot
