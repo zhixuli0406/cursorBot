@@ -270,70 +270,111 @@ class CursorBackgroundAgent:
     async def wait_for_completion(
         self,
         composer_id: str,
-        timeout: int = 300,
+        timeout: int = 0,  # 0 = no timeout (infinite polling)
         poll_interval: int = 5,
         callback: Optional[callable] = None,
+        status_update_interval: int = 60,  # Send status update every N seconds
     ) -> dict:
         """
         Wait for a task to complete with polling.
         
+        Continuously polls until the task is completed or failed.
+        No timeout by default - will keep polling until task finishes.
+        
         Args:
             composer_id: The task/composer ID
-            timeout: Maximum time to wait in seconds
+            timeout: Maximum time to wait (0 = infinite, keep polling)
             poll_interval: Time between status checks
             callback: Optional async callback for status updates
+            status_update_interval: Send periodic status updates every N seconds
             
         Returns:
             dict with final task status and output
         """
         start_time = asyncio.get_event_loop().time()
         last_status = None
+        last_update_time = start_time
+        poll_count = 0
+        
+        logger.info(f"Starting to poll task {composer_id} (timeout={timeout}, interval={poll_interval})")
         
         while True:
-            elapsed = asyncio.get_event_loop().time() - start_time
+            poll_count += 1
+            current_time = asyncio.get_event_loop().time()
+            elapsed = current_time - start_time
             
-            if elapsed > timeout:
+            # Only apply timeout if explicitly set (> 0)
+            if timeout > 0 and elapsed > timeout:
+                logger.warning(f"Task {composer_id} timed out after {elapsed:.0f}s")
                 return {
                     "success": False,
                     "composer_id": composer_id,
                     "status": "timeout",
-                    "message": f"Task timed out after {timeout}s",
+                    "message": f"Task timed out after {timeout}s (still polling possible via /result)",
+                    "elapsed": elapsed,
                 }
             
-            result = await self.get_task_details(composer_id)
+            try:
+                result = await self.get_task_details(composer_id)
+            except Exception as e:
+                logger.error(f"Error getting task details: {e}")
+                # Don't fail immediately, retry on next poll
+                await asyncio.sleep(poll_interval)
+                continue
             
             if not result.get("success"):
-                return result
+                # API error - log but continue polling
+                logger.warning(f"Task {composer_id} status check failed: {result.get('message')}")
+                await asyncio.sleep(poll_interval)
+                continue
             
             status = result.get("status", "unknown")
             
             # Notify callback of status change
             if callback and status != last_status:
                 try:
-                    await callback(composer_id, status, result)
+                    await callback(composer_id, status, result, elapsed)
                 except Exception as e:
                     logger.error(f"Callback error: {e}")
+            
+            # Periodic status update callback (even if status hasn't changed)
+            if callback and (current_time - last_update_time) >= status_update_interval:
+                try:
+                    await callback(composer_id, status, result, elapsed, periodic=True)
+                except Exception as e:
+                    logger.error(f"Periodic callback error: {e}")
+                last_update_time = current_time
             
             last_status = status
             
             # Check if completed
             if status in ["completed", "finished", "done", "success"]:
+                logger.info(f"Task {composer_id} completed after {elapsed:.0f}s ({poll_count} polls)")
                 return {
                     "success": True,
                     "composer_id": composer_id,
                     "status": "completed",
                     "output": result.get("output", ""),
                     "data": result.get("data", {}),
+                    "elapsed": elapsed,
+                    "poll_count": poll_count,
                 }
             
             # Check if failed
             if status in ["failed", "error", "cancelled"]:
+                logger.info(f"Task {composer_id} failed with status {status} after {elapsed:.0f}s")
                 return {
                     "success": False,
                     "composer_id": composer_id,
                     "status": status,
                     "message": result.get("output", "Task failed"),
+                    "elapsed": elapsed,
+                    "poll_count": poll_count,
                 }
+            
+            # Log progress periodically
+            if poll_count % 12 == 0:  # Every minute at 5s interval
+                logger.info(f"Task {composer_id} still running: {status} (elapsed: {elapsed:.0f}s)")
             
             # Wait before next poll
             await asyncio.sleep(poll_interval)

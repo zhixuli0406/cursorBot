@@ -68,9 +68,23 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     else:
         status_items.append("⚪ Background Agent (未設定)")
 
+    # Check AI model status
+    try:
+        from ..core.llm_providers import get_llm_manager
+        manager = get_llm_manager()
+        available = manager.list_available_providers()
+        if available:
+            current = manager.get_user_model(str(user.id))
+            model_name = f"{current[0]}/{current[1]}" if current else "未設定"
+            status_items.append(f"🤖 {model_name}")
+        else:
+            status_items.append("⚪ AI 模型 (未設定)")
+    except Exception:
+        status_items.append("⚪ AI 模型")
+
     # Check Discord status
     if settings.discord_enabled and settings.discord_bot_token:
-        status_items.append("🟢 Discord Bot")
+        status_items.append("🟢 Discord")
     
     status_text = " | ".join(status_items) if status_items else "⚠️ 請設定 API Key"
 
@@ -81,29 +95,30 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 CursorBot 是一個多平台 AI 編程助手，支援 <b>Telegram</b> 和 <b>Discord</b>，讓你遠端控制 Cursor AI Agent，完全無需開啟 IDE。
 
-<b>📡 狀態:</b> {status_text}
+<b>📡 狀態:</b>
+{status_text}
 
 <b>🚀 快速開始:</b>
-1️⃣ 使用 /repo 選擇 GitHub 倉庫
-2️⃣ 直接發送問題或指令
-3️⃣ AI Agent 會自動執行任務並回報結果
+1️⃣ 使用 /model 選擇 AI 模型
+2️⃣ 使用 /repo 選擇 GitHub 倉庫
+3️⃣ 直接發送問題或使用 /agent 指令
+4️⃣ AI 會自動執行任務並回報結果
 
 <b>✨ 核心功能:</b>
-• <b>AI 編程</b> - 發送問題讓 AI 自動編程
+• <b>多模型 AI</b> - OpenAI/Claude/Gemini/Ollama
+• <b>Agent Loop</b> - 自主任務執行與 Skills
+• <b>AI 編程</b> - Cursor Background Agent
 • <b>多媒體支援</b> - 語音轉錄、圖片附件
 • <b>多平台</b> - Telegram + Discord 同步
 • <b>記憶系統</b> - 儲存常用資訊和偏好
-• <b>技能系統</b> - 翻譯、計算、提醒等
-• <b>瀏覽器工具</b> - 網頁自動化和截圖
-• <b>Agent Loop</b> - 自主任務執行
 
 <b>📋 常用指令:</b>
 /help - 完整指令說明
-/status - 系統狀態
-/repo - 設定倉庫
-/tasks - 我的任務
-/memory - 記憶管理
+/model - 切換 AI 模型
+/agent - AI Agent 對話
 /skills - 可用技能
+/repo - 設定 GitHub 倉庫
+/ask - Cursor Background Agent
 
 點擊下方按鈕或直接發送訊息開始！
 """
@@ -127,6 +142,16 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     else:
         status_parts.append("⚪ Background Agent")
     
+    # Check AI model status
+    try:
+        from ..core.llm_providers import get_llm_manager
+        manager = get_llm_manager()
+        available = manager.list_available_providers()
+        if available:
+            status_parts.append(f"🤖 AI ({len(available)} 提供者)")
+    except Exception:
+        pass
+    
     if settings.discord_enabled:
         status_parts.append("🟢 Discord")
     
@@ -147,9 +172,36 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /settings - 用戶設定
 
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>🤖 AI 任務（Background Agent）</b>
+<b>🤖 AI 模型管理</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-/ask &lt;問題&gt; - 發送問題給 AI Agent
+/model - 查看目前 AI 模型
+/model list - 列出所有可用模型
+/model set &lt;provider&gt; [model] - 切換模型
+/model reset - 恢復預設模型
+
+<b>支援的提供者:</b>
+• OpenAI (GPT-4o, GPT-4o-mini)
+• Anthropic (Claude 3.5 Sonnet)
+• Google (Gemini 2.0 Flash)
+• OpenRouter (多種模型)
+• Ollama (本地模型)
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🤖 Agent Loop &amp; Skills</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/agent &lt;任務&gt; - 啟動 AI Agent 執行任務
+/skills - 查看所有可用技能
+/skills agent - 查看 Agent 專用技能
+
+<b>內建 Agent Skills:</b>
+• 網路搜尋、程式碼分析
+• 檔案讀取、指令執行
+• UI/UX 設計系統生成
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>📋 Cursor Background Agent</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/ask &lt;問題&gt; - 發送問題給 Cursor Agent
 /repo &lt;owner/repo&gt; - 切換 GitHub 倉庫
 /repos - 查看帳號中的倉庫
 /tasks - 查看我的任務列表
@@ -165,34 +217,24 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /memory add &lt;key&gt; &lt;value&gt; - 新增記憶
 /memory get &lt;key&gt; - 取得記憶
 /memory del &lt;key&gt; - 刪除記憶
-/memory search &lt;query&gt; - 搜尋記憶
 /clear - 清除對話上下文
 
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>🎯 技能系統</b>
+<b>🎯 指令技能</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-/skills - 查看所有可用技能
 /translate &lt;lang&gt; &lt;text&gt; - 翻譯文字
 /calc &lt;expression&gt; - 計算表達式
 /remind &lt;time&gt; &lt;msg&gt; - 設定提醒
 /schedule - 查看排程任務
 
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>📁 檔案操作</b>
+<b>📁 檔案 &amp; 終端機</b>
 ━━━━━━━━━━━━━━━━━━━━━━
 /file read &lt;路徑&gt; - 讀取檔案
 /file list &lt;目錄&gt; - 列出檔案
-/write &lt;路徑&gt; - 建立檔案
-/edit &lt;檔案&gt; - 編輯檔案
-/delete &lt;路徑&gt; - 刪除檔案
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>💻 終端機操作</b>
-━━━━━━━━━━━━━━━━━━━━━━
 /run &lt;命令&gt; - 執行命令
 /run_bg &lt;命令&gt; - 背景執行
 /jobs - 查看執行中命令
-/kill &lt;ID&gt; - 停止命令
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>📂 工作區管理</b>
@@ -202,30 +244,11 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /search &lt;關鍵字&gt; - 搜尋程式碼
 
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>🤖 Agent Loop</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/agent &lt;任務&gt; - 啟動自主代理執行
-自動分解任務、多步驟推理、調用工具
-
-━━━━━━━━━━━━━━━━━━━━━━
 <b>🌐 Browser 工具</b>
 ━━━━━━━━━━━━━━━━━━━━━━
 /browser navigate &lt;URL&gt; - 開啟網頁
 /browser screenshot - 網頁截圖
 /browser text &lt;selector&gt; - 取得文字
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>⏰ 排程系統</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/remind &lt;時間&gt; &lt;訊息&gt; - 設定提醒
-/schedule list - 查看排程
-/schedule cancel &lt;ID&gt; - 取消排程
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🔔 Webhook</b>
-━━━━━━━━━━━━━━━━━━━━━━
-支援 GitHub/GitLab 事件觸發
-透過 API 設定端點
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>🌐 多平台支援</b>
@@ -236,10 +259,10 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>💡 使用提示</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-• 直接發送文字即可與 AI 對話
+• 使用 /model set 切換 AI 模型
+• /agent 會使用你選擇的模型
 • 發送語音會自動轉錄為文字
 • 發送圖片會附加到任務中
-• 點擊按鈕可快速存取功能
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 
@@ -456,15 +479,73 @@ async def _poll_task_completion(
     composer_id: str,
     status_msg,
 ) -> None:
-    """Poll for task completion and send result."""
+    """
+    Poll for task completion and send result.
+    
+    Continuously polls until the task is completed or failed.
+    Sends periodic status updates to the user.
+    """
     try:
         bg_agent = get_background_agent(settings.cursor_api_key)
         tracker = get_task_tracker()
-
+        last_status_msg_update = asyncio.get_event_loop().time()
+        
+        # Status update callback - updates the status message periodically
+        async def status_callback(
+            task_id: str, 
+            status: str, 
+            result: dict, 
+            elapsed: float,
+            periodic: bool = False
+        ):
+            nonlocal last_status_msg_update
+            
+            current_time = asyncio.get_event_loop().time()
+            
+            # Update status message every 30 seconds or on status change
+            if not periodic and (current_time - last_status_msg_update) < 30:
+                return
+            
+            try:
+                # Format elapsed time
+                if elapsed < 60:
+                    time_str = f"{elapsed:.0f}秒"
+                elif elapsed < 3600:
+                    minutes = int(elapsed // 60)
+                    seconds = int(elapsed % 60)
+                    time_str = f"{minutes}分{seconds}秒"
+                else:
+                    hours = int(elapsed // 3600)
+                    minutes = int((elapsed % 3600) // 60)
+                    time_str = f"{hours}小時{minutes}分"
+                
+                status_emoji = {
+                    "running": "🔄",
+                    "pending": "⏳",
+                    "processing": "⚙️",
+                    "queued": "📋",
+                }.get(status, "🔄")
+                
+                await status_msg.edit_text(
+                    f"{status_emoji} <b>任務執行中...</b>\n\n"
+                    f"🆔 <code>{_escape_html(task_id[:8])}</code>\n"
+                    f"📊 狀態: {_escape_html(status)}\n"
+                    f"⏱️ 已執行: {time_str}\n\n"
+                    f"<i>任務仍在執行，請耐心等候...</i>",
+                    parse_mode="HTML",
+                )
+                last_status_msg_update = current_time
+            except Exception as e:
+                # Message might have been deleted, ignore
+                logger.debug(f"Could not update status message: {e}")
+        
+        # Poll with no timeout (0 = infinite), continuous polling
         result = await bg_agent.wait_for_completion(
             composer_id,
-            timeout=settings.background_agent_timeout,
+            timeout=0,  # No timeout - poll indefinitely
             poll_interval=settings.background_agent_poll_interval,
+            callback=status_callback,
+            status_update_interval=60,  # Send callback every 60 seconds
         )
 
         # Update tracker
@@ -475,6 +556,19 @@ async def _poll_task_completion(
         )
 
         from .keyboards import get_task_keyboard
+        
+        # Format elapsed time for final message
+        elapsed = result.get("elapsed", 0)
+        if elapsed < 60:
+            time_str = f"{elapsed:.0f}秒"
+        elif elapsed < 3600:
+            minutes = int(elapsed // 60)
+            seconds = int(elapsed % 60)
+            time_str = f"{minutes}分{seconds}秒"
+        else:
+            hours = int(elapsed // 3600)
+            minutes = int((elapsed % 3600) // 60)
+            time_str = f"{hours}小時{minutes}分"
 
         if result.get("success"):
             output = result.get("output", "（無輸出）")
@@ -484,25 +578,53 @@ async def _poll_task_completion(
 
             await update.effective_chat.send_message(
                 f"✅ <b>任務完成</b>\n\n"
-                f"🆔 <code>{_escape_html(composer_id[:8])}</code>\n\n"
+                f"🆔 <code>{_escape_html(composer_id[:8])}</code>\n"
+                f"⏱️ 執行時間: {time_str}\n\n"
                 f"📝 <b>結果:</b>\n{output}",
                 parse_mode="HTML",
                 reply_markup=get_task_keyboard(composer_id, "completed"),
             )
+            
+            # Delete the status message
+            try:
+                await status_msg.delete()
+            except Exception:
+                pass
         else:
             status = _escape_html(result.get('status', 'unknown'))
             message = _escape_html(result.get('message', 'Unknown'))
             await update.effective_chat.send_message(
                 f"❌ <b>任務失敗</b>\n\n"
                 f"🆔 <code>{_escape_html(composer_id[:8])}</code>\n"
-                f"狀態: {status}\n"
-                f"原因: {message}",
+                f"⏱️ 執行時間: {time_str}\n"
+                f"📊 狀態: {status}\n"
+                f"❗ 原因: {message}",
                 parse_mode="HTML",
                 reply_markup=get_task_keyboard(composer_id, "failed"),
             )
+            
+            # Delete the status message
+            try:
+                await status_msg.delete()
+            except Exception:
+                pass
 
     except Exception as e:
         logger.error(f"Poll error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # Notify user of polling error
+        try:
+            await update.effective_chat.send_message(
+                f"⚠️ <b>輪詢錯誤</b>\n\n"
+                f"🆔 <code>{_escape_html(composer_id[:8])}</code>\n"
+                f"錯誤: {_escape_html(str(e)[:200])}\n\n"
+                f"使用 /result {composer_id[:8]} 手動檢查任務狀態",
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
 
 
 @authorized_only

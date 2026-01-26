@@ -78,6 +78,16 @@ class LLMProvider(ABC):
     def is_available(self) -> bool:
         """Check if this provider is properly configured."""
         return bool(self.config.api_key) and self.config.enabled
+    
+    async def fetch_models(self) -> list[str]:
+        """
+        Fetch available models from the provider API.
+        Override in subclasses to implement provider-specific logic.
+        
+        Returns:
+            List of model IDs
+        """
+        return []
 
 
 # ============================================
@@ -90,6 +100,46 @@ class OpenAIProvider(LLMProvider):
     @property
     def provider_type(self) -> ProviderType:
         return ProviderType.OPENAI
+    
+    async def fetch_models(self) -> list[str]:
+        """Fetch available models from OpenAI API."""
+        import httpx
+        
+        api_key = self.config.api_key
+        api_base = self.config.api_base or "https://api.openai.com/v1"
+        
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(
+                    f"{api_base}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                )
+                
+                if response.status_code != 200:
+                    logger.warning(f"OpenAI models fetch error: {response.status_code}")
+                    return []
+                
+                result = response.json()
+                # Filter for chat models only
+                chat_models = []
+                for model in result.get("data", []):
+                    model_id = model.get("id", "")
+                    # Include GPT models and o1 models
+                    if any(x in model_id for x in ["gpt-4", "gpt-3.5", "o1-", "chatgpt"]):
+                        chat_models.append(model_id)
+                
+                # Sort by name
+                chat_models.sort(key=lambda x: (
+                    0 if "gpt-4o" in x else 
+                    1 if "gpt-4" in x else 
+                    2 if "o1" in x else 
+                    3 if "gpt-3.5" in x else 4
+                ))
+                return chat_models
+                
+        except Exception as e:
+            logger.warning(f"Failed to fetch OpenAI models: {e}")
+            return []
     
     async def generate(self, messages: list[dict], **kwargs) -> str:
         import httpx
@@ -138,6 +188,44 @@ class GoogleProvider(LLMProvider):
     @property
     def provider_type(self) -> ProviderType:
         return ProviderType.GOOGLE
+    
+    async def fetch_models(self) -> list[str]:
+        """Fetch available models from Google Gemini API."""
+        api_key = self.config.api_key
+        
+        try:
+            import google.generativeai as genai
+            
+            genai.configure(api_key=api_key)
+            
+            # Run in executor since list_models is sync
+            loop = asyncio.get_event_loop()
+            models = await loop.run_in_executor(None, lambda: list(genai.list_models()))
+            
+            # Filter for generative models
+            gemini_models = []
+            for model in models:
+                name = model.name.replace("models/", "")
+                # Only include gemini models that support generateContent
+                if "gemini" in name and "generateContent" in [m.name for m in model.supported_generation_methods]:
+                    gemini_models.append(name)
+            
+            # Sort by version (newer first)
+            gemini_models.sort(key=lambda x: (
+                0 if "2.0" in x else
+                1 if "1.5-pro" in x else
+                2 if "1.5-flash" in x else
+                3 if "1.5" in x else
+                4 if "pro" in x else 5
+            ))
+            return gemini_models
+            
+        except ImportError:
+            logger.warning("google-generativeai not installed")
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to fetch Google models: {e}")
+            return []
     
     async def generate(self, messages: list[dict], **kwargs) -> str:
         api_key = self.config.api_key
@@ -206,6 +294,24 @@ class AnthropicProvider(LLMProvider):
     def provider_type(self) -> ProviderType:
         return ProviderType.ANTHROPIC
     
+    async def fetch_models(self) -> list[str]:
+        """
+        Return available Anthropic Claude models.
+        Note: Anthropic doesn't have a public models list API,
+        so we return a predefined list of known models.
+        """
+        # Predefined list of Claude models (Anthropic has no list API)
+        return [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229",
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+            "claude-2.1",
+            "claude-2.0",
+            "claude-instant-1.2",
+        ]
+    
     async def generate(self, messages: list[dict], **kwargs) -> str:
         import httpx
         
@@ -267,6 +373,55 @@ class OpenRouterProvider(LLMProvider):
     def provider_type(self) -> ProviderType:
         return ProviderType.OPENROUTER
     
+    async def fetch_models(self) -> list[str]:
+        """Fetch available models from OpenRouter API."""
+        import httpx
+        
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(
+                    "https://openrouter.ai/api/v1/models",
+                    headers={
+                        "Authorization": f"Bearer {self.config.api_key}",
+                        "HTTP-Referer": "https://github.com/cursorbot",
+                    },
+                )
+                
+                if response.status_code != 200:
+                    logger.warning(f"OpenRouter models fetch error: {response.status_code}")
+                    return []
+                
+                result = response.json()
+                models = []
+                
+                for model in result.get("data", []):
+                    model_id = model.get("id", "")
+                    # Add free indicator
+                    pricing = model.get("pricing", {})
+                    is_free = (
+                        pricing.get("prompt") == "0" or 
+                        pricing.get("prompt") == 0 or
+                        ":free" in model_id
+                    )
+                    models.append({
+                        "id": model_id,
+                        "name": model.get("name", model_id),
+                        "is_free": is_free,
+                        "context_length": model.get("context_length", 0),
+                    })
+                
+                # Sort: free models first, then by context length
+                models.sort(key=lambda x: (
+                    0 if x["is_free"] else 1,
+                    -x["context_length"]
+                ))
+                
+                return [m["id"] for m in models]
+                
+        except Exception as e:
+            logger.warning(f"Failed to fetch OpenRouter models: {e}")
+            return []
+    
     async def generate(self, messages: list[dict], **kwargs) -> str:
         import httpx
         
@@ -316,6 +471,43 @@ class OllamaProvider(LLMProvider):
     def provider_type(self) -> ProviderType:
         return ProviderType.OLLAMA
     
+    def is_available(self) -> bool:
+        """Ollama doesn't require API key, just needs to be enabled."""
+        return self.config.enabled
+    
+    async def fetch_models(self) -> list[str]:
+        """Fetch available models from Ollama local API."""
+        import httpx
+        
+        api_base = self.config.api_base or "http://localhost:11434"
+        
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(f"{api_base}/api/tags")
+                
+                if response.status_code != 200:
+                    logger.warning(f"Ollama models fetch error: {response.status_code}")
+                    return []
+                
+                result = response.json()
+                models = []
+                
+                for model in result.get("models", []):
+                    name = model.get("name", "")
+                    # Remove tag if it's 'latest'
+                    if name.endswith(":latest"):
+                        name = name.replace(":latest", "")
+                    models.append(name)
+                
+                return sorted(models)
+                
+        except httpx.ConnectError:
+            logger.warning(f"Cannot connect to Ollama at {api_base}")
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to fetch Ollama models: {e}")
+            return []
+    
     async def generate(self, messages: list[dict], **kwargs) -> str:
         import httpx
         
@@ -362,6 +554,48 @@ class CustomProvider(LLMProvider):
     @property
     def provider_type(self) -> ProviderType:
         return ProviderType.CUSTOM
+    
+    def is_available(self) -> bool:
+        """Custom provider needs api_base to be set."""
+        return bool(self.config.api_base) and self.config.enabled
+    
+    async def fetch_models(self) -> list[str]:
+        """Try to fetch models from custom OpenAI-compatible endpoint."""
+        import httpx
+        
+        api_base = self.config.api_base
+        api_key = self.config.api_key
+        
+        if not api_base:
+            return []
+        
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(
+                    f"{api_base}/models",
+                    headers=headers,
+                )
+                
+                if response.status_code != 200:
+                    logger.warning(f"Custom endpoint models fetch error: {response.status_code}")
+                    return []
+                
+                result = response.json()
+                models = []
+                
+                # OpenAI format
+                for model in result.get("data", []):
+                    models.append(model.get("id", ""))
+                
+                return sorted(filter(None, models))
+                
+        except Exception as e:
+            logger.warning(f"Failed to fetch models from custom endpoint: {e}")
+            return []
     
     async def generate(self, messages: list[dict], **kwargs) -> str:
         import httpx
@@ -585,10 +819,13 @@ class LLMProviderManager:
         return [p.value for p in self._providers.keys()]
     
     def list_available_models(self) -> dict[str, list[str]]:
-        """List available models for each provider."""
+        """
+        List available models for each provider (fallback/cached).
+        Use fetch_all_models() for live API fetch.
+        """
         models = {}
         
-        # Predefined popular models
+        # Predefined popular models as fallback
         model_lists = {
             ProviderType.OPENAI: [
                 "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
@@ -615,6 +852,41 @@ class LLMProviderManager:
         
         for provider_type in self._providers.keys():
             models[provider_type.value] = model_lists.get(provider_type, [])
+        
+        return models
+    
+    async def fetch_all_models(self, max_per_provider: int = 20) -> dict[str, list[str]]:
+        """
+        Fetch available models from all configured providers via API.
+        
+        Args:
+            max_per_provider: Maximum number of models to return per provider
+        
+        Returns:
+            dict mapping provider name to list of model IDs
+        """
+        models = {}
+        fallback = self.list_available_models()
+        
+        # Create tasks for all providers
+        tasks = {}
+        for provider_type, provider in self._providers.items():
+            tasks[provider_type] = provider.fetch_models()
+        
+        # Execute all fetches concurrently
+        for provider_type, task in tasks.items():
+            try:
+                result = await task
+                if result:
+                    # Limit results and add to dict
+                    models[provider_type.value] = result[:max_per_provider]
+                else:
+                    # Use fallback if fetch returns empty
+                    models[provider_type.value] = fallback.get(provider_type.value, [])
+            except Exception as e:
+                logger.warning(f"Error fetching models for {provider_type.value}: {e}")
+                # Use fallback on error
+                models[provider_type.value] = fallback.get(provider_type.value, [])
         
         return models
     

@@ -823,7 +823,12 @@ def setup_callback_handlers(app) -> None:
     Args:
         app: Telegram Application instance
     """
-    app.add_handler(CallbackQueryHandler(callback_handler))
+    # Use pattern to exclude ws_ prefixed callbacks (handled by workspace_callback_handler)
+    # Also exclude model_ prefixed callbacks (handled by model_callback_handler)
+    app.add_handler(CallbackQueryHandler(
+        callback_handler,
+        pattern=r"^(?!ws_|model_).*"  # Negative lookahead to exclude ws_ and model_ prefixes
+    ))
     logger.info("Callback handlers configured")
 
 

@@ -576,12 +576,25 @@ async def model_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     
     elif args[0] == "list":
-        # List all models
+        # List all models - fetch from APIs
         status = manager.get_current_status(user_id)
         
         if not status["available_providers"]:
             await update.message.reply_text("❌ 沒有可用的 AI 模型")
             return
+        
+        # Send loading message
+        loading_msg = await update.message.reply_text(
+            "🔄 <b>正在從各提供者獲取可用模型...</b>",
+            parse_mode="HTML",
+        )
+        
+        # Fetch models from APIs
+        try:
+            fetched_models = await manager.fetch_all_models(max_per_provider=15)
+        except Exception as e:
+            logger.error(f"Error fetching models: {e}")
+            fetched_models = status["available_models"]
         
         text = "📋 <b>可用 AI 模型列表</b>\n\n"
         
@@ -594,20 +607,55 @@ async def model_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             "custom": "自訂端點",
         }
         
+        provider_emojis = {
+            "openai": "🤖",
+            "google": "🔷",
+            "anthropic": "🟠",
+            "openrouter": "🌐",
+            "ollama": "🦙",
+            "custom": "⚙️",
+        }
+        
+        total_models = 0
         for provider in status["available_providers"]:
             name = provider_names.get(provider, provider)
-            models = status["available_models"].get(provider, [])
+            emoji = provider_emojis.get(provider, "•")
+            models = fetched_models.get(provider, [])
+            total_models += len(models)
             
-            text += f"<b>{name}</b>\n"
-            for model in models:
-                text += f"  • <code>{model}</code>\n"
+            # Current selection indicator
+            current = status.get("current_provider")
+            is_current = provider == current
+            
+            if is_current:
+                text += f"{emoji} <b>{name}</b> ✓\n"
+            else:
+                text += f"{emoji} <b>{name}</b>\n"
+            
+            if models:
+                # Show up to 10 models, indicate if more
+                display_models = models[:10]
+                for model in display_models:
+                    # Mark current model
+                    if is_current and model == status.get("current_model"):
+                        text += f"  • <code>{model}</code> ← 目前使用\n"
+                    else:
+                        text += f"  • <code>{model}</code>\n"
+                
+                if len(models) > 10:
+                    text += f"  <i>...還有 {len(models) - 10} 個模型</i>\n"
+            else:
+                text += "  <i>（無法取得模型列表）</i>\n"
             text += "\n"
         
+        text += f"<b>共 {total_models} 個模型可用</b>\n\n"
         text += "<b>切換方式：</b>\n"
         text += "<code>/model set openai gpt-4o</code>\n"
         text += "<code>/model set anthropic claude-3-5-sonnet-20241022</code>\n"
+        text += "<code>/model set openrouter google/gemini-2.0-flash-exp:free</code>\n"
         
-        await update.message.reply_text(text, parse_mode="HTML")
+        # Edit the loading message with results
+        await loading_msg.edit_text(text, parse_mode="HTML")
         return
     
     elif args[0] == "set" and len(args) >= 2:

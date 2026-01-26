@@ -572,30 +572,18 @@ async def workspace_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 )
                 return
 
-            # Create inline keyboard
-            keyboard = []
-            for ws in workspaces[:15]:  # Limit to 15
-                current_mark = " ✓" if ws["is_current"] else ""
-                button_text = f"{ws['type']} {ws['name']}{current_mark}"
-                keyboard.append([
-                    InlineKeyboardButton(
-                        button_text,
-                        callback_data=f"ws_switch:{ws['name']}"
-                    )
-                ])
-
-            keyboard.append([
-                InlineKeyboardButton("❌ 關閉", callback_data="ws_close")
-            ])
-
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            # Also show as text
-            formatted = await agent.list_workspaces_formatted()
+            # Show first page with pagination
+            page = 0
+            reply_markup = _create_workspace_keyboard(workspaces, page)
+            
+            total = len(workspaces)
+            page_size = 10
+            total_pages = (total + page_size - 1) // page_size
 
             await update.message.reply_text(
-                f"<b>📂 可用工作區</b>\n\n{formatted}\n\n"
-                f"點擊下方按鈕切換工作區：",
+                f"<b>📂 可用工作區</b>\n\n"
+                f"共 <b>{total}</b> 個工作區（第 {page + 1}/{total_pages} 頁）\n\n"
+                f"點擊按鈕切換工作區：",
                 parse_mode="HTML",
                 reply_markup=reply_markup,
             )
@@ -643,6 +631,68 @@ async def ws_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await workspace_handler(update, context)
 
 
+def _create_workspace_keyboard(workspaces: list, page: int = 0, page_size: int = 10) -> InlineKeyboardMarkup:
+    """
+    Create paginated inline keyboard for workspace selection.
+    
+    Args:
+        workspaces: List of workspace dicts
+        page: Current page (0-indexed)
+        page_size: Items per page
+    
+    Returns:
+        InlineKeyboardMarkup with workspace buttons and pagination
+    """
+    total = len(workspaces)
+    total_pages = (total + page_size - 1) // page_size
+    start = page * page_size
+    end = min(start + page_size, total)
+    
+    keyboard = []
+    
+    # Add workspace buttons for current page
+    for ws in workspaces[start:end]:
+        current_mark = " ✓" if ws["is_current"] else ""
+        button_text = f"{ws['type']} {ws['name']}{current_mark}"
+        keyboard.append([
+            InlineKeyboardButton(
+                button_text,
+                callback_data=f"ws_switch:{ws['name']}"
+            )
+        ])
+    
+    # Add pagination row
+    pagination_row = []
+    
+    # Previous button
+    if page > 0:
+        pagination_row.append(
+            InlineKeyboardButton("◀️ 上一頁", callback_data=f"ws_page:{page - 1}")
+        )
+    
+    # Page indicator
+    pagination_row.append(
+        InlineKeyboardButton(f"📄 {page + 1}/{total_pages}", callback_data="ws_noop")
+    )
+    
+    # Next button
+    if page < total_pages - 1:
+        pagination_row.append(
+            InlineKeyboardButton("下一頁 ▶️", callback_data=f"ws_page:{page + 1}")
+        )
+    
+    if pagination_row:
+        keyboard.append(pagination_row)
+    
+    # Add close button
+    keyboard.append([
+        InlineKeyboardButton("🔄 重新整理", callback_data="ws_refresh"),
+        InlineKeyboardButton("❌ 關閉", callback_data="ws_close"),
+    ])
+    
+    return InlineKeyboardMarkup(keyboard)
+
+
 async def workspace_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle workspace inline keyboard callbacks.
@@ -654,6 +704,72 @@ async def workspace_callback_handler(update: Update, context: ContextTypes.DEFAU
 
     if data == "ws_close":
         await query.message.delete()
+        return
+    
+    if data == "ws_noop":
+        # Do nothing for page indicator button
+        return
+    
+    if data == "ws_refresh":
+        # Refresh workspace list
+        agent = get_cursor_agent()
+        workspaces = await agent.list_workspaces()
+        
+        if not workspaces:
+            await query.message.edit_text(
+                "❌ 找不到任何工作區",
+                parse_mode="HTML",
+            )
+            return
+        
+        total = len(workspaces)
+        page_size = 10
+        total_pages = (total + page_size - 1) // page_size
+        
+        reply_markup = _create_workspace_keyboard(workspaces, 0)
+        
+        await query.message.edit_text(
+            f"<b>📂 可用工作區</b>\n\n"
+            f"共 <b>{total}</b> 個工作區（第 1/{total_pages} 頁）\n\n"
+            f"點擊按鈕切換工作區：",
+            parse_mode="HTML",
+            reply_markup=reply_markup,
+        )
+        return
+    
+    if data.startswith("ws_page:"):
+        # Handle pagination
+        page = int(data.split(":")[1])
+        
+        agent = get_cursor_agent()
+        workspaces = await agent.list_workspaces()
+        
+        if not workspaces:
+            await query.message.edit_text(
+                "❌ 找不到任何工作區",
+                parse_mode="HTML",
+            )
+            return
+        
+        total = len(workspaces)
+        page_size = 10
+        total_pages = (total + page_size - 1) // page_size
+        
+        # Validate page number
+        if page < 0:
+            page = 0
+        elif page >= total_pages:
+            page = total_pages - 1
+        
+        reply_markup = _create_workspace_keyboard(workspaces, page)
+        
+        await query.message.edit_text(
+            f"<b>📂 可用工作區</b>\n\n"
+            f"共 <b>{total}</b> 個工作區（第 {page + 1}/{total_pages} 頁）\n\n"
+            f"點擊按鈕切換工作區：",
+            parse_mode="HTML",
+            reply_markup=reply_markup,
+        )
         return
 
     if data.startswith("ws_switch:"):
@@ -673,10 +789,16 @@ async def workspace_callback_handler(update: Update, context: ContextTypes.DEFAU
         if "✅" in result:
             update_workspace_instances()
 
-        # Update the message
+        # Update the message with back button
+        keyboard = [[
+            InlineKeyboardButton("📂 返回列表", callback_data="ws_refresh"),
+            InlineKeyboardButton("❌ 關閉", callback_data="ws_close"),
+        ]]
+        
         await query.message.edit_text(
             result,
             parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
 
 
