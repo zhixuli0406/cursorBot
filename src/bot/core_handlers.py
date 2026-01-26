@@ -371,6 +371,80 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         )
 
 
+@authorized_only
+async def agent_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /agent command - Run Agent Loop for complex tasks.
+    
+    Usage: /agent <task description>
+    """
+    if not context.args:
+        await update.message.reply_text(
+            "🤖 <b>Agent Loop</b>\n\n"
+            "使用方式: <code>/agent &lt;任務描述&gt;</code>\n\n"
+            "範例:\n"
+            "• <code>/agent 幫我分析這段程式碼的效能問題</code>\n"
+            "• <code>/agent 建立一個完整的登入系統</code>\n"
+            "• <code>/agent 重構這個模組並加入測試</code>",
+            parse_mode="HTML",
+        )
+        return
+    
+    task = " ".join(context.args)
+    user_id = update.effective_user.id
+    
+    status_msg = await update.message.reply_text(
+        f"🤖 <b>Agent Loop 啟動中...</b>\n\n"
+        f"任務: {task[:100]}{'...' if len(task) > 100 else ''}\n\n"
+        f"⏳ Agent 正在分析任務...",
+        parse_mode="HTML",
+    )
+    
+    try:
+        from ..core import get_agent_loop
+        import uuid
+        
+        agent = get_agent_loop()
+        
+        # Run the agent loop
+        result = await agent.run(
+            prompt=task,
+            user_id=str(user_id),
+            session_id=str(uuid.uuid4()),
+            context={"source": "telegram", "command": "agent"},
+        )
+        
+        # Format response based on AgentContext result
+        if result.error:
+            await status_msg.edit_text(
+                f"❌ <b>Agent 執行失敗</b>\n\n{result.error}",
+                parse_mode="HTML",
+            )
+        elif result.final_response:
+            response = result.final_response[:4000]
+            await status_msg.edit_text(
+                f"✅ <b>Agent 完成</b>\n\n"
+                f"執行了 {result.step_count} 個步驟\n\n"
+                f"{response}",
+                parse_mode="HTML",
+            )
+        else:
+            await status_msg.edit_text(
+                f"✅ <b>Agent 完成</b>\n\n"
+                f"執行了 {result.step_count} 個步驟",
+                parse_mode="HTML",
+            )
+            
+    except Exception as e:
+        logger.error(f"Agent handler error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        await status_msg.edit_text(
+            f"❌ Agent 執行錯誤: {str(e)[:200]}",
+            parse_mode="HTML",
+        )
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -378,6 +452,9 @@ def setup_core_handlers(app) -> None:
     Args:
         app: Telegram Application instance
     """
+    # Agent command
+    app.add_handler(CommandHandler("agent", agent_handler))
+    
     # Memory commands
     app.add_handler(CommandHandler("memory", memory_handler))
 
@@ -405,6 +482,7 @@ def setup_core_handlers(app) -> None:
 
 
 __all__ = [
+    "agent_handler",
     "memory_handler",
     "skills_handler",
     "schedule_handler",

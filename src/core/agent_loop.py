@@ -386,11 +386,68 @@ Always explain your reasoning and actions.
 _agent_loop: Optional[AgentLoop] = None
 
 
+async def _gemini_provider(conversation: list[dict]) -> str:
+    """
+    Google Gemini LLM provider for Agent Loop.
+    """
+    from ..utils.config import settings
+    
+    api_key = settings.google_ai_api_key
+    if not api_key:
+        raise ValueError("GOOGLE_GENERATIVE_AI_API_KEY not configured")
+    
+    try:
+        import google.generativeai as genai
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Convert conversation to Gemini format
+        prompt_parts = []
+        for msg in conversation:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role == "system":
+                prompt_parts.append(f"[System Instructions]\n{content}\n")
+            elif role == "user":
+                prompt_parts.append(f"[User]\n{content}\n")
+            elif role == "assistant":
+                prompt_parts.append(f"[Assistant]\n{content}\n")
+        
+        prompt_parts.append("[Assistant]\n")
+        full_prompt = "\n".join(prompt_parts)
+        
+        # Generate response
+        response = await model.generate_content_async(full_prompt)
+        
+        return response.text
+        
+    except ImportError:
+        raise ValueError("google-generativeai package not installed")
+    except Exception as e:
+        logger.error(f"Gemini API error: {e}")
+        raise
+
+
 def get_agent_loop() -> AgentLoop:
-    """Get the global AgentLoop instance."""
+    """Get the global AgentLoop instance with Gemini provider."""
     global _agent_loop
     if _agent_loop is None:
-        _agent_loop = AgentLoop()
+        _agent_loop = AgentLoop(
+            llm_provider=_gemini_provider,
+            system_prompt="""You are CursorBot, an intelligent AI assistant that helps with various tasks.
+
+When given a task:
+1. Analyze the request carefully
+2. Break down complex tasks into steps
+3. Provide detailed, helpful responses
+4. Use code examples when appropriate
+5. Be concise but thorough
+
+Always respond in the same language as the user's input.
+If the user writes in Chinese, respond in Chinese.
+"""
+        )
     return _agent_loop
 
 

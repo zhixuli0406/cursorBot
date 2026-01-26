@@ -596,10 +596,6 @@ async def handle_back_main(query) -> None:
 
 async def handle_agent_loop(query) -> None:
     """Show Agent Loop info."""
-    from ..core import get_agent_loop
-
-    agent = get_agent_loop()
-
     text = """🤖 <b>Agent Loop</b>
 
 Agent Loop 是一個自主代理執行系統，可以:
