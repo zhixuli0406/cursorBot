@@ -737,8 +737,6 @@ async def model_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             fetched_models = status["available_models"]
         
         # Cache the fetched models in context for pagination
-        if not context.user_data:
-            context.user_data = {}
         context.user_data["model_list_cache"] = fetched_models
         context.user_data["model_list_providers"] = status["available_providers"]
         
@@ -822,9 +820,6 @@ async def model_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
     manager = get_llm_manager()
     
     # Get cached models from context
-    if not context.user_data:
-        context.user_data = {}
-    
     cached_models = context.user_data.get("model_list_cache", {})
     providers = context.user_data.get("model_list_providers", [])
     
