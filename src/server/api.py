@@ -4,7 +4,8 @@ Provides REST API and webhook endpoints
 """
 
 from contextlib import asynccontextmanager
-from typing import Optional
+from datetime import datetime
+from typing import Optional, List
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,13 +23,65 @@ class HealthResponse(BaseModel):
 
     status: str
     version: str
+    uptime_seconds: float
     telegram_bot: bool
+    discord_bot: bool
+    background_agent: bool
+    llm_providers: List[str]
+    memory_usage_mb: float
+    active_tasks: int
+
+
+class DetailedHealthResponse(BaseModel):
+    """Detailed health check response."""
+    
+    status: str
+    version: str
+    timestamp: str
+    uptime_seconds: float
+    
+    # Services
+    services: dict
+    
+    # LLM Providers
+    llm: dict
+    
+    # Background Agent
+    background_agent: dict
+    
+    # System
+    system: dict
 
 
 class SearchRequest(BaseModel):
     """Request model for search endpoint."""
 
     query: str
+
+
+class BroadcastRequest(BaseModel):
+    """Request model for broadcast endpoint."""
+    
+    message: str
+    user_ids: Optional[List[int]] = None  # If None, broadcast to all allowed users
+    parse_mode: Optional[str] = "HTML"
+
+
+class UsageStatsResponse(BaseModel):
+    """Usage statistics response model."""
+    
+    total_requests: int
+    successful_requests: int
+    failed_requests: int
+    failover_requests: int
+    total_input_chars: int
+    total_output_chars: int
+    total_time_seconds: float
+    by_provider: dict
+
+
+# Track server start time
+_server_start_time: Optional[datetime] = None
 
 
 # Global instances
@@ -41,10 +94,11 @@ async def lifespan(app: FastAPI):
     Application lifespan manager.
     Handles startup and shutdown events.
     """
-    global workspace_agent
+    global workspace_agent, _server_start_time
 
     # Startup
     logger.info("Starting CursorBot API Server...")
+    _server_start_time = datetime.now()
 
     # Ensure directories exist
     settings.ensure_directories()
@@ -105,19 +159,192 @@ def register_routes(app: FastAPI) -> None:
     @app.get("/health", response_model=HealthResponse)
     async def health_check():
         """Health check endpoint."""
+        import psutil
+        
         tg_bot_status = False
-
+        discord_bot_status = False
+        bg_agent_status = False
+        llm_providers = []
+        active_tasks = 0
+        
+        # Check Telegram bot
         try:
             bot = get_telegram_bot()
             tg_bot_status = bot._running if bot else False
         except Exception:
             pass
+        
+        # Check Discord bot
+        try:
+            from ..channels.discord_channel import get_discord_bot
+            discord_bot = get_discord_bot()
+            discord_bot_status = discord_bot.is_ready() if discord_bot else False
+        except Exception:
+            pass
+        
+        # Check Background Agent
+        try:
+            from ..cursor.background_agent import get_task_tracker
+            tracker = get_task_tracker()
+            active_tasks = len(tracker.get_pending_tasks())
+            bg_agent_status = bool(settings.cursor_api_key)
+        except Exception:
+            pass
+        
+        # Check LLM providers
+        try:
+            from ..core.llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            llm_providers = manager.list_available_providers()
+        except Exception:
+            pass
+        
+        # Get memory usage
+        process = psutil.Process()
+        memory_mb = process.memory_info().rss / 1024 / 1024
+        
+        # Calculate uptime
+        uptime = 0.0
+        if _server_start_time:
+            uptime = (datetime.now() - _server_start_time).total_seconds()
+        
+        # Determine overall status
+        status = "healthy"
+        if not tg_bot_status and not discord_bot_status:
+            status = "degraded"
+        if not llm_providers:
+            status = "degraded"
 
         return HealthResponse(
-            status="healthy" if tg_bot_status else "degraded",
-            version="0.1.0",
+            status=status,
+            version="0.2.0",
+            uptime_seconds=round(uptime, 2),
             telegram_bot=tg_bot_status,
+            discord_bot=discord_bot_status,
+            background_agent=bg_agent_status,
+            llm_providers=llm_providers,
+            memory_usage_mb=round(memory_mb, 2),
+            active_tasks=active_tasks,
         )
+    
+    @app.get("/health/detailed", response_model=DetailedHealthResponse)
+    async def detailed_health_check():
+        """Detailed health check with all system information."""
+        import psutil
+        import platform
+        
+        # Get basic health info
+        health = await health_check()
+        
+        # LLM provider details
+        llm_info = {"providers": [], "usage_stats": {}}
+        try:
+            from ..core.llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            llm_info["providers"] = manager.list_available_providers()
+            llm_info["usage_stats"] = manager.get_usage_stats()
+            status = manager.get_current_status()
+            llm_info["current_provider"] = status.get("current_provider")
+            llm_info["current_model"] = status.get("current_model")
+        except Exception as e:
+            llm_info["error"] = str(e)
+        
+        # Background agent details
+        bg_info = {"enabled": False, "active_tasks": 0, "completed_tasks": 0}
+        try:
+            from ..cursor.background_agent import get_task_tracker
+            tracker = get_task_tracker()
+            bg_info["enabled"] = bool(settings.cursor_api_key)
+            bg_info["active_tasks"] = len(tracker.get_pending_tasks())
+            bg_info["completed_tasks"] = len(tracker.tasks) - bg_info["active_tasks"]
+        except Exception as e:
+            bg_info["error"] = str(e)
+        
+        # System info
+        process = psutil.Process()
+        system_info = {
+            "platform": platform.system(),
+            "python_version": platform.python_version(),
+            "cpu_percent": psutil.cpu_percent(),
+            "memory_percent": psutil.virtual_memory().percent,
+            "process_memory_mb": round(process.memory_info().rss / 1024 / 1024, 2),
+            "process_threads": process.num_threads(),
+        }
+        
+        return DetailedHealthResponse(
+            status=health.status,
+            version="0.2.0",
+            timestamp=datetime.now().isoformat(),
+            uptime_seconds=health.uptime_seconds,
+            services={
+                "telegram_bot": health.telegram_bot,
+                "discord_bot": health.discord_bot,
+                "api_server": True,
+            },
+            llm=llm_info,
+            background_agent=bg_info,
+            system=system_info,
+        )
+    
+    @app.get("/api/usage", response_model=UsageStatsResponse)
+    async def get_usage_stats():
+        """Get LLM usage statistics."""
+        try:
+            from ..core.llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            stats = manager.get_usage_stats()
+            return UsageStatsResponse(**stats)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.post("/api/broadcast")
+    async def broadcast_message(request: BroadcastRequest):
+        """
+        Broadcast a message to users.
+        Requires admin API key.
+        """
+        try:
+            bot = get_telegram_bot()
+            if not bot or not bot.app:
+                raise HTTPException(status_code=503, detail="Telegram bot not available")
+            
+            # Get target users
+            target_users = request.user_ids
+            if not target_users:
+                # Broadcast to all allowed users
+                target_users = settings.telegram_allowed_users
+            
+            if not target_users:
+                raise HTTPException(status_code=400, detail="No target users specified")
+            
+            # Send messages
+            sent_count = 0
+            failed_count = 0
+            
+            for user_id in target_users:
+                try:
+                    await bot.bot.send_message(
+                        chat_id=user_id,
+                        text=request.message,
+                        parse_mode=request.parse_mode,
+                    )
+                    sent_count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to send broadcast to {user_id}: {e}")
+                    failed_count += 1
+            
+            return {
+                "success": True,
+                "sent": sent_count,
+                "failed": failed_count,
+                "total": len(target_users),
+            }
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Broadcast error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
     @app.get("/status")
     async def get_status():

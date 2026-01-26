@@ -88,6 +88,21 @@ class LLMProvider(ABC):
             List of model IDs
         """
         return []
+    
+    async def generate_stream(self, messages: list[dict], **kwargs):
+        """
+        Generate a streaming response from the LLM.
+        Yields chunks of text as they arrive.
+        
+        Override in subclasses to implement provider-specific streaming.
+        Default implementation falls back to non-streaming.
+        
+        Yields:
+            str: Text chunks
+        """
+        # Default: fall back to non-streaming
+        result = await self.generate(messages, **kwargs)
+        yield result
 
 
 # ============================================
@@ -140,6 +155,56 @@ class OpenAIProvider(LLMProvider):
         except Exception as e:
             logger.warning(f"Failed to fetch OpenAI models: {e}")
             return []
+    
+    async def generate_stream(self, messages: list[dict], **kwargs):
+        """Generate streaming response from OpenAI."""
+        import httpx
+        
+        api_key = self.config.api_key
+        api_base = self.config.api_base or "https://api.openai.com/v1"
+        model = kwargs.get("model") or self.config.model or "gpt-4o-mini"
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                async with client.stream(
+                    "POST",
+                    f"{api_base}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "messages": messages,
+                        "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+                        "temperature": kwargs.get("temperature", self.config.temperature),
+                        "stream": True,
+                    },
+                ) as response:
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        raise ValueError(f"OpenAI API error: {response.status_code} - {error_text}")
+                    
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data = line[6:]
+                            if data == "[DONE]":
+                                break
+                            try:
+                                import json
+                                chunk = json.loads(data)
+                                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                            except json.JSONDecodeError:
+                                continue
+                                
+        except httpx.TimeoutException:
+            raise ValueError("OpenAI API timeout")
+        except Exception as e:
+            logger.error(f"OpenAI streaming error: {e}")
+            raise
     
     async def generate(self, messages: list[dict], **kwargs) -> str:
         import httpx
@@ -288,7 +353,7 @@ class GoogleProvider(LLMProvider):
 # ============================================
 
 class AnthropicProvider(LLMProvider):
-    """Anthropic Claude models provider."""
+    """Anthropic Claude models provider with Extended Thinking support."""
     
     @property
     def provider_type(self) -> ProviderType:
@@ -302,17 +367,33 @@ class AnthropicProvider(LLMProvider):
         """
         # Predefined list of Claude models (Anthropic has no list API)
         return [
+            "claude-sonnet-4-20250514",
             "claude-3-5-sonnet-20241022",
             "claude-3-5-haiku-20241022",
             "claude-3-opus-20240229",
             "claude-3-sonnet-20240229",
             "claude-3-haiku-20240307",
-            "claude-2.1",
-            "claude-2.0",
-            "claude-instant-1.2",
         ]
     
-    async def generate(self, messages: list[dict], **kwargs) -> str:
+    async def generate(
+        self, 
+        messages: list[dict], 
+        thinking: bool = False,
+        thinking_budget: int = 10000,
+        **kwargs
+    ) -> str:
+        """
+        Generate response from Anthropic Claude.
+        
+        Args:
+            messages: Conversation messages
+            thinking: Enable Extended Thinking mode (Claude 3.5+ only)
+            thinking_budget: Max tokens for thinking (1024-100000)
+            **kwargs: Additional arguments
+        
+        Returns:
+            Generated response (includes thinking if enabled)
+        """
         import httpx
         
         api_key = self.config.api_key
@@ -330,21 +411,43 @@ class AnthropicProvider(LLMProvider):
         
         try:
             async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                # Build payload
+                max_tokens = kwargs.get("max_tokens", self.config.max_tokens)
+                
                 payload = {
                     "model": model,
                     "messages": chat_messages,
-                    "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+                    "max_tokens": max_tokens,
                 }
+                
                 if system_content:
                     payload["system"] = system_content.strip()
                 
+                # Add thinking configuration if enabled
+                if thinking:
+                    # Thinking requires specific budget configuration
+                    thinking_budget = max(1024, min(thinking_budget, 100000))
+                    payload["thinking"] = {
+                        "type": "enabled",
+                        "budget_tokens": thinking_budget
+                    }
+                    # When thinking is enabled, temperature must be 1
+                    payload["temperature"] = 1
+                    logger.info(f"Extended Thinking enabled with budget: {thinking_budget}")
+                
+                headers = {
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                }
+                
+                # Use beta header for thinking feature
+                if thinking:
+                    headers["anthropic-beta"] = "interleaved-thinking-2025-05-14"
+                
                 response = await client.post(
                     f"{api_base}/messages",
-                    headers={
-                        "x-api-key": api_key,
-                        "anthropic-version": "2023-06-01",
-                        "Content-Type": "application/json",
-                    },
+                    headers=headers,
                     json=payload,
                 )
                 
@@ -353,12 +456,123 @@ class AnthropicProvider(LLMProvider):
                     raise ValueError(f"Anthropic API error: {response.status_code}")
                 
                 result = response.json()
-                return result["content"][0]["text"]
+                
+                # Process response content
+                content_blocks = result.get("content", [])
+                text_parts = []
+                thinking_parts = []
+                
+                for block in content_blocks:
+                    if block.get("type") == "thinking":
+                        thinking_parts.append(block.get("thinking", ""))
+                    elif block.get("type") == "text":
+                        text_parts.append(block.get("text", ""))
+                
+                # Combine response
+                response_text = "\n".join(text_parts)
+                
+                # Optionally include thinking in response
+                if thinking and thinking_parts and kwargs.get("include_thinking", False):
+                    thinking_text = "\n".join(thinking_parts)
+                    response_text = f"<thinking>\n{thinking_text}\n</thinking>\n\n{response_text}"
+                
+                return response_text
                 
         except httpx.TimeoutException:
             raise ValueError("Anthropic API timeout")
         except Exception as e:
             logger.error(f"Anthropic API error: {e}")
+            raise
+    
+    async def generate_with_thinking(
+        self,
+        messages: list[dict],
+        thinking_budget: int = 10000,
+        include_thinking: bool = False,
+        **kwargs
+    ) -> dict:
+        """
+        Generate response with Extended Thinking and return structured result.
+        
+        Args:
+            messages: Conversation messages
+            thinking_budget: Max tokens for thinking
+            include_thinking: Include thinking in result
+            **kwargs: Additional arguments
+        
+        Returns:
+            dict with 'response', 'thinking', and 'usage' keys
+        """
+        import httpx
+        
+        api_key = self.config.api_key
+        api_base = self.config.api_base or "https://api.anthropic.com/v1"
+        model = kwargs.get("model") or self.config.model or "claude-3-5-sonnet-20241022"
+        
+        # Extract system message
+        system_content = ""
+        chat_messages = []
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_content += msg.get("content", "") + "\n"
+            else:
+                chat_messages.append(msg)
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                thinking_budget = max(1024, min(thinking_budget, 100000))
+                
+                payload = {
+                    "model": model,
+                    "messages": chat_messages,
+                    "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+                    "thinking": {
+                        "type": "enabled",
+                        "budget_tokens": thinking_budget
+                    },
+                    "temperature": 1,  # Required for thinking
+                }
+                
+                if system_content:
+                    payload["system"] = system_content.strip()
+                
+                response = await client.post(
+                    f"{api_base}/messages",
+                    headers={
+                        "x-api-key": api_key,
+                        "anthropic-version": "2023-06-01",
+                        "anthropic-beta": "interleaved-thinking-2025-05-14",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                
+                if response.status_code != 200:
+                    raise ValueError(f"Anthropic API error: {response.status_code}")
+                
+                result = response.json()
+                
+                # Parse content blocks
+                content_blocks = result.get("content", [])
+                text_parts = []
+                thinking_parts = []
+                
+                for block in content_blocks:
+                    if block.get("type") == "thinking":
+                        thinking_parts.append(block.get("thinking", ""))
+                    elif block.get("type") == "text":
+                        text_parts.append(block.get("text", ""))
+                
+                return {
+                    "response": "\n".join(text_parts),
+                    "thinking": "\n".join(thinking_parts) if include_thinking else None,
+                    "usage": result.get("usage", {}),
+                    "model": result.get("model", model),
+                    "stop_reason": result.get("stop_reason"),
+                }
+                
+        except Exception as e:
+            logger.error(f"Anthropic thinking error: {e}")
             raise
 
 
@@ -421,6 +635,57 @@ class OpenRouterProvider(LLMProvider):
         except Exception as e:
             logger.warning(f"Failed to fetch OpenRouter models: {e}")
             return []
+    
+    async def generate_stream(self, messages: list[dict], **kwargs):
+        """Generate streaming response from OpenRouter."""
+        import httpx
+        
+        api_key = self.config.api_key
+        model = kwargs.get("model") or self.config.model or "google/gemini-2.0-flash-exp:free"
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                async with client.stream(
+                    "POST",
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://github.com/cursorbot",
+                        "X-Title": "CursorBot",
+                    },
+                    json={
+                        "model": model,
+                        "messages": messages,
+                        "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+                        "temperature": kwargs.get("temperature", self.config.temperature),
+                        "stream": True,
+                    },
+                ) as response:
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        raise ValueError(f"OpenRouter API error: {response.status_code} - {error_text}")
+                    
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data = line[6:]
+                            if data == "[DONE]":
+                                break
+                            try:
+                                import json
+                                chunk = json.loads(data)
+                                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                            except json.JSONDecodeError:
+                                continue
+                                
+        except httpx.TimeoutException:
+            raise ValueError("OpenRouter API timeout")
+        except Exception as e:
+            logger.error(f"OpenRouter streaming error: {e}")
+            raise
     
     async def generate(self, messages: list[dict], **kwargs) -> str:
         import httpx
@@ -688,6 +953,8 @@ class LLMProviderManager:
         self._default_model: Optional[str] = None
         # User-specific model selections (user_id -> (provider, model))
         self._user_selections: dict[str, tuple[ProviderType, str]] = {}
+        # Usage tracking history
+        self._usage_history: list[dict] = []
     
     def load_from_settings(self) -> None:
         """Load provider configurations from settings."""
@@ -1029,20 +1296,25 @@ class LLMProviderManager:
         messages: list[dict],
         provider: Optional[str] = None,
         model: Optional[str] = None,
+        enable_failover: bool = True,
         **kwargs
     ) -> str:
         """
         Generate a response using the specified or default provider.
+        Supports automatic failover to backup providers on failure.
         
         Args:
             messages: Conversation messages in OpenAI format
             provider: Optional provider name (openai, google, anthropic, etc.)
             model: Optional model name (overrides provider default)
+            enable_failover: Whether to try other providers on failure
             **kwargs: Additional arguments for the provider
         
         Returns:
             Generated response text
         """
+        import time
+        
         llm_provider = self.get_provider(provider)
         
         if not llm_provider:
@@ -1060,7 +1332,153 @@ class LLMProviderManager:
         if not model and self._default_model:
             model = self._default_model
         
-        return await llm_provider.generate(messages, model=model, **kwargs)
+        # Build failover order
+        failover_providers = []
+        if enable_failover:
+            # Priority order for failover
+            priority = [
+                ProviderType.OPENROUTER,
+                ProviderType.OPENAI,
+                ProviderType.ANTHROPIC,
+                ProviderType.GOOGLE,
+                ProviderType.OLLAMA,
+                ProviderType.CUSTOM,
+            ]
+            
+            primary_type = llm_provider.provider_type
+            for pt in priority:
+                if pt != primary_type and pt in self._providers:
+                    failover_providers.append(self._providers[pt])
+        
+        # Try primary provider first
+        start_time = time.time()
+        errors = []
+        
+        try:
+            result = await llm_provider.generate(messages, model=model, **kwargs)
+            
+            # Track usage
+            elapsed = time.time() - start_time
+            self._track_usage(llm_provider.provider_type.value, model, len(str(messages)), len(result), elapsed, True)
+            
+            return result
+            
+        except Exception as e:
+            errors.append(f"{llm_provider.provider_type.value}: {str(e)}")
+            logger.warning(f"Primary provider {llm_provider.provider_type.value} failed: {e}")
+            
+            # Track failed usage
+            elapsed = time.time() - start_time
+            self._track_usage(llm_provider.provider_type.value, model, len(str(messages)), 0, elapsed, False)
+        
+        # Try failover providers
+        for backup_provider in failover_providers:
+            start_time = time.time()
+            backup_model = backup_provider.config.model
+            
+            try:
+                logger.info(f"Failing over to {backup_provider.provider_type.value}")
+                result = await backup_provider.generate(messages, model=backup_model, **kwargs)
+                
+                # Track usage
+                elapsed = time.time() - start_time
+                self._track_usage(backup_provider.provider_type.value, backup_model, len(str(messages)), len(result), elapsed, True, failover=True)
+                
+                return result
+                
+            except Exception as e:
+                errors.append(f"{backup_provider.provider_type.value}: {str(e)}")
+                logger.warning(f"Failover provider {backup_provider.provider_type.value} failed: {e}")
+                
+                # Track failed usage
+                elapsed = time.time() - start_time
+                self._track_usage(backup_provider.provider_type.value, backup_model, len(str(messages)), 0, elapsed, False, failover=True)
+                continue
+        
+        # All providers failed
+        raise ValueError(f"All LLM providers failed:\n" + "\n".join(errors))
+    
+    def _track_usage(
+        self, 
+        provider: str, 
+        model: str, 
+        input_chars: int, 
+        output_chars: int, 
+        elapsed: float, 
+        success: bool,
+        failover: bool = False
+    ) -> None:
+        """Track API usage for analytics."""
+        usage_entry = {
+            "timestamp": asyncio.get_event_loop().time() if asyncio.get_event_loop().is_running() else 0,
+            "provider": provider,
+            "model": model or "default",
+            "input_chars": input_chars,
+            "output_chars": output_chars,
+            "elapsed_seconds": round(elapsed, 2),
+            "success": success,
+            "failover": failover,
+        }
+        
+        self._usage_history.append(usage_entry)
+        
+        # Keep only last 1000 entries
+        if len(self._usage_history) > 1000:
+            self._usage_history = self._usage_history[-1000:]
+        
+        logger.debug(f"Usage tracked: {provider}/{model} - {output_chars} chars in {elapsed:.2f}s")
+    
+    def get_usage_stats(self, user_id: Optional[str] = None) -> dict:
+        """
+        Get usage statistics.
+        
+        Returns:
+            dict with usage statistics
+        """
+        if not self._usage_history:
+            return {
+                "total_requests": 0,
+                "successful_requests": 0,
+                "failed_requests": 0,
+                "failover_requests": 0,
+                "total_input_chars": 0,
+                "total_output_chars": 0,
+                "total_time_seconds": 0,
+                "by_provider": {},
+            }
+        
+        stats = {
+            "total_requests": len(self._usage_history),
+            "successful_requests": sum(1 for u in self._usage_history if u["success"]),
+            "failed_requests": sum(1 for u in self._usage_history if not u["success"]),
+            "failover_requests": sum(1 for u in self._usage_history if u.get("failover")),
+            "total_input_chars": sum(u["input_chars"] for u in self._usage_history),
+            "total_output_chars": sum(u["output_chars"] for u in self._usage_history),
+            "total_time_seconds": round(sum(u["elapsed_seconds"] for u in self._usage_history), 2),
+            "by_provider": {},
+        }
+        
+        # Group by provider
+        for entry in self._usage_history:
+            provider = entry["provider"]
+            if provider not in stats["by_provider"]:
+                stats["by_provider"][provider] = {
+                    "requests": 0,
+                    "successful": 0,
+                    "failed": 0,
+                    "output_chars": 0,
+                    "time_seconds": 0,
+                }
+            
+            stats["by_provider"][provider]["requests"] += 1
+            if entry["success"]:
+                stats["by_provider"][provider]["successful"] += 1
+            else:
+                stats["by_provider"][provider]["failed"] += 1
+            stats["by_provider"][provider]["output_chars"] += entry["output_chars"]
+            stats["by_provider"][provider]["time_seconds"] += entry["elapsed_seconds"]
+        
+        return stats
     
     def get_llm_provider_function(self) -> Optional[Callable]:
         """
@@ -1074,6 +1492,55 @@ class LLMProviderManager:
             return await self.generate(conversation)
         
         return provider_func
+    
+    async def generate_stream(
+        self,
+        messages: list[dict],
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        **kwargs
+    ):
+        """
+        Generate a streaming response.
+        
+        Yields:
+            str: Text chunks as they arrive
+        """
+        llm_provider = self.get_provider(provider)
+        
+        if not llm_provider:
+            raise ValueError("No LLM provider available")
+        
+        if not model and self._default_model:
+            model = self._default_model
+        
+        async for chunk in llm_provider.generate_stream(messages, model=model, **kwargs):
+            yield chunk
+    
+    async def generate_stream_for_user(
+        self,
+        user_id: str,
+        messages: list[dict],
+        **kwargs
+    ):
+        """
+        Generate a streaming response using the user's selected model.
+        
+        Yields:
+            str: Text chunks as they arrive
+        """
+        provider = None
+        model = None
+        
+        if user_id in self._user_selections:
+            provider_type, model = self._user_selections[user_id]
+            provider = provider_type.value
+            if not model:
+                p = self._providers.get(provider_type)
+                model = p.config.model if p else None
+        
+        async for chunk in self.generate_stream(messages, provider=provider, model=model, **kwargs):
+            yield chunk
 
 
 # Global instance

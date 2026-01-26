@@ -1,6 +1,6 @@
 """
 Core modules for CursorBot
-Includes memory, approvals, skills, context, scheduler, webhooks, tools, browser, agent loop, and LLM providers
+Includes memory, approvals, skills, context, scheduler, webhooks, tools, browser, agent loop, LLM providers, and heartbeat
 
 Inspired by ClawdBot's architecture
 """
@@ -20,6 +20,33 @@ from .agent_loop import AgentLoop, AgentContext, AgentState, get_agent_loop, res
 from .llm_providers import (
     LLMProviderManager, get_llm_manager, reset_llm_manager,
     ProviderType, LLMProvider,
+)
+from .heartbeat import (
+    HeartbeatMonitor, HeartbeatConfig, ServiceStatus, ServiceHealth,
+    RetryHandler, RetryConfig, with_retry,
+    get_heartbeat_monitor, get_retry_handler,
+)
+from .queue import (
+    TaskQueue, TaskStatus, TaskPriority, Task, QueueConfig,
+    QueueManager, get_queue_manager, get_task_queue,
+)
+from .tts import (
+    TTSManager, TTSConfig, TTSResult, TTSProvider,
+    get_tts_manager, text_to_speech,
+)
+from .subagents import (
+    SubagentOrchestrator, Subagent, SubagentType, SubagentStatus,
+    SubagentTask, SubagentConfig, TaskPlan,
+    get_subagent_orchestrator,
+)
+from .sandbox import (
+    SandboxManager, SandboxConfig, SandboxType, ExecutionResult,
+    ExecutionStatus, get_sandbox_manager, execute_code,
+)
+from .oauth import (
+    OAuthManager, OAuthConfig, OAuthProvider, OAuthToken, OAuthUser,
+    APITokenManager, APIToken,
+    get_oauth_manager, get_api_token_manager,
 )
 
 __all__ = [
@@ -73,4 +100,57 @@ __all__ = [
     "reset_llm_manager",
     "ProviderType",
     "LLMProvider",
+    # Heartbeat & Retry
+    "HeartbeatMonitor",
+    "HeartbeatConfig",
+    "ServiceStatus",
+    "ServiceHealth",
+    "RetryHandler",
+    "RetryConfig",
+    "with_retry",
+    "get_heartbeat_monitor",
+    "get_retry_handler",
+    # Task Queue
+    "TaskQueue",
+    "TaskStatus",
+    "TaskPriority",
+    "Task",
+    "QueueConfig",
+    "QueueManager",
+    "get_queue_manager",
+    "get_task_queue",
+    # TTS
+    "TTSManager",
+    "TTSConfig",
+    "TTSResult",
+    "TTSProvider",
+    "get_tts_manager",
+    "text_to_speech",
+    # Subagents
+    "SubagentOrchestrator",
+    "Subagent",
+    "SubagentType",
+    "SubagentStatus",
+    "SubagentTask",
+    "SubagentConfig",
+    "TaskPlan",
+    "get_subagent_orchestrator",
+    # Sandbox
+    "SandboxManager",
+    "SandboxConfig",
+    "SandboxType",
+    "ExecutionResult",
+    "ExecutionStatus",
+    "get_sandbox_manager",
+    "execute_code",
+    # OAuth
+    "OAuthManager",
+    "OAuthConfig",
+    "OAuthProvider",
+    "OAuthToken",
+    "OAuthUser",
+    "APITokenManager",
+    "APIToken",
+    "get_oauth_manager",
+    "get_api_token_manager",
 ]

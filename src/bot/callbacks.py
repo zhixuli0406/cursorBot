@@ -86,10 +86,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await handle_tasks_list(query, user_id)
 
         elif action == "repo_select":
-            await handle_repo_select(query, param, user_id)
+            await handle_repo_select(query, param, user_id, context)
 
         elif action == "repos_list" or action == "repos_refresh":
-            await handle_repos_list(query, user_id)
+            await handle_repos_list(query, user_id, context)
+        
+        elif action == "repos_page":
+            await handle_repos_page(query, int(param), user_id, context)
+        
+        elif action == "repos_noop":
+            # Do nothing (page indicator button)
+            pass
 
         elif action == "status" or action == "status_refresh":
             await handle_status(query, user_id)
@@ -347,24 +354,36 @@ async def handle_tasks_list(query, user_id: int) -> None:
     )
 
 
-async def handle_repo_select(query, full_name: str, user_id: int) -> None:
+async def handle_repo_select(query, full_name: str, user_id: int, context=None) -> None:
     """Select a repository."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    
     repo_url = f"https://github.com/{full_name}"
     set_user_repo(user_id, repo_url)
 
     repo_name = full_name.split("/")[-1]
+    
+    # Create keyboard with back to list and close buttons
+    keyboard = [
+        [InlineKeyboardButton("🔗 在 GitHub 開啟", url=repo_url)],
+        [
+            InlineKeyboardButton("📂 返回列表", callback_data="repos_refresh"),
+            InlineKeyboardButton("❌ 關閉", callback_data="close"),
+        ],
+    ]
 
     await query.message.edit_text(
         f"✅ <b>已選擇倉庫</b>\n\n"
-        f"📁 {full_name}\n\n"
+        f"📁 <code>{full_name}</code>\n\n"
         f"現在可以發送任務到此倉庫。\n"
         f"直接輸入問題或使用 /ask 指令。",
         parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
 
-async def handle_repos_list(query, user_id: int) -> None:
-    """Show repository list."""
+async def handle_repos_list(query, user_id: int, context=None) -> None:
+    """Show repository list with pagination."""
     if not settings.cursor_api_key:
         await query.message.edit_text(
             "⚠️ <b>未設定 API Key</b>\n\n"
@@ -380,12 +399,25 @@ async def handle_repos_list(query, user_id: int) -> None:
         if result.get("success") and result.get("repositories"):
             repos = result.get("repositories", [])
             current_repo = get_user_repo(user_id)
+            
+            # Cache repos in context for pagination
+            if context:
+                context.user_data["repos_cache"] = repos
+            
+            total_pages = max(1, (len(repos) + 7) // 8)
+            
+            text = f"<b>📁 選擇倉庫</b>\n\n"
+            text += f"共 {len(repos)} 個倉庫（第 1/{total_pages} 頁）\n"
+            text += "點擊按鈕切換倉庫："
+            
+            if current_repo:
+                repo_name = current_repo.split("/")[-1]
+                text += f"\n\n目前使用: <code>{repo_name}</code>"
 
             await query.message.edit_text(
-                f"<b>📁 選擇倉庫</b>\n\n"
-                f"找到 {len(repos)} 個倉庫:",
+                text,
                 parse_mode="HTML",
-                reply_markup=get_repo_keyboard(repos, current_repo),
+                reply_markup=get_repo_keyboard(repos, current_repo, page=0),
             )
         else:
             await query.message.edit_text(
@@ -398,6 +430,35 @@ async def handle_repos_list(query, user_id: int) -> None:
     except Exception as e:
         logger.error(f"Error listing repos: {e}")
         await query.message.edit_text(f"❌ 錯誤: {str(e)[:100]}")
+
+
+async def handle_repos_page(query, page: int, user_id: int, context=None) -> None:
+    """Handle repository list pagination."""
+    # Get cached repos from context
+    repos = context.user_data.get("repos_cache", []) if context else []
+    
+    if not repos:
+        # If no cache, refresh the list
+        await handle_repos_list(query, user_id, context)
+        return
+    
+    current_repo = get_user_repo(user_id)
+    total_pages = max(1, (len(repos) + 7) // 8)
+    page = max(0, min(page, total_pages - 1))
+    
+    text = f"<b>📁 選擇倉庫</b>\n\n"
+    text += f"共 {len(repos)} 個倉庫（第 {page + 1}/{total_pages} 頁）\n"
+    text += "點擊按鈕切換倉庫："
+    
+    if current_repo:
+        repo_name = current_repo.split("/")[-1]
+        text += f"\n\n目前使用: <code>{repo_name}</code>"
+
+    await query.message.edit_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=get_repo_keyboard(repos, current_repo, page=page),
+    )
 
 
 async def handle_status(query, user_id: int) -> None:

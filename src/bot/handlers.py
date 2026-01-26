@@ -973,72 +973,77 @@ async def repo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def repos_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /repos command.
-    Show all repositories from Cursor account and recently used ones.
+    Show all repositories from Cursor account with pagination.
     """
+    from .keyboards import get_repo_keyboard
+    
     user_id = update.effective_user.id
     current_repo = get_user_repo(user_id)
-    default_repo = settings.cursor_github_repo
-
-    lines = ["<b>📁 我的倉庫</b>\n"]
-
-    # Show current and default repos
-    if current_repo:
-        repo_name = current_repo.split("/")[-1]
-        lines.append(f"<b>目前:</b> {repo_name} ✓")
-        lines.append(f"  └ {current_repo}")
-
-    if default_repo and default_repo != current_repo:
-        repo_name = default_repo.split("/")[-1]
-        lines.append(f"\n<b>預設:</b> {repo_name}")
-        lines.append(f"  └ {default_repo}")
 
     # Fetch repositories from Cursor API if Background Agent is enabled
-    if is_background_agent_enabled():
-        await update.message.chat.send_action("typing")
+    if not is_background_agent_enabled():
+        await update.message.reply_text(
+            "💡 <b>未啟用 Background Agent</b>\n\n"
+            "請設定 CURSOR_API_KEY 以查看帳號中的所有倉庫。\n\n"
+            "<b>手動切換倉庫:</b>\n"
+            "<code>/repo owner/repo-name</code>",
+            parse_mode="HTML",
+        )
+        return
+
+    # Send loading message
+    loading_msg = await update.message.reply_text(
+        "🔄 <b>正在獲取倉庫列表...</b>",
+        parse_mode="HTML",
+    )
+    
+    try:
+        bg_agent = get_background_agent(settings.cursor_api_key)
+        result = await bg_agent.list_repositories()
         
-        try:
-            bg_agent = get_background_agent(settings.cursor_api_key)
-            result = await bg_agent.list_repositories()
+        if result.get("success") and result.get("repositories"):
+            repos = result.get("repositories", [])
             
-            if result.get("success") and result.get("repositories"):
-                repos = result.get("repositories", [])
-                lines.append(f"\n<b>📦 帳號倉庫 ({len(repos)}):</b>")
-                
-                for repo in repos[:15]:  # Limit to 15 repos
-                    name = repo.get("name", "")
-                    owner = repo.get("owner", "")
-                    full_name = repo.get("full_name", f"{owner}/{name}")
-                    description = repo.get("description", "")
-                    private = repo.get("private", False)
-                    
-                    # Mark if this is the current repo
-                    is_current = current_repo and full_name in current_repo
-                    current_mark = " ✓" if is_current else ""
-                    private_mark = "🔒" if private else "📂"
-                    
-                    lines.append(f"\n{private_mark} <b>{name}</b>{current_mark}")
-                    lines.append(f"  └ <code>{full_name}</code>")
-                    if description:
-                        desc_preview = description[:50] + "..." if len(description) > 50 else description
-                        lines.append(f"  └ {desc_preview}")
-                
-                if len(repos) > 15:
-                    lines.append(f"\n... 還有 {len(repos) - 15} 個倉庫")
-            elif result.get("message"):
-                lines.append(f"\n⚠️ 無法取得帳號倉庫: {result.get('message', '')[:100]}")
-            else:
-                lines.append("\n📭 帳號中沒有找到任何倉庫")
-                
-        except Exception as e:
-            logger.error(f"Error fetching repositories: {e}")
-            lines.append(f"\n⚠️ 取得倉庫時發生錯誤")
-    else:
-        lines.append("\n💡 啟用 Background Agent 以查看帳號中的所有倉庫")
-
-    lines.append("\n<b>切換倉庫:</b>")
-    lines.append("<code>/repo owner/repo-name</code>")
-
-    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+            # Cache repos in context for pagination
+            context.user_data["repos_cache"] = repos
+            
+            # Build text
+            text = f"<b>📁 選擇倉庫</b>\n\n"
+            text += f"共 {len(repos)} 個倉庫（第 1/{max(1, (len(repos) + 7) // 8)} 頁）\n"
+            text += "點擊按鈕切換倉庫：\n"
+            
+            if current_repo:
+                repo_name = current_repo.split("/")[-1]
+                text += f"\n目前使用: <code>{repo_name}</code>"
+            
+            await loading_msg.edit_text(
+                text,
+                parse_mode="HTML",
+                reply_markup=get_repo_keyboard(repos, current_repo, page=0),
+            )
+        elif result.get("message"):
+            await loading_msg.edit_text(
+                f"⚠️ <b>無法取得倉庫列表</b>\n\n"
+                f"{result.get('message', '')[:100]}\n\n"
+                f"<b>手動切換倉庫:</b>\n"
+                f"<code>/repo owner/repo-name</code>",
+                parse_mode="HTML",
+            )
+        else:
+            await loading_msg.edit_text(
+                "📭 <b>帳號中沒有找到任何倉庫</b>\n\n"
+                "<b>手動切換倉庫:</b>\n"
+                "<code>/repo owner/repo-name</code>",
+                parse_mode="HTML",
+            )
+            
+    except Exception as e:
+        logger.error(f"Error fetching repositories: {e}")
+        await loading_msg.edit_text(
+            f"❌ <b>取得倉庫時發生錯誤</b>\n\n"
+            f"<code>{str(e)[:100]}</code>",
+            parse_mode="HTML",
+        )
 
 
 @authorized_only
@@ -1091,17 +1096,105 @@ async def cancel_task_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(f"❌ 錯誤: {str(e)[:200]}")
 
 
+def _should_respond_in_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> tuple[bool, str]:
+    """
+    Check if bot should respond in a group chat.
+    
+    Returns:
+        tuple of (should_respond, cleaned_message)
+    """
+    message_text = update.message.text or ""
+    chat_type = update.effective_chat.type
+    
+    # Always respond in private chats
+    if chat_type == "private":
+        return True, message_text
+    
+    # In groups, check for @mention
+    bot_username = context.bot.username
+    if not bot_username:
+        return False, message_text
+    
+    # Check for @mention patterns
+    mention_patterns = [
+        f"@{bot_username}",
+        f"@{bot_username.lower()}",
+    ]
+    
+    # Check if message starts with or contains @bot mention
+    cleaned_message = message_text
+    found_mention = False
+    
+    for pattern in mention_patterns:
+        if pattern in message_text.lower():
+            found_mention = True
+            # Remove the mention from message
+            cleaned_message = message_text.replace(pattern, "").replace(pattern.lower(), "").strip()
+            break
+    
+    # Also check message entities for mention
+    if not found_mention and update.message.entities:
+        for entity in update.message.entities:
+            if entity.type == "mention":
+                mention_text = message_text[entity.offset:entity.offset + entity.length]
+                if mention_text.lower() == f"@{bot_username.lower()}":
+                    found_mention = True
+                    cleaned_message = message_text[:entity.offset] + message_text[entity.offset + entity.length:]
+                    cleaned_message = cleaned_message.strip()
+                    break
+    
+    # Check if it's a reply to bot's message
+    if not found_mention and update.message.reply_to_message:
+        reply_user = update.message.reply_to_message.from_user
+        if reply_user and reply_user.is_bot and reply_user.username == bot_username:
+            found_mention = True
+    
+    return found_mention, cleaned_message
+
+
+def _get_session_key(update: Update) -> str:
+    """
+    Get a unique session key for the chat.
+    Different chats/groups have different sessions.
+    """
+    chat_id = update.effective_chat.id
+    chat_type = update.effective_chat.type
+    
+    if chat_type == "private":
+        # Private chat: use user_id
+        return f"user_{update.effective_user.id}"
+    else:
+        # Group chat: use chat_id
+        return f"group_{chat_id}"
+
+
 @authorized_only
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle regular text messages.
-    Send to Background Agent as a question.
+    Supports @mention in groups and session isolation.
     """
-    message_text = update.message.text
+    # Check if we should respond (handles group @mention)
+    should_respond, message_text = _should_respond_in_group(update, context)
+    
+    if not should_respond:
+        # In group but not mentioned, ignore
+        return
+    
+    if not message_text.strip():
+        # Empty message after removing mention
+        return
+    
     user_id = update.effective_user.id
     username = update.effective_user.username or update.effective_user.first_name
     chat_id = update.effective_chat.id
-    logger.info(f"User {user_id} message: {message_text[:50]}...")
+    session_key = _get_session_key(update)
+    chat_type = update.effective_chat.type
+    
+    logger.info(f"User {user_id} message in {chat_type} (session: {session_key}): {message_text[:50]}...")
+    
+    # Show typing indicator
+    await update.effective_chat.send_action("typing")
 
     # Check if Background Agent is enabled
     if is_background_agent_enabled():

@@ -128,17 +128,32 @@ def get_task_created_keyboard(task_id: str) -> InlineKeyboardMarkup:
 # ============================================
 
 
-def get_repo_keyboard(repos: list[dict], current_repo: str = "") -> InlineKeyboardMarkup:
+def get_repo_keyboard(
+    repos: list[dict], 
+    current_repo: str = "",
+    page: int = 0,
+    page_size: int = 8,
+) -> InlineKeyboardMarkup:
     """
-    Get repository selection keyboard.
+    Get paginated repository selection keyboard.
 
     Args:
         repos: List of repository dictionaries
         current_repo: Currently selected repo URL
+        page: Current page number (0-indexed)
+        page_size: Number of repos per page
     """
     keyboard = []
+    
+    total = len(repos)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(0, min(page, total_pages - 1))
+    
+    start = page * page_size
+    end = min(start + page_size, total)
+    page_repos = repos[start:end]
 
-    for repo in repos[:10]:  # Limit to 10 repos
+    for repo in page_repos:
         name = repo.get("name", "")
         full_name = repo.get("full_name", "")
         owner = repo.get("owner", "")
@@ -165,6 +180,18 @@ def get_repo_keyboard(repos: list[dict], current_repo: str = "") -> InlineKeyboa
                 callback_data=f"repo_select:{full_name}"
             )
         ])
+
+    # Navigation row
+    nav_row = []
+    if page > 0:
+        nav_row.append(InlineKeyboardButton("◀️ 上一頁", callback_data=f"repos_page:{page - 1}"))
+    
+    nav_row.append(InlineKeyboardButton(f"📄 {page + 1}/{total_pages}", callback_data="repos_noop"))
+    
+    if page < total_pages - 1:
+        nav_row.append(InlineKeyboardButton("下一頁 ▶️", callback_data=f"repos_page:{page + 1}"))
+    
+    keyboard.append(nav_row)
 
     keyboard.append([
         InlineKeyboardButton("🔄 重新整理", callback_data="repos_refresh"),

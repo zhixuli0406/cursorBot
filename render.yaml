@@ -1,0 +1,38 @@
+# Render Blueprint Configuration for CursorBot
+# Deploy with Render: https://render.com/docs/deploy-from-repo
+
+services:
+  - type: web
+    name: cursorbot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ALLOWED_USERS
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_GENERATIVE_AI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: CURSOR_API_BASE
+        sync: false
+      - key: CURSOR_API_TOKEN
+        sync: false
+      - key: CURSOR_WORKSPACE_PATH
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+      - key: API_PORT
+        value: "8000"
+    autoDeploy: true
