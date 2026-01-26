@@ -420,34 +420,56 @@ async def agent_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             "範例:\n"
             "• <code>/agent 幫我分析這段程式碼的效能問題</code>\n"
             "• <code>/agent 建立一個完整的登入系統</code>\n"
-            "• <code>/agent 重構這個模組並加入測試</code>",
+            "• <code>/agent 重構這個模組並加入測試</code>\n\n"
+            "切換模型: <code>/model set &lt;provider&gt;</code>",
             parse_mode="HTML",
         )
         return
     
     task = " ".join(context.args)
-    user_id = update.effective_user.id
+    user_id = str(update.effective_user.id)
+    
+    # Get current model info
+    from ..core.llm_providers import get_llm_manager
+    manager = get_llm_manager()
+    current_model = manager.get_user_model(user_id)
+    model_info = f"{current_model[0]}/{current_model[1]}" if current_model else "未設定"
     
     status_msg = await update.message.reply_text(
         f"🤖 <b>Agent Loop 啟動中...</b>\n\n"
-        f"任務: {task[:100]}{'...' if len(task) > 100 else ''}\n\n"
+        f"任務: {task[:100]}{'...' if len(task) > 100 else ''}\n"
+        f"模型: <code>{model_info}</code>\n\n"
         f"⏳ Agent 正在分析任務...",
         parse_mode="HTML",
     )
     
     try:
-        from ..core import get_agent_loop
+        from ..core import get_agent_loop, AgentLoop
+        from ..core.llm_providers import get_llm_manager
         import uuid
         
+        # Get user's selected provider function
+        manager = get_llm_manager()
+        user_provider = manager.get_llm_provider_function_for_user(user_id)
+        
+        # Create agent with user's provider
         agent = get_agent_loop()
+        
+        # Temporarily use user's provider if set
+        original_provider = agent.llm_provider
+        if user_provider:
+            agent.llm_provider = user_provider
         
         # Run the agent loop
         result = await agent.run(
             prompt=task,
-            user_id=str(user_id),
+            user_id=user_id,
             session_id=str(uuid.uuid4()),
             context={"source": "telegram", "command": "agent"},
         )
+        
+        # Restore original provider
+        agent.llm_provider = original_provider
         
         # Format response based on AgentContext result
         if result.error:
@@ -480,6 +502,168 @@ async def agent_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
 
 
+# ============================================
+# Model Selection Commands
+# ============================================
+
+
+@authorized_only
+async def model_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /model command.
+    List available models and switch between them.
+    
+    Usage:
+        /model - Show current model and available options
+        /model list - List all available providers and models
+        /model set <provider> [model] - Set model for this user
+        /model reset - Reset to default model
+    """
+    from ..core.llm_providers import get_llm_manager
+    
+    user_id = str(update.effective_user.id)
+    args = context.args or []
+    manager = get_llm_manager()
+    
+    if not args or args[0] == "status":
+        # Show current status
+        status = manager.get_current_status(user_id)
+        
+        if not status["available_providers"]:
+            await update.message.reply_text(
+                "❌ <b>沒有可用的 AI 模型</b>\n\n"
+                "請在 .env 中設定至少一個提供者的 API Key：\n"
+                "• OPENAI_API_KEY\n"
+                "• GOOGLE_GENERATIVE_AI_API_KEY\n"
+                "• ANTHROPIC_API_KEY\n"
+                "• OPENROUTER_API_KEY\n"
+                "• OLLAMA_ENABLED=true",
+                parse_mode="HTML",
+            )
+            return
+        
+        # Build status message
+        current = f"{status['current_provider']}/{status['current_model']}" if status["current_provider"] else "未設定"
+        selection_type = "（自選）" if status["is_user_selection"] else "（預設）"
+        
+        text = f"🤖 <b>AI 模型狀態</b>\n\n"
+        text += f"<b>目前使用：</b> <code>{current}</code> {selection_type}\n\n"
+        text += f"<b>可用提供者：</b>\n"
+        
+        provider_icons = {
+            "openai": "🟢",
+            "google": "🔵",
+            "anthropic": "🟠",
+            "openrouter": "🟣",
+            "ollama": "⚪",
+            "custom": "⚙️",
+        }
+        
+        for provider in status["available_providers"]:
+            icon = provider_icons.get(provider, "•")
+            models = status["available_models"].get(provider, [])
+            model_preview = ", ".join(models[:3])
+            if len(models) > 3:
+                model_preview += f" (+{len(models)-3})"
+            text += f"{icon} <b>{provider}</b>: {model_preview}\n"
+        
+        text += "\n<b>指令：</b>\n"
+        text += "• <code>/model list</code> - 顯示所有模型\n"
+        text += "• <code>/model set &lt;provider&gt; [model]</code> - 切換模型\n"
+        text += "• <code>/model reset</code> - 恢復預設\n"
+        
+        await update.message.reply_text(text, parse_mode="HTML")
+        return
+    
+    elif args[0] == "list":
+        # List all models
+        status = manager.get_current_status(user_id)
+        
+        if not status["available_providers"]:
+            await update.message.reply_text("❌ 沒有可用的 AI 模型")
+            return
+        
+        text = "📋 <b>可用 AI 模型列表</b>\n\n"
+        
+        provider_names = {
+            "openai": "OpenAI",
+            "google": "Google Gemini",
+            "anthropic": "Anthropic Claude",
+            "openrouter": "OpenRouter",
+            "ollama": "Ollama (本地)",
+            "custom": "自訂端點",
+        }
+        
+        for provider in status["available_providers"]:
+            name = provider_names.get(provider, provider)
+            models = status["available_models"].get(provider, [])
+            
+            text += f"<b>{name}</b>\n"
+            for model in models:
+                text += f"  • <code>{model}</code>\n"
+            text += "\n"
+        
+        text += "<b>切換方式：</b>\n"
+        text += "<code>/model set openai gpt-4o</code>\n"
+        text += "<code>/model set anthropic claude-3-5-sonnet-20241022</code>\n"
+        
+        await update.message.reply_text(text, parse_mode="HTML")
+        return
+    
+    elif args[0] == "set" and len(args) >= 2:
+        # Set model
+        provider = args[1].lower()
+        model = args[2] if len(args) >= 3 else None
+        
+        if manager.set_user_model(user_id, provider, model):
+            current = manager.get_user_model(user_id)
+            if current:
+                await update.message.reply_text(
+                    f"✅ <b>已切換 AI 模型</b>\n\n"
+                    f"提供者：<code>{current[0]}</code>\n"
+                    f"模型：<code>{current[1]}</code>",
+                    parse_mode="HTML",
+                )
+            else:
+                await update.message.reply_text("✅ 模型已設定")
+        else:
+            available = manager.list_available_providers()
+            await update.message.reply_text(
+                f"❌ 無效的提供者：<code>{provider}</code>\n\n"
+                f"可用的提供者：{', '.join(available)}",
+                parse_mode="HTML",
+            )
+        return
+    
+    elif args[0] == "reset":
+        # Reset to default
+        manager.clear_user_model(user_id)
+        status = manager.get_current_status(user_id)
+        
+        current = f"{status['current_provider']}/{status['current_model']}" if status["current_provider"] else "未設定"
+        
+        await update.message.reply_text(
+            f"🔄 <b>已恢復預設模型</b>\n\n"
+            f"目前使用：<code>{current}</code>",
+            parse_mode="HTML",
+        )
+        return
+    
+    else:
+        await update.message.reply_text(
+            "❓ <b>模型指令用法</b>\n\n"
+            "• <code>/model</code> - 查看目前狀態\n"
+            "• <code>/model list</code> - 列出所有模型\n"
+            "• <code>/model set &lt;provider&gt; [model]</code> - 切換模型\n"
+            "• <code>/model reset</code> - 恢復預設\n\n"
+            "<b>範例：</b>\n"
+            "<code>/model set openai gpt-4o</code>\n"
+            "<code>/model set anthropic</code>\n"
+            "<code>/model set ollama llama3.2</code>",
+            parse_mode="HTML",
+        )
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -489,6 +673,9 @@ def setup_core_handlers(app) -> None:
     """
     # Agent command
     app.add_handler(CommandHandler("agent", agent_handler))
+    
+    # Model selection command
+    app.add_handler(CommandHandler("model", model_handler))
     
     # Memory commands
     app.add_handler(CommandHandler("memory", memory_handler))
@@ -518,6 +705,7 @@ def setup_core_handlers(app) -> None:
 
 __all__ = [
     "agent_handler",
+    "model_handler",
     "memory_handler",
     "skills_handler",
     "schedule_handler",

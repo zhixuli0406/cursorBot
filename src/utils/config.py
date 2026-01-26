@@ -146,27 +146,113 @@ class Settings(BaseSettings):
         description="Optional GitHub repository URL for Background Agent tasks",
     )
 
-    # AI Integration Settings
-    openrouter_api_key: str = Field(
+    # ============================================
+    # AI / LLM Provider Settings
+    # ============================================
+    
+    # Default LLM Settings
+    default_llm_provider: str = Field(
         default="",
-        description="OpenRouter API key for AI functionality (voice transcription, etc.)",
+        description="Default LLM provider: openai, google, anthropic, openrouter, ollama, custom",
     )
-    openrouter_model: str = Field(
-        default="openai/gpt-4.1",
-        description="OpenRouter model for AI interactions",
+    default_llm_model: str = Field(
+        default="",
+        description="Default model to use (overrides provider default)",
     )
+    
+    # OpenAI Settings
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key",
+    )
+    openai_api_base: str = Field(
+        default="https://api.openai.com/v1",
+        description="OpenAI API base URL (for Azure or custom endpoints)",
+    )
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        description="OpenAI model: gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo, o1-preview",
+    )
+    
+    # Google Gemini Settings
     google_generative_ai_api_key: str = Field(
         default="",
-        description="Google Gemini API key for voice transcription and image processing",
+        description="Google Gemini API key",
+    )
+    google_model: str = Field(
+        default="gemini-2.0-flash",
+        description="Google model: gemini-2.0-flash, gemini-1.5-pro, gemini-pro",
     )
     
     @property
     def google_ai_api_key(self) -> str:
         """Alias for google_generative_ai_api_key."""
         return self.google_generative_ai_api_key
+    
+    # Anthropic Claude Settings
+    anthropic_api_key: str = Field(
+        default="",
+        description="Anthropic Claude API key",
+    )
+    anthropic_api_base: str = Field(
+        default="https://api.anthropic.com/v1",
+        description="Anthropic API base URL",
+    )
+    anthropic_model: str = Field(
+        default="claude-3-5-sonnet-20241022",
+        description="Anthropic model: claude-3-5-sonnet, claude-3-opus, claude-3-haiku",
+    )
+    
+    # OpenRouter Settings (proxy to multiple models)
+    openrouter_api_key: str = Field(
+        default="",
+        description="OpenRouter API key (access to multiple AI models)",
+    )
+    openrouter_model: str = Field(
+        default="google/gemini-2.0-flash-exp:free",
+        description="OpenRouter model (e.g., openai/gpt-4o, anthropic/claude-3.5-sonnet)",
+    )
+    
+    # Ollama Settings (local models)
+    ollama_enabled: bool = Field(
+        default=False,
+        description="Enable Ollama local models",
+    )
+    ollama_api_base: str = Field(
+        default="http://localhost:11434",
+        description="Ollama API base URL",
+    )
+    ollama_model: str = Field(
+        default="llama3.2",
+        description="Ollama model: llama3.2, mistral, codellama, phi3, qwen2.5",
+    )
+    
+    # Custom OpenAI-Compatible Settings
+    custom_api_key: str = Field(
+        default="",
+        description="Custom endpoint API key (optional)",
+    )
+    custom_api_base: str = Field(
+        default="",
+        description="Custom OpenAI-compatible API base URL",
+    )
+    custom_model: str = Field(
+        default="default",
+        description="Custom endpoint model name",
+    )
+    
+    # AI General Settings
     custom_prompt: str = Field(
         default="",
         description="Custom instructions to add to AI prompts",
+    )
+    ai_max_tokens: int = Field(
+        default=4096,
+        description="Maximum tokens for AI responses",
+    )
+    ai_temperature: float = Field(
+        default=0.7,
+        description="AI temperature (0.0-1.0)",
     )
 
     # Discord Settings

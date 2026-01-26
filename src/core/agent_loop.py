@@ -386,139 +386,32 @@ Always explain your reasoning and actions.
 _agent_loop: Optional[AgentLoop] = None
 
 
-async def _openrouter_provider(conversation: list[dict]) -> str:
-    """
-    OpenRouter LLM provider for Agent Loop.
-    Supports multiple AI models through OpenRouter API.
-    """
-    from ..utils.config import settings
-    import httpx
-    
-    api_key = settings.openrouter_api_key
-    if not api_key:
-        raise ValueError("OPENROUTER_API_KEY not configured")
-    
-    model = settings.openrouter_model or "google/gemini-2.0-flash-exp:free"
-    
-    try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://github.com/cursorbot",
-                    "X-Title": "CursorBot",
-                },
-                json={
-                    "model": model,
-                    "messages": conversation,
-                    "max_tokens": 4096,
-                },
-            )
-            
-            if response.status_code != 200:
-                error_text = response.text
-                logger.error(f"OpenRouter API error: {response.status_code} - {error_text}")
-                raise ValueError(f"OpenRouter API error: {response.status_code}")
-            
-            result = response.json()
-            return result["choices"][0]["message"]["content"]
-            
-    except httpx.TimeoutException:
-        raise ValueError("OpenRouter API timeout")
-    except Exception as e:
-        logger.error(f"OpenRouter API error: {e}")
-        raise
-
-
-async def _gemini_provider(conversation: list[dict]) -> str:
-    """
-    Google Gemini LLM provider for Agent Loop.
-    """
-    from ..utils.config import settings
-    
-    api_key = settings.google_ai_api_key
-    if not api_key:
-        raise ValueError("GOOGLE_GENERATIVE_AI_API_KEY not configured")
-    
-    try:
-        import google.generativeai as genai
-        
-        genai.configure(api_key=api_key)
-        
-        # Try different model names (Gemini 2.0 Flash is the latest)
-        model_names = [
-            'gemini-2.0-flash',
-            'gemini-2.0-flash-exp', 
-            'gemini-1.5-pro',
-            'gemini-1.5-flash-latest',
-            'gemini-pro',
-        ]
-        
-        model = None
-        for model_name in model_names:
-            try:
-                model = genai.GenerativeModel(model_name)
-                logger.info(f"Using Gemini model: {model_name}")
-                break
-            except Exception:
-                continue
-        
-        if model is None:
-            raise ValueError("No available Gemini model found")
-        
-        # Convert conversation to Gemini format
-        prompt_parts = []
-        for msg in conversation:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            if role == "system":
-                prompt_parts.append(f"[System Instructions]\n{content}\n")
-            elif role == "user":
-                prompt_parts.append(f"[User]\n{content}\n")
-            elif role == "assistant":
-                prompt_parts.append(f"[Assistant]\n{content}\n")
-        
-        prompt_parts.append("[Assistant]\n")
-        full_prompt = "\n".join(prompt_parts)
-        
-        # Generate response (use sync version wrapped in async)
-        import asyncio
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None, 
-            lambda: model.generate_content(full_prompt)
-        )
-        
-        return response.text
-        
-    except ImportError:
-        raise ValueError("google-generativeai package not installed")
-    except Exception as e:
-        logger.error(f"Gemini API error: {e}")
-        raise
-
-
 def _get_llm_provider():
     """
-    Get the appropriate LLM provider based on configuration.
-    Priority: OpenRouter > Google Gemini
+    Get the LLM provider function using the new LLMProviderManager.
+    Supports multiple providers: OpenAI, Google, Anthropic, OpenRouter, Ollama, Custom.
     """
-    from ..utils.config import settings
-    
-    # Prefer OpenRouter if configured
-    if settings.openrouter_api_key:
-        logger.info(f"Using OpenRouter with model: {settings.openrouter_model}")
-        return _openrouter_provider
-    
-    # Fallback to Gemini
-    if settings.google_ai_api_key:
-        logger.info("Using Google Gemini")
-        return _gemini_provider
-    
-    logger.warning("No LLM provider configured (set OPENROUTER_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY)")
-    return None
+    try:
+        from .llm_providers import get_llm_manager
+        
+        manager = get_llm_manager()
+        provider_func = manager.get_llm_provider_function()
+        
+        if provider_func:
+            available = manager.list_available_providers()
+            logger.info(f"LLM providers loaded: {available}")
+            return provider_func
+        
+        logger.warning(
+            "No LLM provider configured. Set one of: "
+            "OPENAI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, "
+            "ANTHROPIC_API_KEY, OPENROUTER_API_KEY, or OLLAMA_ENABLED=true"
+        )
+        return None
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize LLM provider: {e}")
+        return None
 
 
 def _get_agent_tools() -> dict:

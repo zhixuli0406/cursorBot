@@ -167,54 +167,110 @@ CURSOR_WORKSPACE_PATH=/path/to/your/projects
 
 > ⚠️ 需要 Cursor Pro 訂閱才能使用 Background Agent
 
-#### 5. 設定 AI 提供者（Agent Loop 功能）
+#### 5. 設定 AI 提供者（多模型支援）
 
-`/agent` 指令需要 AI API 才能運作。支援兩種提供者：
+`/agent` 指令支援多種 AI 提供者，只需在 `.env` 填入對應的 API Key 即可使用。
+
+**支援的提供者：**
+
+| 提供者 | 環境變數 | 說明 |
+|--------|----------|------|
+| OpenAI | `OPENAI_API_KEY` | GPT-4o, GPT-3.5-turbo 等 |
+| Google Gemini | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini 2.0, 1.5 Pro 等 |
+| Anthropic | `ANTHROPIC_API_KEY` | Claude 3.5 Sonnet, Opus 等 |
+| OpenRouter | `OPENROUTER_API_KEY` | 代理多種模型（推薦） |
+| Ollama | `OLLAMA_ENABLED=true` | 本地模型（Llama, Mistral 等） |
+| 自訂端點 | `CUSTOM_API_BASE` | 相容 OpenAI API 的端點 |
 
 **方案一：OpenRouter（推薦）**
 
-OpenRouter 整合多種 AI 模型，包括免費模型，配額較寬鬆。
-
-1. 前往 [OpenRouter](https://openrouter.ai/keys) 註冊並獲取 API Key
-2. 在 `.env` 中設定：
+一個 API Key 即可存取多種模型，包含免費選項。
 
 ```env
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxx
 OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
 ```
 
-**可用的免費模型：**
+取得 API Key：[openrouter.ai/keys](https://openrouter.ai/keys)
 
-| 模型 | 說明 |
-|------|------|
-| `google/gemini-2.0-flash-exp:free` | Google Gemini 2.0，推薦 |
-| `meta-llama/llama-3.2-3b-instruct:free` | Meta Llama 3.2 |
-| `qwen/qwen-2-7b-instruct:free` | 阿里通義千問 |
+**方案二：OpenAI**
 
-**付費模型（效果更好）：**
+```env
+OPENAI_API_KEY=sk-xxxxxxxxxxxx
+OPENAI_MODEL=gpt-4o-mini
+```
 
-| 模型 | 說明 |
-|------|------|
-| `anthropic/claude-3.5-sonnet` | Claude 3.5 Sonnet |
-| `openai/gpt-4o` | GPT-4o |
-| `google/gemini-pro-1.5` | Gemini 1.5 Pro |
+可用模型：`gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1-preview`, `o1-mini`
 
-**方案二：Google Gemini**
+取得 API Key：[platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
-直接使用 Google AI API，但免費配額較少。
+**方案三：Anthropic Claude**
 
-1. 前往 [Google AI Studio](https://aistudio.google.com/apikey) 獲取 API Key
-2. 在 `.env` 中設定：
+```env
+ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxx
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+```
+
+可用模型：`claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`, `claude-3-haiku-20240307`
+
+取得 API Key：[console.anthropic.com](https://console.anthropic.com/)
+
+**方案四：Google Gemini**
 
 ```env
 GOOGLE_GENERATIVE_AI_API_KEY=AIzaSyxxxxxxxxxx
+GOOGLE_MODEL=gemini-2.0-flash
 ```
 
-> ⚠️ Google Gemini 免費版有較嚴格的配額限制（每分鐘請求數、每日 token 數），超過會報 429 錯誤。建議使用 OpenRouter。
+可用模型：`gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-pro`
 
-**優先順序：** 系統會自動選擇可用的提供者
+取得 API Key：[aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+
+**方案五：Ollama（本地模型）**
+
+不需要 API Key，在本地執行模型。
+
+```env
+OLLAMA_ENABLED=true
+OLLAMA_API_BASE=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+```
+
+安裝 Ollama：[ollama.ai](https://ollama.ai/)
+
+```bash
+# 安裝後執行
+ollama pull llama3.2
+ollama serve
+```
+
+可用模型：`llama3.2`, `llama3.1`, `mistral`, `codellama`, `phi3`, `qwen2.5`
+
+**方案六：自訂端點**
+
+支援任何相容 OpenAI API 的端點（如 LM Studio, vLLM, LocalAI）。
+
+```env
+CUSTOM_API_BASE=http://localhost:1234/v1
+CUSTOM_API_KEY=optional-key
+CUSTOM_MODEL=local-model
+```
+
+**指定預設提供者：**
+
+```env
+# 強制使用特定提供者
+DEFAULT_LLM_PROVIDER=openai
+DEFAULT_LLM_MODEL=gpt-4o
+```
+
+**自動選擇優先順序：**
 1. OpenRouter（如果設定了 `OPENROUTER_API_KEY`）
-2. Google Gemini（如果設定了 `GOOGLE_GENERATIVE_AI_API_KEY`）
+2. OpenAI（如果設定了 `OPENAI_API_KEY`）
+3. Anthropic（如果設定了 `ANTHROPIC_API_KEY`）
+4. Google Gemini（如果設定了 `GOOGLE_GENERATIVE_AI_API_KEY`）
+5. Ollama（如果設定了 `OLLAMA_ENABLED=true`）
+6. 自訂端點（如果設定了 `CUSTOM_API_BASE`）
 
 #### 6. 啟動服務
 
@@ -318,18 +374,33 @@ python -m src.main
 | 指令 | 說明 |
 |------|------|
 | `/ask <問題>` | 發送問題給 Cursor Background Agent |
-| `/agent <任務>` | 啟動 Agent Loop 執行複雜任務（使用 OpenRouter/Gemini） |
+| `/agent <任務>` | 啟動 Agent Loop 執行複雜任務 |
+| `/model` | 查看目前使用的 AI 模型 |
+| `/model list` | 列出所有可用模型 |
+| `/model set <provider> [model]` | 切換 AI 模型 |
+| `/model reset` | 恢復預設模型 |
 | `/repo <owner/repo>` | 切換 GitHub 倉庫 |
 | `/repos` | 查看帳號中所有的 GitHub 倉庫 |
 | `/tasks` | 查看我的任務列表 |
 | `/result <ID>` | 查看任務結果 |
 | `/cancel_task <ID>` | 取消執行中的任務 |
 
+**模型切換範例：**
+
+```
+/model                              # 查看目前狀態
+/model list                         # 列出所有模型
+/model set openai gpt-4o            # 使用 OpenAI GPT-4o
+/model set anthropic                # 使用 Anthropic (預設模型)
+/model set ollama llama3.2          # 使用本地 Ollama
+/model reset                        # 恢復預設
+```
+
 **`/ask` vs `/agent` 的差別：**
 
 | | `/ask` | `/agent` |
 |---|--------|----------|
-| 後端 | Cursor Background Agent | OpenRouter / Google Gemini |
+| 後端 | Cursor Background Agent | 可切換（OpenAI/Claude/Gemini 等） |
 | 用途 | 程式碼相關任務 | 通用 AI 對話和分析 |
 | 需要 | Cursor Pro 訂閱 | OpenRouter 或 Gemini API Key |
 | 特點 | 可直接修改 GitHub 倉庫 | 多步驟推理、通用問答 |

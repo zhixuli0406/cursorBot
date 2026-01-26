@@ -1,6 +1,6 @@
 """
 Core modules for CursorBot
-Includes memory, approvals, skills, context, scheduler, webhooks, tools, browser, and agent loop
+Includes memory, approvals, skills, context, scheduler, webhooks, tools, browser, agent loop, and LLM providers
 
 Inspired by ClawdBot's architecture
 """
@@ -17,6 +17,10 @@ from .webhooks import WebhookManager, WebhookType, get_webhook_manager
 from .tools import Tool, ToolResult, ToolRegistry, get_tool_registry
 from .browser import BrowserTool, BrowserResult, get_browser_tool, PLAYWRIGHT_AVAILABLE
 from .agent_loop import AgentLoop, AgentContext, AgentState, get_agent_loop, reset_agent_loop
+from .llm_providers import (
+    LLMProviderManager, get_llm_manager, reset_llm_manager,
+    ProviderType, LLMProvider,
+)
 
 __all__ = [
     # Memory
@@ -63,4 +67,10 @@ __all__ = [
     "AgentState",
     "get_agent_loop",
     "reset_agent_loop",
+    # LLM Providers
+    "LLMProviderManager",
+    "get_llm_manager",
+    "reset_llm_manager",
+    "ProviderType",
+    "LLMProvider",
 ]
