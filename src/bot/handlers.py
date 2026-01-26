@@ -56,27 +56,51 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     Handle /start command.
     Welcome message and basic instructions.
     """
+    from .keyboards import get_welcome_keyboard
+
     user = update.effective_user
     logger.info(f"User {user.id} ({user.username}) started the bot")
+
+    # Check status
+    if is_background_agent_enabled():
+        status = "🟢 Background Agent 已連線"
+    else:
+        status = "⚠️ 請設定 API Key"
 
     welcome_text = f"""
 👋 <b>歡迎使用 CursorBot!</b>
 
-您好, {user.first_name}! 我是您的 Cursor Agent 遠端控制助手。
+您好, {user.first_name}!
 
-<b>📋 可用指令:</b>
-• /help - 顯示所有指令
-• /status - 查看連線狀態
-• /ask &lt;問題&gt; - 詢問 Cursor Agent
-• /code &lt;指令&gt; - 執行程式碼操作
-• /file &lt;路徑&gt; - 檔案操作
-• /search &lt;關鍵字&gt; - 搜尋程式碼
+CursorBot 讓你透過 Telegram 遠端控制 Cursor AI Agent，完全無需開啟 IDE。
 
-<b>🔐 您的使用者 ID:</b> <code>{user.id}</code>
+<b>狀態:</b> {status}
 
-使用 /help 查看詳細說明。
+<b>🚀 快速開始:</b>
+1. 使用 /repo 選擇 GitHub 倉庫
+2. 直接發送問題或指令
+3. AI Agent 會自動執行任務
+
+<b>✨ 主要功能:</b>
+• <b>AI 任務</b> - 發送問題讓 AI 自動編程
+• <b>語音/圖片</b> - 支援語音轉錄和圖片附件
+• <b>記憶系統</b> - /memory 儲存常用資訊
+• <b>技能系統</b> - /skills 查看可用技能
+• <b>排程任務</b> - /remind 設定提醒
+
+<b>📋 常用指令:</b>
+/help - 完整指令說明
+/status - 系統狀態
+/repo - 設定倉庫
+/tasks - 我的任務
+
+使用下方按鈕開始，或直接發送訊息！
 """
-    await update.message.reply_text(welcome_text, parse_mode="HTML")
+    await update.message.reply_text(
+        welcome_text,
+        parse_mode="HTML",
+        reply_markup=get_welcome_keyboard(),
+    )
 
 
 @authorized_only
@@ -100,6 +124,8 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • /start - 啟動並顯示歡迎訊息
 • /help - 顯示此說明
 • /status - 查看系統狀態
+• /stats - 使用統計
+• /settings - 用戶設定
 
 <b>🔹 AI 對話</b>
 • /ask &lt;問題&gt; - 發送問題給 AI Agent
@@ -109,28 +135,43 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • /result &lt;ID&gt; - 查看任務結果
 • /cancel_task &lt;ID&gt; - 取消執行中的任務
 
+<b>🔹 記憶系統</b>
+• /memory - 查看我的記憶
+• /memory add &lt;key&gt; &lt;value&gt; - 新增記憶
+• /memory get &lt;key&gt; - 取得記憶
+• /memory del &lt;key&gt; - 刪除記憶
+• /memory search &lt;query&gt; - 搜尋記憶
+• /clear - 清除對話上下文
+
+<b>🔹 技能系統</b>
+• /skills - 查看可用技能
+• /translate &lt;lang&gt; &lt;text&gt; - 翻譯文字
+• /calc &lt;expression&gt; - 計算表達式
+• /remind &lt;time&gt; &lt;msg&gt; - 設定提醒
+• /schedule - 查看排程任務
+
 <b>🔹 檔案操作</b>
-• /file read &lt;路徑&gt; - 讀取檔案內容
-• /file list &lt;目錄&gt; - 列出目錄檔案
-• /write &lt;路徑&gt; - 建立/覆寫檔案
-• /edit &lt;檔案&gt; &lt;舊&gt; -&gt; &lt;新&gt; - 編輯檔案
+• /file read &lt;路徑&gt; - 讀取檔案
+• /file list &lt;目錄&gt; - 列出檔案
+• /write &lt;路徑&gt; - 建立檔案
+• /edit &lt;檔案&gt; - 編輯檔案
 • /delete &lt;路徑&gt; - 刪除檔案
-• /undo - 復原上一次編輯
 
 <b>🔹 終端機操作</b>
-• /run &lt;命令&gt; - 執行命令並等待結果
-• /run_bg &lt;命令&gt; - 背景執行命令
-• /jobs - 查看執行中的命令
-• /kill &lt;ID&gt; - 停止執行中的命令
+• /run &lt;命令&gt; - 執行命令
+• /run_bg &lt;命令&gt; - 背景執行
+• /jobs - 查看執行中命令
+• /kill &lt;ID&gt; - 停止命令
 
 <b>🔹 工作區管理</b>
-• /workspace - 顯示目前工作區資訊
-• /workspace list - 列出所有可用工作區
-• /cd &lt;名稱&gt; - 快速切換工作區
+• /workspace - 顯示工作區
+• /cd &lt;名稱&gt; - 切換工作區
 • /search &lt;關鍵字&gt; - 搜尋程式碼
 
 <b>💡 提示:</b>
-直接發送訊息也可以與 AI Agent 對話!
+• 直接發送訊息即可與 AI 對話
+• 發送語音會自動轉錄
+• 發送圖片會加入任務
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 
@@ -238,9 +279,12 @@ async def _handle_background_agent_ask(
     chat_id: int,
 ) -> None:
     """Handle ask command using Background Agent."""
+    from .keyboards import get_repo_keyboard
+    from .media_handlers import get_cached_media, clear_cache, get_cache_count
+
     # Get user's current repo
     repo_url = get_user_repo(user_id)
-    
+
     # Check if GitHub repo is configured
     if not repo_url:
         await update.message.reply_text(
@@ -248,7 +292,7 @@ async def _handle_background_agent_ask(
             "Background Agent 需要指定 GitHub 倉庫才能運作。\n\n"
             "<b>設定方式:</b>\n"
             "1. 使用 <code>/repo owner/repo-name</code> 指定倉庫\n"
-            "2. 或在 .env 設定 CURSOR_GITHUB_REPO\n\n"
+            "2. 或點擊下方按鈕選擇倉庫\n\n"
             "<b>範例:</b>\n"
             "<code>/repo lizhixu/cursorBot</code>",
             parse_mode="HTML",
@@ -256,14 +300,27 @@ async def _handle_background_agent_ask(
         return
 
     repo_name = repo_url.split("/")[-1]
-    
+
+    # Check for cached media (images)
+    cached_media = get_cached_media(user_id)
+    media_count = len(cached_media)
+    media_info = f"\n📎 附件: {media_count} 張圖片" if media_count > 0 else ""
+
+    # Add custom prompt if configured
+    if settings.custom_prompt:
+        question = f"{settings.custom_prompt}\n\n{question}"
+
     # Send initial response
     status_msg = await update.message.reply_text(
         f"🚀 <b>正在啟動 Background Agent...</b>\n\n"
         f"📁 倉庫: <code>{repo_name}</code>\n"
-        f"❓ 問題: {question[:80]}{'...' if len(question) > 80 else ''}",
+        f"❓ 問題: {question[:80]}{'...' if len(question) > 80 else ''}{media_info}",
         parse_mode="HTML",
     )
+
+    # Clear media cache after task creation
+    if media_count > 0:
+        clear_cache(user_id)
 
     try:
         # Create background agent task
@@ -300,14 +357,16 @@ async def _handle_background_agent_ask(
         tracker = get_task_tracker()
         tracker.add_task(user_id, composer_id, question, chat_id)
 
+        from .keyboards import get_task_created_keyboard
+
         await status_msg.edit_text(
             f"✅ <b>任務已建立</b>\n\n"
             f"🆔 任務 ID: <code>{composer_id}</code>\n"
-            f"❓ 問題: {question[:80]}{'...' if len(question) > 80 else ''}\n\n"
-            f"⏳ 正在執行中...\n"
-            f"使用 /tasks 查看狀態\n"
-            f"使用 /result {composer_id[:8]} 查看結果",
+            f"📁 倉庫: <code>{repo_name}</code>\n"
+            f"❓ 問題: {question[:60]}{'...' if len(question) > 60 else ''}\n\n"
+            f"⏳ 正在執行中...",
             parse_mode="HTML",
+            reply_markup=get_task_created_keyboard(composer_id),
         )
 
         # Start background polling for this task
@@ -347,10 +406,12 @@ async def _poll_task_completion(
             result.get("output", ""),
         )
 
+        from .keyboards import get_task_keyboard
+
         if result.get("success"):
             output = result.get("output", "（無輸出）")
-            if len(output) > 3500:
-                output = output[:3500] + "\n\n... (內容過長已截斷)"
+            if len(output) > 2500:
+                output = output[:2500] + "\n\n... (內容過長已截斷)"
             output = _escape_html(output)
 
             await update.effective_chat.send_message(
@@ -358,6 +419,7 @@ async def _poll_task_completion(
                 f"🆔 <code>{_escape_html(composer_id[:8])}</code>\n\n"
                 f"📝 <b>結果:</b>\n{output}",
                 parse_mode="HTML",
+                reply_markup=get_task_keyboard(composer_id, "completed"),
             )
         else:
             status = _escape_html(result.get('status', 'unknown'))
@@ -368,6 +430,7 @@ async def _poll_task_completion(
                 f"狀態: {status}\n"
                 f"原因: {message}",
                 parse_mode="HTML",
+                reply_markup=get_task_keyboard(composer_id, "failed"),
             )
 
     except Exception as e:
@@ -636,18 +699,8 @@ async def result_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
 
 
-# Store user's current repo selection
-_user_repos: dict[int, str] = {}
-
-
-def get_user_repo(user_id: int) -> str:
-    """Get user's current repo, fallback to settings."""
-    return _user_repos.get(user_id, settings.cursor_github_repo)
-
-
-def set_user_repo(user_id: int, repo_url: str) -> None:
-    """Set user's current repo."""
-    _user_repos[user_id] = repo_url
+# Import user repo functions from callbacks module (shared state)
+from .callbacks import get_user_repo, set_user_repo
 
 
 @authorized_only
@@ -909,7 +962,19 @@ def setup_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("search", search_handler))
     app.add_handler(CommandHandler("project", project_handler))
 
-    # Message handler for regular text
+    # Setup callback handlers for inline keyboards
+    from .callbacks import setup_callback_handlers
+    setup_callback_handlers(app)
+
+    # Setup media handlers (voice, photo, document)
+    from .media_handlers import setup_media_handlers
+    setup_media_handlers(app)
+
+    # Setup core feature handlers (memory, skills, scheduler, etc.)
+    from .core_handlers import setup_core_handlers
+    setup_core_handlers(app)
+
+    # Message handler for regular text (should be added last)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
     # Error handler

@@ -102,6 +102,42 @@ class Settings(BaseSettings):
         description="Optional GitHub repository URL for Background Agent tasks",
     )
 
+    # AI Integration Settings
+    openrouter_api_key: str = Field(
+        default="",
+        description="OpenRouter API key for AI functionality (voice transcription, etc.)",
+    )
+    openrouter_model: str = Field(
+        default="openai/gpt-4.1",
+        description="OpenRouter model for AI interactions",
+    )
+    google_ai_api_key: str = Field(
+        default="",
+        description="Google Gemini API key for voice transcription and image processing",
+    )
+    custom_prompt: str = Field(
+        default="",
+        description="Custom instructions to add to AI prompts",
+    )
+
+    # Discord Settings
+    discord_bot_token: str = Field(
+        default="",
+        description="Discord bot token",
+    )
+    discord_allowed_guilds: str = Field(
+        default="",
+        description="Comma-separated list of allowed Discord guild IDs",
+    )
+    discord_allowed_users: str = Field(
+        default="",
+        description="Comma-separated list of allowed Discord user IDs",
+    )
+    discord_enabled: bool = Field(
+        default=False,
+        description="Enable Discord bot",
+    )
+
     @property
     def allowed_user_ids(self) -> List[int]:
         """Parse comma-separated user IDs into a list of integers."""

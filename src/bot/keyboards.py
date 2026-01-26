@@ -1,6 +1,8 @@
 """
 Custom keyboard layouts for Telegram Bot
-Provides interactive inline and reply keyboards
+Provides interactive inline and reply keyboards for CursorBot
+
+Features inspired by cursor-telegram-bot and ClawBot
 """
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
@@ -13,14 +15,180 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     """
     keyboard = [
         ["📊 狀態", "❓ 幫助"],
-        ["💬 詢問", "📁 檔案"],
-        ["🔍 搜尋", "📂 專案"],
+        ["📋 任務", "📁 倉庫"],
+        ["🔍 搜尋", "⚙️ 設定"],
     ]
     return ReplyKeyboardMarkup(
         keyboard,
         resize_keyboard=True,
         one_time_keyboard=False,
     )
+
+
+# ============================================
+# Task Management Keyboards
+# ============================================
+
+
+def get_task_keyboard(task_id: str, status: str = "running") -> InlineKeyboardMarkup:
+    """
+    Get task action keyboard with buttons.
+
+    Args:
+        task_id: The task/composer ID
+        status: Current task status
+    """
+    keyboard = []
+
+    # Open in Cursor button (external link)
+    cursor_url = f"https://cursor.com/agents/{task_id}"
+    keyboard.append([
+        InlineKeyboardButton("🔗 在 Cursor 開啟", url=cursor_url)
+    ])
+
+    # Action buttons based on status
+    if status in ["running", "pending", "created"]:
+        keyboard.append([
+            InlineKeyboardButton("🔄 重新整理", callback_data=f"task_refresh:{task_id[:8]}"),
+            InlineKeyboardButton("❌ 取消任務", callback_data=f"task_cancel:{task_id[:8]}"),
+        ])
+    else:
+        keyboard.append([
+            InlineKeyboardButton("🔄 重新整理", callback_data=f"task_refresh:{task_id[:8]}"),
+            InlineKeyboardButton("📋 複製結果", callback_data=f"task_copy:{task_id[:8]}"),
+        ])
+
+    # Follow-up button
+    keyboard.append([
+        InlineKeyboardButton("💬 追問", callback_data=f"task_followup:{task_id[:8]}")
+    ])
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_task_list_keyboard(tasks: list[dict]) -> InlineKeyboardMarkup:
+    """
+    Get task list selection keyboard.
+
+    Args:
+        tasks: List of task dictionaries
+    """
+    keyboard = []
+
+    for task in tasks[:8]:  # Limit to 8 tasks
+        task_id = task.get("composer_id", "")[:8]
+        status = task.get("status", "unknown")
+        prompt = task.get("prompt", "")[:20] + "..." if len(task.get("prompt", "")) > 20 else task.get("prompt", "")
+
+        # Status emoji
+        emoji = {
+            "running": "🔄",
+            "pending": "⏳",
+            "created": "🆕",
+            "completed": "✅",
+            "failed": "❌",
+            "cancelled": "🚫",
+        }.get(status, "❓")
+
+        keyboard.append([
+            InlineKeyboardButton(
+                f"{emoji} {task_id}: {prompt}",
+                callback_data=f"task_view:{task_id}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton("🔄 重新整理", callback_data="tasks_refresh"),
+        InlineKeyboardButton("❌ 關閉", callback_data="close"),
+    ])
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_task_created_keyboard(task_id: str) -> InlineKeyboardMarkup:
+    """
+    Get keyboard shown when task is created.
+
+    Args:
+        task_id: The task/composer ID
+    """
+    cursor_url = f"https://cursor.com/agents/{task_id}"
+    keyboard = [
+        [InlineKeyboardButton("🔗 在 Cursor 開啟", url=cursor_url)],
+        [
+            InlineKeyboardButton("🔄 查看狀態", callback_data=f"task_refresh:{task_id[:8]}"),
+            InlineKeyboardButton("❌ 取消", callback_data=f"task_cancel:{task_id[:8]}"),
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+# ============================================
+# Repository Keyboards
+# ============================================
+
+
+def get_repo_keyboard(repos: list[dict], current_repo: str = "") -> InlineKeyboardMarkup:
+    """
+    Get repository selection keyboard.
+
+    Args:
+        repos: List of repository dictionaries
+        current_repo: Currently selected repo URL
+    """
+    keyboard = []
+
+    for repo in repos[:10]:  # Limit to 10 repos
+        name = repo.get("name", "")
+        full_name = repo.get("full_name", "")
+        owner = repo.get("owner", "")
+        private = repo.get("private", False)
+
+        # Fallback: construct full_name if empty
+        if not full_name:
+            if owner and name:
+                full_name = f"{owner}/{name}"
+            elif name:
+                full_name = name
+            else:
+                # Skip repos without proper identification
+                continue
+
+        # Mark current repo
+        is_current = current_repo and full_name in current_repo
+        prefix = "✓ " if is_current else ""
+        lock = "🔒 " if private else ""
+
+        keyboard.append([
+            InlineKeyboardButton(
+                f"{lock}{prefix}{name or full_name.split('/')[-1]}",
+                callback_data=f"repo_select:{full_name}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton("🔄 重新整理", callback_data="repos_refresh"),
+        InlineKeyboardButton("❌ 關閉", callback_data="close"),
+    ])
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_repo_info_keyboard(repo_url: str) -> InlineKeyboardMarkup:
+    """
+    Get keyboard for repo info display.
+
+    Args:
+        repo_url: GitHub repository URL
+    """
+    keyboard = [
+        [InlineKeyboardButton("🔗 在 GitHub 開啟", url=repo_url)],
+        [
+            InlineKeyboardButton("💬 發送任務", callback_data="ask_new"),
+            InlineKeyboardButton("🔄 切換倉庫", callback_data="repos_list"),
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
 
 def get_file_operations_keyboard(path: str = ".") -> InlineKeyboardMarkup:
@@ -126,9 +294,85 @@ def get_settings_keyboard() -> InlineKeyboardMarkup:
     """Get settings menu keyboard."""
     keyboard = [
         [InlineKeyboardButton("🔔 通知設定", callback_data="settings_notifications")],
-        [InlineKeyboardButton("🎨 顯示設定", callback_data="settings_display")],
-        [InlineKeyboardButton("🔐 安全設定", callback_data="settings_security")],
+        [InlineKeyboardButton("📝 自訂提示詞", callback_data="settings_prompt")],
+        [InlineKeyboardButton("🤖 AI 設定", callback_data="settings_ai")],
         [InlineKeyboardButton("❌ 關閉", callback_data="close")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+# ============================================
+# Quick Action Keyboards
+# ============================================
+
+
+def get_welcome_keyboard() -> InlineKeyboardMarkup:
+    """Get welcome message keyboard with quick actions."""
+    keyboard = [
+        [
+            InlineKeyboardButton("📁 選擇倉庫", callback_data="repos_list"),
+            InlineKeyboardButton("📋 我的任務", callback_data="tasks_list"),
+        ],
+        [
+            InlineKeyboardButton("🧠 記憶", callback_data="memory_list"),
+            InlineKeyboardButton("🎯 技能", callback_data="skills_list"),
+        ],
+        [
+            InlineKeyboardButton("📊 狀態", callback_data="status"),
+            InlineKeyboardButton("❓ 幫助", callback_data="help"),
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_status_keyboard() -> InlineKeyboardMarkup:
+    """Get status page keyboard."""
+    keyboard = [
+        [
+            InlineKeyboardButton("📁 我的倉庫", callback_data="repos_list"),
+            InlineKeyboardButton("📋 我的任務", callback_data="tasks_list"),
+        ],
+        [
+            InlineKeyboardButton("🔄 重新整理", callback_data="status_refresh"),
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_help_keyboard() -> InlineKeyboardMarkup:
+    """Get help page keyboard."""
+    keyboard = [
+        [InlineKeyboardButton("🚀 快速開始", callback_data="help_quickstart")],
+        [InlineKeyboardButton("📖 指令說明", callback_data="help_commands")],
+        [InlineKeyboardButton("❓ 常見問題", callback_data="help_faq")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_error_keyboard() -> InlineKeyboardMarkup:
+    """Get error message keyboard with retry option."""
+    keyboard = [
+        [
+            InlineKeyboardButton("🔄 重試", callback_data="retry_last"),
+            InlineKeyboardButton("❓ 取得幫助", callback_data="help"),
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+# ============================================
+# Image/Voice Keyboards
+# ============================================
+
+
+def get_media_received_keyboard() -> InlineKeyboardMarkup:
+    """Get keyboard shown when media (image/voice) is received."""
+    keyboard = [
+        [InlineKeyboardButton("💬 建立任務", callback_data="create_task_with_media")],
+        [
+            InlineKeyboardButton("🗑️ 清除快取", callback_data="clear_media_cache"),
+            InlineKeyboardButton("❌ 取消", callback_data="cancel_media"),
+        ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -141,4 +385,18 @@ __all__ = [
     "get_search_results_keyboard",
     "get_code_action_keyboard",
     "get_settings_keyboard",
+    # Task keyboards
+    "get_task_keyboard",
+    "get_task_list_keyboard",
+    "get_task_created_keyboard",
+    # Repo keyboards
+    "get_repo_keyboard",
+    "get_repo_info_keyboard",
+    # Quick action keyboards
+    "get_welcome_keyboard",
+    "get_status_keyboard",
+    "get_help_keyboard",
+    "get_error_keyboard",
+    # Media keyboards
+    "get_media_received_keyboard",
 ]

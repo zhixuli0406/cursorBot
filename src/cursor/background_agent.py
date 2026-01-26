@@ -373,6 +373,59 @@ class CursorBackgroundAgent:
                 "message": str(e),
             }
     
+    def _format_repo_info(self, repo: dict) -> dict:
+        """
+        Format repository information with consistent structure.
+        
+        Args:
+            repo: Raw repository data from API
+            
+        Returns:
+            Formatted repository info dict
+        """
+        # Extract owner from different possible formats
+        owner = ""
+        if isinstance(repo.get("owner"), dict):
+            owner = repo.get("owner", {}).get("login", "")
+        else:
+            owner = repo.get("owner", "")
+        
+        # Extract name
+        name = repo.get("name", "")
+        
+        # Construct full_name if not provided
+        full_name = repo.get("full_name", "")
+        if not full_name and owner and name:
+            full_name = f"{owner}/{name}"
+        elif not full_name and name:
+            # Try to extract from URL if available
+            url = repo.get("html_url", repo.get("url", ""))
+            if "github.com/" in url:
+                parts = url.split("github.com/")[-1].strip("/").split("/")
+                if len(parts) >= 2:
+                    full_name = f"{parts[0]}/{parts[1]}"
+            if not full_name:
+                full_name = name
+        
+        # If name is empty, extract from full_name
+        if not name and full_name:
+            name = full_name.split("/")[-1]
+        
+        # If owner is empty, extract from full_name
+        if not owner and full_name and "/" in full_name:
+            owner = full_name.split("/")[0]
+        
+        return {
+            "id": repo.get("id", ""),
+            "name": name,
+            "full_name": full_name,
+            "owner": owner,
+            "url": repo.get("html_url", repo.get("url", "")),
+            "description": repo.get("description", ""),
+            "private": repo.get("private", False),
+            "default_branch": repo.get("default_branch", "main"),
+        }
+
     async def list_repositories(self) -> dict:
         """
         List all GitHub repositories connected to the Cursor account.
@@ -394,20 +447,8 @@ class CursorBackgroundAgent:
                 else:
                     repos = data.get("repositories", data.get("repos", []))
                 
-                # Format repository information
-                formatted_repos = []
-                for repo in repos:
-                    repo_info = {
-                        "id": repo.get("id", ""),
-                        "name": repo.get("name", repo.get("full_name", "").split("/")[-1]),
-                        "full_name": repo.get("full_name", ""),
-                        "owner": repo.get("owner", {}).get("login", "") if isinstance(repo.get("owner"), dict) else repo.get("owner", ""),
-                        "url": repo.get("html_url", repo.get("url", "")),
-                        "description": repo.get("description", ""),
-                        "private": repo.get("private", False),
-                        "default_branch": repo.get("default_branch", "main"),
-                    }
-                    formatted_repos.append(repo_info)
+                # Format repository information using helper method
+                formatted_repos = [self._format_repo_info(repo) for repo in repos]
                 
                 logger.info(f"Found {len(formatted_repos)} repositories")
                 
@@ -462,17 +503,7 @@ class CursorBackgroundAgent:
                 
                 formatted_repos = []
                 for repo in repos:
-                    repo_info = {
-                        "id": repo.get("id", ""),
-                        "name": repo.get("name", ""),
-                        "full_name": repo.get("full_name", ""),
-                        "owner": repo.get("owner", {}).get("login", "") if isinstance(repo.get("owner"), dict) else repo.get("owner", ""),
-                        "url": repo.get("html_url", repo.get("url", "")),
-                        "description": repo.get("description", ""),
-                        "private": repo.get("private", False),
-                        "default_branch": repo.get("default_branch", "main"),
-                    }
-                    formatted_repos.append(repo_info)
+                    formatted_repos.append(self._format_repo_info(repo))
                 
                 return {
                     "success": True,
@@ -489,17 +520,7 @@ class CursorBackgroundAgent:
                     
                     formatted_repos = []
                     for repo in repos:
-                        repo_info = {
-                            "id": repo.get("id", ""),
-                            "name": repo.get("name", ""),
-                            "full_name": repo.get("full_name", ""),
-                            "owner": repo.get("owner", {}).get("login", "") if isinstance(repo.get("owner"), dict) else repo.get("owner", ""),
-                            "url": repo.get("html_url", repo.get("url", "")),
-                            "description": repo.get("description", ""),
-                            "private": repo.get("private", False),
-                            "default_branch": repo.get("default_branch", "main"),
-                        }
-                        formatted_repos.append(repo_info)
+                        formatted_repos.append(self._format_repo_info(repo))
                     
                     return {
                         "success": True,

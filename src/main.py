@@ -1,6 +1,6 @@
 """
 CursorBot Main Entry Point
-Starts both Telegram Bot and API Server
+Starts Telegram Bot, Discord Bot, and API Server
 """
 
 import asyncio
@@ -20,13 +20,15 @@ from .utils.task_queue import get_task_queue
 class CursorBotApp:
     """
     Main application class that coordinates all services.
-    Manages Telegram Bot and API Server lifecycle.
+    Manages Telegram Bot, Discord Bot, and API Server lifecycle.
     """
 
     def __init__(self):
         self.telegram_bot: Optional[CursorTelegramBot] = None
+        self.discord_channel = None
         self.server_task: Optional[asyncio.Task] = None
         self.bot_task: Optional[asyncio.Task] = None
+        self.discord_task: Optional[asyncio.Task] = None
         self._shutdown_event = asyncio.Event()
 
     async def start_telegram_bot(self) -> None:
@@ -37,6 +39,42 @@ class CursorBotApp:
         except Exception as e:
             logger.error(f"Telegram bot error: {e}")
             raise
+
+    async def start_discord_bot(self) -> None:
+        """Start the Discord bot."""
+        try:
+            from .channels.discord_channel import create_discord_channel, DISCORD_AVAILABLE
+            from .channels.discord_handlers import setup_discord_handlers
+
+            if not DISCORD_AVAILABLE:
+                logger.warning("discord.py not installed, skipping Discord bot")
+                return
+
+            # Parse allowed guilds and users
+            allowed_guilds = []
+            if settings.discord_allowed_guilds:
+                allowed_guilds = [int(g.strip()) for g in settings.discord_allowed_guilds.split(",") if g.strip()]
+
+            allowed_users = []
+            if settings.discord_allowed_users:
+                allowed_users = [int(u.strip()) for u in settings.discord_allowed_users.split(",") if u.strip()]
+
+            # Create Discord channel
+            self.discord_channel = create_discord_channel(
+                token=settings.discord_bot_token,
+                allowed_guilds=allowed_guilds,
+                allowed_users=allowed_users,
+            )
+
+            if self.discord_channel:
+                # Setup handlers
+                setup_discord_handlers(self.discord_channel)
+                logger.info("Starting Discord Bot...")
+                await self.discord_channel.start()
+
+        except Exception as e:
+            logger.error(f"Discord bot error: {e}")
+            # Don't raise - let other services continue
 
     async def start_api_server(self) -> None:
         """Start the FastAPI server."""
@@ -75,18 +113,36 @@ class CursorBotApp:
             logger.info("Task queue started")
 
             # Start services concurrently
+            tasks = []
+
+            # Telegram Bot
             self.bot_task = asyncio.create_task(
                 self.start_telegram_bot(),
                 name="telegram_bot",
             )
+            tasks.append(self.bot_task)
+
+            # Discord Bot (if enabled)
+            if settings.discord_enabled and settings.discord_bot_token:
+                logger.info("Discord Bot enabled, starting...")
+                self.discord_task = asyncio.create_task(
+                    self.start_discord_bot(),
+                    name="discord_bot",
+                )
+                tasks.append(self.discord_task)
+            else:
+                logger.info("Discord Bot disabled (set DISCORD_ENABLED=true to enable)")
+
+            # API Server
             self.server_task = asyncio.create_task(
                 self.start_api_server(),
                 name="api_server",
             )
+            tasks.append(self.server_task)
 
             # Wait for shutdown signal or task completion
             done, pending = await asyncio.wait(
-                [self.bot_task, self.server_task],
+                tasks,
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
@@ -123,8 +179,15 @@ class CursorBotApp:
         if self.telegram_bot:
             await self.telegram_bot.stop()
 
+        # Stop Discord bot
+        if self.discord_channel:
+            try:
+                await self.discord_channel.stop()
+            except Exception as e:
+                logger.error(f"Error stopping Discord bot: {e}")
+
         # Cancel tasks
-        for task in [self.bot_task, self.server_task]:
+        for task in [self.bot_task, self.server_task, self.discord_task]:
             if task and not task.done():
                 task.cancel()
                 try:
@@ -154,6 +217,8 @@ class CursorBotApp:
             self.bot_task.cancel()
         if self.server_task:
             self.server_task.cancel()
+        if self.discord_task:
+            self.discord_task.cancel()
 
 
 def main() -> None:
@@ -162,9 +227,9 @@ def main() -> None:
     print("""
     ╔═══════════════════════════════════════════════╗
     ║                                               ║
-    ║   🤖 CursorBot - Telegram Remote Control      ║
+    ║   🤖 CursorBot - Multi-Platform AI Control    ║
     ║                                               ║
-    ║   Control Cursor Agent from anywhere!         ║
+    ║   Telegram + Discord + Cursor Agent           ║
     ║                                               ║
     ╚═══════════════════════════════════════════════╝
     """)
