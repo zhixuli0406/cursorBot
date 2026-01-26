@@ -384,10 +384,129 @@ python -m src.main
 | `/memory add <key> <value>` | 新增記憶 |
 | `/memory get <key>` | 取得記憶 |
 | `/memory del <key>` | 刪除記憶 |
-| `/skills` | 查看可用技能 |
+| `/skills` | 查看所有可用技能 |
+| `/skills agent` | 查看 Agent 技能 |
 | `/translate <lang> <text>` | 翻譯 |
 | `/calc <expression>` | 計算 |
 | `/remind <time> <message>` | 設定提醒 |
+
+### Agent 技能系統
+
+Agent 技能是 `/agent` 指令可以使用的工具，讓 AI 能執行實際操作。
+
+**內建 Agent 技能：**
+
+| 技能名稱 | 說明 |
+|----------|------|
+| `web_search` | 搜尋網路資訊（使用 DuckDuckGo） |
+| `code_analysis` | 分析程式碼品質和問題 |
+| `file_read` | 讀取工作區檔案 |
+| `execute_command` | 執行終端指令 |
+| `url_fetch` | 擷取網頁內容 |
+
+**UI/UX Pro Max Agent Skills（已安裝）：**
+
+| 技能名稱 | 說明 |
+|----------|------|
+| `uiux_design_system` | 生成完整的 UI/UX 設計系統建議 |
+| `uiux_search` | 搜尋 UI 風格、色彩調色盤、字體排版 |
+| `uiux_stack` | 取得特定技術堆疊的 UI/UX 指南 |
+| `uiux_checklist` | 取得 UI/UX 交付前檢查清單 |
+
+> 基於 [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
+> 包含 67 種 UI 風格、96 種色彩調色盤、57 種字體組合、100 條推理規則
+
+**使用範例：**
+
+```
+/agent 幫我搜尋 Python 非同步程式設計的教學
+/agent 分析 src/main.py 的程式碼品質
+/agent 讀取 README.md 並摘要重點
+/agent 執行 npm install 並告訴我結果
+
+# UI/UX 設計相關
+/agent 幫我設計一個 SaaS 儀表板的 UI 風格
+/agent 為美容 SPA 網站生成設計系統
+/agent 搜尋 glassmorphism 風格指南
+/agent 取得 React 的 UI 效能最佳實踐
+```
+
+**自訂 Agent 技能：**
+
+將技能檔案放入 `skills/agent/` 目錄，系統會自動偵測並載入。支援多種格式：
+
+**方式一：簡單 Python 檔案（推薦）**
+
+```python
+# skills/agent/my_skill.py
+# 只需定義 SKILL_INFO 和 execute 函數即可！
+
+SKILL_INFO = {
+    "name": "my_skill",
+    "description": "My custom skill",
+    "parameters": {"input": "Input text"},
+    "examples": ["Example usage"],
+}
+
+async def execute(input: str = "", **kwargs) -> dict:
+    return {"result": input.upper()}
+```
+
+**方式二：JSON 配置檔案**
+
+```json
+// skills/agent/my_api.skill.json
+{
+  "name": "my_api",
+  "description": "Call external API",
+  "type": "http",
+  "url": "https://api.example.com/endpoint",
+  "method": "POST",
+  "parameters": {"query": "Search query"}
+}
+```
+
+**方式三：Shell 指令技能**
+
+```json
+// skills/agent/disk_check.skill.json
+{
+  "name": "disk_check",
+  "description": "Check disk usage",
+  "type": "command",
+  "command": "df -h",
+  "timeout": 10
+}
+```
+
+**方式四：完整 Python 類別**
+
+```python
+# skills/agent/advanced_skill.py
+from src.core.skills import AgentSkill, AgentSkillInfo
+
+class AdvancedSkill(AgentSkill):
+    @property
+    def info(self) -> AgentSkillInfo:
+        return AgentSkillInfo(
+            name="advanced_skill",
+            description="Advanced skill with full control",
+        )
+    
+    async def execute(self, **kwargs) -> dict:
+        return {"result": "Success"}
+```
+
+**支援的技能類型：**
+
+| 類型 | 檔案格式 | 說明 |
+|------|----------|------|
+| Python 函數 | `*.py` + `SKILL_INFO` | 最簡單，自動封裝 |
+| Python 類別 | `*.py` + `AgentSkill` 子類 | 完整控制 |
+| HTTP API | `*.skill.json` + `type: "http"` | 呼叫外部 API |
+| Shell 指令 | `*.skill.json` + `type: "command"` | 執行系統指令 |
+| 腳本執行 | `*.skill.json` + `type: "script"` | 執行外部腳本 |
+| YAML 配置 | `*.skill.yaml` | 同 JSON，支援 YAML 格式 |
 
 ### 系統管理
 

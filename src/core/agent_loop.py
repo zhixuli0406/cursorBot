@@ -521,27 +521,75 @@ def _get_llm_provider():
     return None
 
 
+def _get_agent_tools() -> dict:
+    """Get tools from skill manager."""
+    try:
+        from .skills import get_skill_manager
+        manager = get_skill_manager()
+        return manager.get_agent_tools()
+    except Exception as e:
+        logger.error(f"Failed to get agent tools: {e}")
+        return {}
+
+
+def _get_tools_description() -> str:
+    """Get tools description for system prompt."""
+    try:
+        from .skills import get_skill_manager
+        manager = get_skill_manager()
+        return manager.get_agent_tools_description()
+    except Exception:
+        return ""
+
+
 def get_agent_loop() -> AgentLoop:
-    """Get the global AgentLoop instance with configured LLM provider."""
+    """Get the global AgentLoop instance with configured LLM provider and skills."""
     global _agent_loop
     if _agent_loop is None:
-        _agent_loop = AgentLoop(
-            llm_provider=_get_llm_provider(),
-            system_prompt="""You are CursorBot, an intelligent AI assistant that helps with various tasks.
+        # Get tools from skill manager
+        tools = _get_agent_tools()
+        tools_desc = _get_tools_description()
+        
+        system_prompt = f"""You are CursorBot, an intelligent AI assistant that helps with various tasks.
+
+You have access to the following tools/skills:
+{tools_desc if tools_desc else "No tools available"}
 
 When given a task:
 1. Analyze the request carefully
-2. Break down complex tasks into steps
-3. Provide detailed, helpful responses
-4. Use code examples when appropriate
-5. Be concise but thorough
+2. If you need to use a tool, specify which tool and parameters
+3. Break down complex tasks into steps
+4. Provide detailed, helpful responses
+5. Use code examples when appropriate
+6. Be concise but thorough
+
+To use a tool, respond with:
+[TOOL: tool_name]
+{{parameters as JSON}}
+[/TOOL]
 
 Always respond in the same language as the user's input.
 If the user writes in Chinese, respond in Chinese.
 If the user writes in Traditional Chinese, respond in Traditional Chinese.
 """
+        
+        _agent_loop = AgentLoop(
+            llm_provider=_get_llm_provider(),
+            tools=tools,
+            system_prompt=system_prompt,
         )
+        
+        if tools:
+            logger.info(f"Agent Loop initialized with {len(tools)} tools: {list(tools.keys())}")
+    
     return _agent_loop
+
+
+def reset_agent_loop() -> None:
+    """Reset the agent loop instance (useful after adding new skills)."""
+    global _agent_loop
+    _agent_loop = None
+    logger.info("Agent Loop reset")
 
 
 __all__ = [

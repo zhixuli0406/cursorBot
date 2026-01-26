@@ -76,11 +76,17 @@ RUN playwright install chromium && \
 # Copy application code
 COPY src/ ./src/
 
+# Copy skills directory (for custom agent skills)
+COPY skills/ ./skills/
+
 # Copy env.example as reference
 COPY env.example .
 
 # Create data directory for persistence
 RUN mkdir -p /app/data
+
+# Ensure skills directory exists with proper permissions
+RUN mkdir -p /app/skills/agent
 
 # Create workspace directory with proper permissions
 # This will be the mount point for user's projects

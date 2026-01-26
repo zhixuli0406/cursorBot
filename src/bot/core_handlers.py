@@ -122,7 +122,7 @@ async def memory_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def skills_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /skills command.
-    List available skills.
+    List available skills (both command and agent skills).
     """
     skills = get_skill_manager()
 
@@ -130,20 +130,55 @@ async def skills_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not skills.list_skills():
         await skills.load_builtin_skills()
 
-    skill_list = skills.list_skills()
-
-    if not skill_list:
-        await update.message.reply_text("❌ 沒有可用的技能")
+    args = context.args if context.args else []
+    
+    # /skills agent - show agent skills
+    if args and args[0] == "agent":
+        agent_skills = skills.list_agent_skills()
+        
+        if not agent_skills:
+            await update.message.reply_text("❌ 沒有可用的 Agent 技能")
+            return
+        
+        text = "🤖 <b>Agent 技能</b>\n\n"
+        text += "這些技能可在 /agent 指令中使用:\n\n"
+        
+        for skill in agent_skills:
+            status = "✅" if skill.enabled else "❌"
+            text += f"{status} <b>{skill.name}</b>\n"
+            text += f"   {skill.description}\n"
+            if skill.categories:
+                text += f"   分類: {', '.join(skill.categories)}\n"
+            if skill.examples:
+                text += f"   範例: {skill.examples[0]}\n"
+            text += "\n"
+        
+        await update.message.reply_text(text, parse_mode="HTML")
         return
+    
+    # Default: show command skills
+    skill_list = skills.list_skills()
+    agent_skills = skills.list_agent_skills()
 
     text = "🎯 <b>可用技能</b>\n\n"
-
-    for skill in skill_list:
-        status = "✅" if skill.enabled else "❌"
-        commands = ", ".join([f"/{c}" for c in skill.commands])
-        text += f"{status} <b>{skill.name}</b>\n"
-        text += f"   {skill.description}\n"
-        text += f"   指令: {commands}\n\n"
+    
+    # Command skills
+    if skill_list:
+        text += "<b>📋 指令技能:</b>\n"
+        for skill in skill_list:
+            status = "✅" if skill.enabled else "❌"
+            commands = ", ".join([f"/{c}" for c in skill.commands])
+            text += f"{status} <b>{skill.name}</b>: {commands}\n"
+        text += "\n"
+    
+    # Agent skills summary
+    if agent_skills:
+        text += f"<b>🤖 Agent 技能:</b> {len(agent_skills)} 個可用\n"
+        text += "使用 <code>/skills agent</code> 查看詳情\n\n"
+    
+    text += "<b>使用說明:</b>\n"
+    text += "• 指令技能: 直接使用 /指令 執行\n"
+    text += "• Agent 技能: 透過 /agent 指令使用\n"
 
     await update.message.reply_text(text, parse_mode="HTML")
 

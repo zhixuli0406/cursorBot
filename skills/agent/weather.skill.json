@@ -1,0 +1,18 @@
+{
+  "name": "weather_api",
+  "description": "Get weather information from wttr.in API",
+  "version": "1.0.0",
+  "author": "CursorBot",
+  "type": "http",
+  "url": "https://wttr.in/{location}?format=j1",
+  "method": "GET",
+  "timeout": 30,
+  "parameters": {
+    "location": "City name or location (e.g., 'Tokyo', 'New+York')"
+  },
+  "examples": [
+    "Get weather for Tokyo",
+    "What's the weather in London?"
+  ],
+  "categories": ["weather", "api", "utility"]
+}

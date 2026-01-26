@@ -1,0 +1,15 @@
+{
+  "name": "system_info",
+  "description": "Get system information (OS, memory, disk usage)",
+  "version": "1.0.0",
+  "author": "CursorBot",
+  "type": "command",
+  "command": "uname -a && df -h / && free -h 2>/dev/null || vm_stat",
+  "timeout": 10,
+  "parameters": {},
+  "examples": [
+    "Show system info",
+    "Check disk space"
+  ],
+  "categories": ["system", "utility", "shell"]
+}
