@@ -24,23 +24,9 @@ services:
       # Data persistence
       - cursorbot_data:/app/data
       
-      # ============================================
-      # WORKSPACE MOUNTING (for terminal commands)
-      # ============================================
-      # Uncomment and modify the line below to mount your project directory
-      # This allows /run commands to access your files
-      #
-      # Format: /path/on/host:/workspace
-      # 
-      # Windows example:
-      # - C:/Users/YourName/Projects:/workspace
-      #
-      # macOS/Linux example:
-      # - /home/yourname/projects:/workspace
-      # - ~/projects:/workspace
-      #
-      # ============================================
-      # - /your/projects/path:/workspace
+      # Workspace mounting (reads from .env CURSOR_WORKSPACE_PATH)
+      # This allows /run commands to access your project files
+      - ${CURSOR_WORKSPACE_PATH:-./workspace}:/workspace
     
     # Port mapping (for API server)
     ports:

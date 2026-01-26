@@ -421,29 +421,22 @@ DISCORD_ALLOWED_GUILDS=your_guild_id
 
 當 CursorBot 運行在 Docker 容器內時，`/run` 等終端機指令會在**容器內**執行。
 
-### 掛載工作目錄
+### 設定工作目錄
 
-若需要讓終端機指令存取你的專案檔案，需要在 `docker-compose.yml` 中掛載目錄：
+在 `.env` 文件中設定 `CURSOR_WORKSPACE_PATH`，Docker 會自動掛載該目錄：
 
-```yaml
-volumes:
-  - cursorbot_data:/app/data
-  # 掛載你的專案目錄
-  - /path/to/your/projects:/workspace
-```
-
-**範例：**
-
-```yaml
+```env
 # Windows
-- C:/Users/YourName/Projects:/workspace
+CURSOR_WORKSPACE_PATH=C:/Users/YourName/Projects
 
 # macOS
-- /Users/yourname/projects:/workspace
+CURSOR_WORKSPACE_PATH=/Users/yourname/projects
 
 # Linux
-- /home/yourname/projects:/workspace
+CURSOR_WORKSPACE_PATH=/home/yourname/projects
 ```
+
+`docker-compose.yml` 會自動讀取這個路徑並掛載到容器的 `/workspace` 目錄。
 
 ### 使用方式
 
