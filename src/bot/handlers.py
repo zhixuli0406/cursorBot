@@ -62,39 +62,50 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.info(f"User {user.id} ({user.username}) started the bot")
 
     # Check status
+    status_items = []
     if is_background_agent_enabled():
-        status = "🟢 Background Agent 已連線"
+        status_items.append("🟢 Background Agent")
     else:
-        status = "⚠️ 請設定 API Key"
+        status_items.append("⚪ Background Agent (未設定)")
+
+    # Check Discord status
+    if settings.discord_enabled and settings.discord_bot_token:
+        status_items.append("🟢 Discord Bot")
+    
+    status_text = " | ".join(status_items) if status_items else "⚠️ 請設定 API Key"
 
     welcome_text = f"""
 👋 <b>歡迎使用 CursorBot!</b>
 
 您好, {user.first_name}!
 
-CursorBot 讓你透過 Telegram 遠端控制 Cursor AI Agent，完全無需開啟 IDE。
+CursorBot 是一個多平台 AI 編程助手，支援 <b>Telegram</b> 和 <b>Discord</b>，讓你遠端控制 Cursor AI Agent，完全無需開啟 IDE。
 
-<b>狀態:</b> {status}
+<b>📡 狀態:</b> {status_text}
 
 <b>🚀 快速開始:</b>
-1. 使用 /repo 選擇 GitHub 倉庫
-2. 直接發送問題或指令
-3. AI Agent 會自動執行任務
+1️⃣ 使用 /repo 選擇 GitHub 倉庫
+2️⃣ 直接發送問題或指令
+3️⃣ AI Agent 會自動執行任務並回報結果
 
-<b>✨ 主要功能:</b>
-• <b>AI 任務</b> - 發送問題讓 AI 自動編程
-• <b>語音/圖片</b> - 支援語音轉錄和圖片附件
-• <b>記憶系統</b> - /memory 儲存常用資訊
-• <b>技能系統</b> - /skills 查看可用技能
-• <b>排程任務</b> - /remind 設定提醒
+<b>✨ 核心功能:</b>
+• <b>AI 編程</b> - 發送問題讓 AI 自動編程
+• <b>多媒體支援</b> - 語音轉錄、圖片附件
+• <b>多平台</b> - Telegram + Discord 同步
+• <b>記憶系統</b> - 儲存常用資訊和偏好
+• <b>技能系統</b> - 翻譯、計算、提醒等
+• <b>瀏覽器工具</b> - 網頁自動化和截圖
+• <b>Agent Loop</b> - 自主任務執行
 
 <b>📋 常用指令:</b>
 /help - 完整指令說明
 /status - 系統狀態
 /repo - 設定倉庫
 /tasks - 我的任務
+/memory - 記憶管理
+/skills - 可用技能
 
-使用下方按鈕開始，或直接發送訊息！
+點擊下方按鈕或直接發送訊息開始！
 """
     await update.message.reply_text(
         welcome_text,
@@ -109,69 +120,100 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     Handle /help command.
     Display detailed help information.
     """
-    # Check if Background Agent is configured
+    # Check status
+    status_parts = []
     if is_background_agent_enabled():
-        status_info = "🟢 Background Agent 已啟用"
+        status_parts.append("🟢 Background Agent")
     else:
-        status_info = "⚠️ 請設定 CURSOR_API_KEY 和 BACKGROUND_AGENT_ENABLED"
+        status_parts.append("⚪ Background Agent")
+    
+    if settings.discord_enabled:
+        status_parts.append("🟢 Discord")
+    
+    status_info = " | ".join(status_parts)
 
     help_text = f"""
-<b>📖 CursorBot 指令說明</b>
+<b>📖 CursorBot 完整指令說明</b>
 
-<b>{status_info}</b>
+<b>狀態:</b> {status_info}
 
+━━━━━━━━━━━━━━━━━━━━━━
 <b>🔹 基礎指令</b>
-• /start - 啟動並顯示歡迎訊息
-• /help - 顯示此說明
-• /status - 查看系統狀態
-• /stats - 使用統計
-• /settings - 用戶設定
+━━━━━━━━━━━━━━━━━━━━━━
+/start - 啟動並顯示歡迎訊息
+/help - 顯示此說明
+/status - 查看系統狀態
+/stats - 使用統計
+/settings - 用戶設定
 
-<b>🔹 AI 對話</b>
-• /ask &lt;問題&gt; - 發送問題給 AI Agent
-• /repo &lt;owner/repo&gt; - 切換 GitHub 倉庫
-• /repos - 查看帳號中的倉庫
-• /tasks - 查看我的任務列表
-• /result &lt;ID&gt; - 查看任務結果
-• /cancel_task &lt;ID&gt; - 取消執行中的任務
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🤖 AI 任務（Background Agent）</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/ask &lt;問題&gt; - 發送問題給 AI Agent
+/repo &lt;owner/repo&gt; - 切換 GitHub 倉庫
+/repos - 查看帳號中的倉庫
+/tasks - 查看我的任務列表
+/result &lt;ID&gt; - 查看任務結果
+/cancel_task &lt;ID&gt; - 取消執行中的任務
 
-<b>🔹 記憶系統</b>
-• /memory - 查看我的記憶
-• /memory add &lt;key&gt; &lt;value&gt; - 新增記憶
-• /memory get &lt;key&gt; - 取得記憶
-• /memory del &lt;key&gt; - 刪除記憶
-• /memory search &lt;query&gt; - 搜尋記憶
-• /clear - 清除對話上下文
+<i>💡 也可以直接發送訊息、語音或圖片</i>
 
-<b>🔹 技能系統</b>
-• /skills - 查看可用技能
-• /translate &lt;lang&gt; &lt;text&gt; - 翻譯文字
-• /calc &lt;expression&gt; - 計算表達式
-• /remind &lt;time&gt; &lt;msg&gt; - 設定提醒
-• /schedule - 查看排程任務
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🧠 記憶系統</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/memory - 查看我的記憶
+/memory add &lt;key&gt; &lt;value&gt; - 新增記憶
+/memory get &lt;key&gt; - 取得記憶
+/memory del &lt;key&gt; - 刪除記憶
+/memory search &lt;query&gt; - 搜尋記憶
+/clear - 清除對話上下文
 
-<b>🔹 檔案操作</b>
-• /file read &lt;路徑&gt; - 讀取檔案
-• /file list &lt;目錄&gt; - 列出檔案
-• /write &lt;路徑&gt; - 建立檔案
-• /edit &lt;檔案&gt; - 編輯檔案
-• /delete &lt;路徑&gt; - 刪除檔案
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🎯 技能系統</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/skills - 查看所有可用技能
+/translate &lt;lang&gt; &lt;text&gt; - 翻譯文字
+/calc &lt;expression&gt; - 計算表達式
+/remind &lt;time&gt; &lt;msg&gt; - 設定提醒
+/schedule - 查看排程任務
 
-<b>🔹 終端機操作</b>
-• /run &lt;命令&gt; - 執行命令
-• /run_bg &lt;命令&gt; - 背景執行
-• /jobs - 查看執行中命令
-• /kill &lt;ID&gt; - 停止命令
+━━━━━━━━━━━━━━━━━━━━━━
+<b>📁 檔案操作</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/file read &lt;路徑&gt; - 讀取檔案
+/file list &lt;目錄&gt; - 列出檔案
+/write &lt;路徑&gt; - 建立檔案
+/edit &lt;檔案&gt; - 編輯檔案
+/delete &lt;路徑&gt; - 刪除檔案
 
-<b>🔹 工作區管理</b>
-• /workspace - 顯示工作區
-• /cd &lt;名稱&gt; - 切換工作區
-• /search &lt;關鍵字&gt; - 搜尋程式碼
+━━━━━━━━━━━━━━━━━━━━━━
+<b>💻 終端機操作</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/run &lt;命令&gt; - 執行命令
+/run_bg &lt;命令&gt; - 背景執行
+/jobs - 查看執行中命令
+/kill &lt;ID&gt; - 停止命令
 
-<b>💡 提示:</b>
-• 直接發送訊息即可與 AI 對話
-• 發送語音會自動轉錄
-• 發送圖片會加入任務
+━━━━━━━━━━━━━━━━━━━━━━
+<b>📂 工作區管理</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/workspace - 顯示工作區
+/cd &lt;名稱&gt; - 切換工作區
+/search &lt;關鍵字&gt; - 搜尋程式碼
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🌐 多平台支援</b>
+━━━━━━━━━━━━━━━━━━━━━━
+• <b>Telegram</b> - 你正在使用
+• <b>Discord</b> - 相同功能，斜線指令
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>💡 使用提示</b>
+━━━━━━━━━━━━━━━━━━━━━━
+• 直接發送文字即可與 AI 對話
+• 發送語音會自動轉錄為文字
+• 發送圖片會附加到任務中
+• 使用按鈕可以快速操作
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 

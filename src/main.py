@@ -4,9 +4,18 @@ Starts Telegram Bot, Discord Bot, and API Server
 """
 
 import asyncio
+import os
 import signal
 import sys
 from typing import Optional
+
+# Fix SSL certificate issue on macOS
+try:
+    import certifi
+    os.environ.setdefault('SSL_CERT_FILE', certifi.where())
+    os.environ.setdefault('REQUESTS_CA_BUNDLE', certifi.where())
+except ImportError:
+    pass
 
 import uvicorn
 

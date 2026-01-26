@@ -55,34 +55,42 @@ async def handle_start(ctx: MessageContext, interaction=None) -> None:
     user = ctx.user
     
     # Check Background Agent status
+    status_items = []
     if settings.background_agent_enabled and settings.cursor_api_key:
-        status = "🟢 Background Agent 已連線"
+        status_items.append("🟢 Background Agent")
     else:
-        status = "⚠️ 請設定 API Key"
+        status_items.append("⚪ Background Agent")
+    status_items.append("🟢 Discord Bot")
+    
+    status = " | ".join(status_items)
 
     content = f"""**👋 歡迎使用 CursorBot!**
 
 您好, {user.display_name}!
 
-CursorBot 讓你透過 Discord 遠端控制 Cursor AI Agent。
+CursorBot 是一個多平台 AI 編程助手，支援 **Telegram** 和 **Discord**，讓你遠端控制 Cursor AI Agent。
 
-**狀態:** {status}
+**📡 狀態:** {status}
 
 **🚀 快速開始:**
-1. 使用 `/repo` 選擇 GitHub 倉庫
-2. 直接發送問題或使用 `/ask`
-3. AI Agent 會自動執行任務
+1️⃣ 使用 `/repo` 選擇 GitHub 倉庫
+2️⃣ 直接發送問題或使用 `/ask`
+3️⃣ AI Agent 會自動執行任務並回報結果
 
-**✨ 主要功能:**
-• **AI 任務** - 發送問題讓 AI 自動編程
+**✨ 核心功能:**
+• **AI 編程** - 發送問題讓 AI 自動編程
+• **多平台** - Telegram + Discord 同步
 • **記憶系統** - `/memory` 儲存常用資訊
 • **技能系統** - `/skills` 查看可用技能
+• **瀏覽器工具** - 網頁自動化
+• **Agent Loop** - 自主任務執行
 
 **📋 常用指令:**
 `/help` - 完整指令說明
 `/status` - 系統狀態
 `/repo` - 設定倉庫
 `/tasks` - 我的任務
+`/memory` - 記憶管理
 """
 
     buttons = [
@@ -100,33 +108,56 @@ CursorBot 讓你透過 Discord 遠端控制 Cursor AI Agent。
 
 async def handle_help(ctx: MessageContext, interaction=None) -> None:
     """Handle /help command."""
-    content = """**📖 CursorBot 指令說明**
+    content = """**📖 CursorBot 完整指令說明**
 
+━━━━━━━━━━━━━━━━━━━━━━
 **🔹 基礎指令**
+━━━━━━━━━━━━━━━━━━━━━━
 • `/start` - 啟動並顯示歡迎訊息
 • `/help` - 顯示此說明
 • `/status` - 查看系統狀態
 • `/stats` - 使用統計
 
-**🔹 AI 對話**
+━━━━━━━━━━━━━━━━━━━━━━
+**🤖 AI 任務（Background Agent）**
+━━━━━━━━━━━━━━━━━━━━━━
 • `/ask <問題>` - 發送問題給 AI Agent
 • `/repo <owner/repo>` - 切換 GitHub 倉庫
 • `/repos` - 查看帳號中的倉庫
 • `/tasks` - 查看我的任務列表
 • `/result <ID>` - 查看任務結果
 
-**🔹 記憶系統**
+*💡 直接發送訊息也可以與 AI 對話*
+
+━━━━━━━━━━━━━━━━━━━━━━
+**🧠 記憶系統**
+━━━━━━━━━━━━━━━━━━━━━━
 • `/memory` - 查看我的記憶
 • `/memory add <key> <value>` - 新增記憶
+• `/memory get <key>` - 取得記憶
+• `/memory del <key>` - 刪除記憶
 • `/clear` - 清除對話上下文
 
-**🔹 技能系統**
+━━━━━━━━━━━━━━━━━━━━━━
+**🎯 技能系統**
+━━━━━━━━━━━━━━━━━━━━━━
 • `/skills` - 查看可用技能
 • `/calc <expression>` - 計算表達式
 • `/remind <time> <msg>` - 設定提醒
+• `/translate <lang> <text>` - 翻譯文字
 
-**💡 提示:**
-直接發送訊息也可以與 AI 對話!
+━━━━━━━━━━━━━━━━━━━━━━
+**🌐 多平台支援**
+━━━━━━━━━━━━━━━━━━━━━━
+• **Discord** - 你正在使用
+• **Telegram** - 相同功能
+
+━━━━━━━━━━━━━━━━━━━━━━
+**💡 使用提示**
+━━━━━━━━━━━━━━━━━━━━━━
+• 直接發送訊息即可與 AI 對話
+• 使用按鈕可以快速操作
+• Telegram 和 Discord 功能同步
 """
 
     if interaction:
