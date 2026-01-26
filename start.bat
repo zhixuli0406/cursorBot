@@ -14,20 +14,129 @@ echo.
 
 :: ========== Check Python ==========
 echo [INFO] Checking Python...
+
+:: First check if Python 3.12 is already installed
+set "PY312="
+py -3.12 --version >nul 2>&1
+if not errorlevel 1 (
+    set "PY312=py -3.12"
+    for /f "tokens=2" %%i in ('py -3.12 --version 2^>^&1') do echo [OK] Python %%i (3.12 found via py launcher)
+    goto :pythonok
+)
+
+:: Check default python
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python not found. Please install Python 3.10+
+    echo [WARN] Python not found. Will install Python 3.12...
+    goto :installpython
+)
+
+:: Get Python version
+for /f "tokens=2" %%i in ('python --version 2^>^&1') do set "PYVER=%%i"
+echo [INFO] Found Python %PYVER%
+
+:: Check if Python version is too new (3.13+)
+echo %PYVER% | findstr /b "3.13 3.14 3.15" >nul
+if not errorlevel 1 (
     echo.
+    echo [WARN] Python %PYVER% is too new! Many packages won't work.
+    echo [INFO] Will install Python 3.12 automatically...
+    goto :installpython
+)
+
+:: Python version is OK
+echo [OK] Python %PYVER%
+goto :pythonok
+
+:installpython
+echo.
+echo ============================================================
+echo   Installing Python 3.12
+echo ============================================================
+echo.
+
+:: Try winget first
+where winget >nul 2>&1
+if not errorlevel 1 (
+    echo [INFO] Installing Python 3.12 via winget...
+    winget install Python.Python.3.12 --accept-package-agreements --accept-source-agreements
+    if not errorlevel 1 (
+        echo [OK] Python 3.12 installed via winget
+        echo.
+        echo [INFO] Refreshing environment...
+        
+        :: Refresh PATH
+        for /f "tokens=2*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SYSPATH=%%b"
+        for /f "tokens=2*" %%a in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "USERPATH=%%b"
+        set "PATH=%SYSPATH%;%USERPATH%"
+        
+        :: Try py launcher
+        py -3.12 --version >nul 2>&1
+        if not errorlevel 1 (
+            set "PY312=py -3.12"
+            echo [OK] Python 3.12 ready
+            goto :pythonok
+        )
+        
+        echo [INFO] Please restart this script to use Python 3.12
+        pause
+        exit /b 0
+    )
+    echo [WARN] winget installation failed, trying manual download...
+)
+
+:: Manual download
+echo [INFO] Downloading Python 3.12 installer...
+set "PY_INSTALLER=%TEMP%\python-3.12.8-amd64.exe"
+
+powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.12.8/python-3.12.8-amd64.exe' -OutFile '%PY_INSTALLER%'}" 2>nul
+
+if not exist "%PY_INSTALLER%" (
+    echo [ERROR] Failed to download Python installer
+    echo [INFO] Please download manually from: https://www.python.org/downloads/release/python-3128/
     pause
     exit /b 1
 )
-python --version
+
+echo [INFO] Installing Python 3.12...
+echo [INFO] This will open the Python installer.
+"%PY_INSTALLER%" /passive InstallAllUsers=0 PrependPath=1 Include_test=0
+
+del "%PY_INSTALLER%" 2>nul
+
+echo.
+echo [OK] Python 3.12 installation completed
+echo [INFO] Please RESTART this script to use Python 3.12
+echo.
+pause
+exit /b 0
+
+:pythonok
+:: Delete old venv if using Python 3.12 and venv was created with different version
+if defined PY312 (
+    if exist "venv" (
+        echo.
+        echo [INFO] Checking venv Python version...
+        venv\Scripts\python --version 2>nul | findstr /b "3.12" >nul
+        if errorlevel 1 (
+            echo [WARN] venv was created with different Python version
+            echo [INFO] Deleting old venv...
+            rd /s /q venv
+            echo [OK] Old venv deleted
+        )
+    )
+)
 echo.
 
 :: ========== Create venv if needed ==========
 if not exist "venv" (
     echo [INFO] Creating virtual environment...
-    python -m venv venv
+    if defined PY312 (
+        echo [INFO] Using Python 3.12...
+        %PY312% -m venv venv
+    ) else (
+        python -m venv venv
+    )
     if errorlevel 1 (
         echo [ERROR] Failed to create venv
         pause
