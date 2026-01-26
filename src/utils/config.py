@@ -3,12 +3,46 @@ Configuration management for CursorBot
 Load settings from environment variables with validation
 """
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def is_running_in_docker() -> bool:
+    """Check if running inside a Docker container."""
+    # Method 1: Check for .dockerenv file
+    if os.path.exists("/.dockerenv"):
+        return True
+    # Method 2: Check cgroup
+    try:
+        with open("/proc/1/cgroup", "r") as f:
+            return "docker" in f.read()
+    except:
+        pass
+    # Method 3: Check environment variable
+    return os.environ.get("RUNNING_IN_DOCKER", "").lower() == "true"
+
+
+def get_effective_workspace_path() -> str:
+    """
+    Get the effective workspace path.
+    In Docker: returns /workspace
+    On host: returns CURSOR_WORKSPACE_PATH from environment
+    """
+    if is_running_in_docker():
+        # In Docker, workspace is mounted at /workspace
+        docker_workspace = "/workspace"
+        if os.path.exists(docker_workspace):
+            return docker_workspace
+        # Fallback to /app if /workspace doesn't exist
+        return "/app"
+    
+    # On host, use environment variable
+    return os.environ.get("CURSOR_WORKSPACE_PATH", "")
 
 
 class Settings(BaseSettings):
@@ -34,11 +68,21 @@ class Settings(BaseSettings):
         description="Comma-separated list of allowed Telegram user IDs",
     )
 
-    # Workspace Settings
+    # Workspace Settings (raw value from .env)
     cursor_workspace_path: str = Field(
         default="",
         description="Path to local workspace directory",
     )
+    
+    @property
+    def effective_workspace_path(self) -> str:
+        """Get the effective workspace path (Docker-aware)."""
+        return get_effective_workspace_path() or self.cursor_workspace_path
+    
+    @property
+    def is_docker(self) -> bool:
+        """Check if running in Docker."""
+        return is_running_in_docker()
 
     # Server Settings
     server_host: str = Field(

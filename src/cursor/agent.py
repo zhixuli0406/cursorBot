@@ -19,10 +19,14 @@ class WorkspaceAgent:
 
     def __init__(self):
         """Initialize the Workspace Agent."""
-        root_path = settings.cursor_workspace_path
+        # Use effective_workspace_path which is Docker-aware
+        root_path = settings.effective_workspace_path
         if not root_path:
             root_path = str(Path.cwd())
-            logger.warning(f"CURSOR_WORKSPACE_PATH not set, using: {root_path}")
+            logger.warning(f"Workspace path not set, using: {root_path}")
+        
+        if settings.is_docker:
+            logger.info(f"Running in Docker, workspace: {root_path}")
 
         self.root_workspace = Path(root_path)
         self.workspace_path = self.root_workspace
