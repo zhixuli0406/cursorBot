@@ -7,12 +7,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    RUNNING_IN_DOCKER=true
+    RUNNING_IN_DOCKER=true \
+    # Set default workspace path in container
+    DOCKER_WORKSPACE_PATH=/workspace
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for Playwright and other packages
+# Install system dependencies for Playwright, development tools, and common utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # For Playwright
     libnss3 \
@@ -32,9 +34,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     libpango-1.0-0 \
     libcairo2 \
+    # Development tools
+    git \
+    openssh-client \
+    # Build tools (for npm packages that require compilation)
+    build-essential \
     # General utilities
     curl \
+    wget \
+    unzip \
+    zip \
+    jq \
+    tree \
+    htop \
+    procps \
+    nano \
+    vim-tiny \
+    # Network utilities
+    iputils-ping \
+    dnsutils \
+    net-tools \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20.x LTS (for npm/node commands)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@latest && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -56,10 +82,28 @@ COPY env.example .
 # Create data directory for persistence
 RUN mkdir -p /app/data
 
-# Create non-root user for security
-RUN useradd -m -u 1000 cursorbot && \
-    chown -R cursorbot:cursorbot /app
+# Create workspace directory with proper permissions
+# This will be the mount point for user's projects
+RUN mkdir -p /workspace && chmod 777 /workspace
+
+# Create non-root user for security with proper home directory
+RUN useradd -m -u 1000 -s /bin/bash cursorbot && \
+    chown -R cursorbot:cursorbot /app && \
+    # Allow cursorbot to write to workspace
+    chown cursorbot:cursorbot /workspace && \
+    # Setup git config for cursorbot user
+    mkdir -p /home/cursorbot/.config && \
+    chown -R cursorbot:cursorbot /home/cursorbot
+
+# Switch to non-root user
 USER cursorbot
+
+# Set git safe directory (for mounted volumes)
+RUN git config --global --add safe.directory '*'
+
+# Set default shell environment
+ENV HOME=/home/cursorbot \
+    SHELL=/bin/bash
 
 # Expose port for API server (if needed)
 EXPOSE 8000

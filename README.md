@@ -365,6 +365,7 @@ python -m src.main
 | `/run_bg <命令>` | 背景執行 |
 | `/jobs` | 查看執行中的命令 |
 | `/kill <ID>` | 停止命令 |
+| `/diagnose` | 診斷終端環境（Docker/本地） |
 
 ### 工作區管理
 
@@ -516,6 +517,21 @@ CURSOR_WORKSPACE_PATH=/home/yourname/projects
 /run npm install
 ```
 
+### 環境診斷
+
+如果終端機指令無法正常執行，可以使用診斷指令檢查環境狀態：
+
+```
+/diagnose
+```
+
+這會顯示：
+- 運行環境類型（Docker/本地）
+- 工作目錄狀態
+- 可用的工具（git、node、npm、python 等）
+- 用戶權限資訊
+- 基本指令執行測試
+
 ### 進入容器終端
 
 如需直接進入容器操作：
@@ -527,17 +543,29 @@ docker exec -it cursorbot /bin/bash
 ### 容器內可用工具
 
 Docker 映像已包含：
-- Python 3.12
-- pip
+- Python 3.12 + pip
+- Node.js 20.x + npm
+- Git
 - Playwright（Chromium）
-- curl
-- 基本 Linux 工具
+- 建置工具（build-essential）
+- 常用工具：curl、wget、jq、tree、htop、nano、vim
+- 網路工具：ping、nslookup、netstat
 
 ### 安全注意事項
 
 - 掛載的目錄在容器內可完全存取
 - 避免掛載系統敏感目錄（如 `/`, `C:\Windows`）
 - 建議只掛載專案工作目錄
+- 容器使用非 root 用戶（UID 1000）運行
+
+### Git SSH 認證（可選）
+
+如果需要在容器內使用 Git SSH 認證，可以在 `docker-compose.yml` 中取消註解 SSH 掛載：
+
+```yaml
+volumes:
+  - ~/.ssh:/home/cursorbot/.ssh:ro
+```
 
 ---
 
@@ -552,6 +580,53 @@ Docker 映像已包含：
 | 映像拉取失敗 | 檢查網路連線，或嘗試使用 VPN |
 | 容器啟動失敗 | 執行 `docker compose logs` 查看錯誤訊息 |
 | 終端指令找不到檔案 | 檢查 `docker-compose.yml` 的 volumes 掛載設定 |
+
+### Docker 終端機指令問題
+
+**問題：** `/run` 指令無法執行或找不到檔案
+
+**診斷步驟：**
+1. 執行 `/diagnose` 查看環境狀態
+2. 確認 `CURSOR_WORKSPACE_PATH` 在 `.env` 中正確設定
+3. 確認該路徑在主機上實際存在
+
+**解決方案：**
+
+```bash
+# 1. 停止並重建容器
+docker compose down
+docker compose up -d --build
+
+# 2. 檢查掛載是否成功
+docker exec -it cursorbot ls -la /workspace
+
+# 3. 如果權限問題，檢查主機目錄權限
+ls -la /path/to/your/workspace
+```
+
+**問題：** 權限被拒絕（Permission denied）
+
+**原因：** Docker 容器使用 UID 1000 運行，但主機目錄可能屬於其他用戶。
+
+**解決方案：**
+```bash
+# 方法一：更改主機目錄權限
+chmod -R 755 /path/to/your/workspace
+
+# 方法二：更改目錄擁有者
+sudo chown -R 1000:1000 /path/to/your/workspace
+```
+
+**問題：** 找不到 git/node/npm 等工具
+
+**原因：** 使用舊版映像。
+
+**解決方案：**
+```bash
+# 重新建置映像（不使用快取）
+docker compose build --no-cache
+docker compose up -d
+```
 
 ### Windows 本地安裝
 

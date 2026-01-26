@@ -379,6 +379,31 @@ async def kill_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text(f"❌ 找不到命令或無法停止: {cmd_id}")
 
 
+@authorized_only
+async def diagnose_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /diagnose command to check terminal environment status.
+    Useful for troubleshooting Docker or permission issues.
+    """
+    await update.message.chat.send_action("typing")
+    
+    term = get_terminal()
+    result = await term.diagnose_environment()
+    
+    # Format output
+    output = result.stdout if result.stdout else "(No output)"
+    if len(output) > 3500:
+        output = output[:3500] + "\n... (truncated)"
+    
+    env_type = "Docker" if term.is_docker else "Local"
+    
+    await update.message.reply_text(
+        f"🔍 <b>Environment Diagnostics</b> ({env_type})\n\n"
+        f"<pre>{output}</pre>",
+        parse_mode="HTML",
+    )
+
+
 # ============================================
 # Task Queue Handlers
 # ============================================
@@ -718,6 +743,7 @@ def setup_extended_handlers(app) -> None:
     app.add_handler(CommandHandler("run_bg", run_bg_handler))
     app.add_handler(CommandHandler("jobs", jobs_handler))
     app.add_handler(CommandHandler("kill", kill_handler))
+    app.add_handler(CommandHandler("diagnose", diagnose_handler))
 
     # Task management
     app.add_handler(CommandHandler("tasks", tasks_handler))
