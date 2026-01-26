@@ -148,7 +148,7 @@ python -m src.main
 |------|------|
 | `/ask <問題>` | 發送問題給 AI Agent（自動執行） |
 | `/repo <owner/repo>` | 切換 GitHub 倉庫 |
-| `/repos` | 查看我的倉庫 |
+| `/repos` | 查看帳號中所有的 GitHub 倉庫 |
 | `/tasks` | 查看我的任務列表 |
 | `/result <ID>` | 查看任務結果 |
 | `/cancel_task <ID>` | 取消執行中的任務 |

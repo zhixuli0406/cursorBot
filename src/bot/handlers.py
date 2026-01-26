@@ -870,7 +870,7 @@ async def repo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def repos_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /repos command.
-    Show recently used repositories.
+    Show all repositories from Cursor account and recently used ones.
     """
     user_id = update.effective_user.id
     current_repo = get_user_repo(user_id)
@@ -878,6 +878,7 @@ async def repos_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     lines = ["<b>📁 我的倉庫</b>\n"]
 
+    # Show current and default repos
     if current_repo:
         repo_name = current_repo.split("/")[-1]
         lines.append(f"<b>目前:</b> {repo_name} ✓")
@@ -887,6 +888,49 @@ async def repos_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         repo_name = default_repo.split("/")[-1]
         lines.append(f"\n<b>預設:</b> {repo_name}")
         lines.append(f"  └ {default_repo}")
+
+    # Fetch repositories from Cursor API if Background Agent is enabled
+    if is_background_agent_enabled():
+        await update.message.chat.send_action("typing")
+        
+        try:
+            bg_agent = get_background_agent(settings.cursor_api_key)
+            result = await bg_agent.list_repositories()
+            
+            if result.get("success") and result.get("repositories"):
+                repos = result.get("repositories", [])
+                lines.append(f"\n<b>📦 帳號倉庫 ({len(repos)}):</b>")
+                
+                for repo in repos[:15]:  # Limit to 15 repos
+                    name = repo.get("name", "")
+                    owner = repo.get("owner", "")
+                    full_name = repo.get("full_name", f"{owner}/{name}")
+                    description = repo.get("description", "")
+                    private = repo.get("private", False)
+                    
+                    # Mark if this is the current repo
+                    is_current = current_repo and full_name in current_repo
+                    current_mark = " ✓" if is_current else ""
+                    private_mark = "🔒" if private else "📂"
+                    
+                    lines.append(f"\n{private_mark} <b>{name}</b>{current_mark}")
+                    lines.append(f"  └ <code>{full_name}</code>")
+                    if description:
+                        desc_preview = description[:50] + "..." if len(description) > 50 else description
+                        lines.append(f"  └ {desc_preview}")
+                
+                if len(repos) > 15:
+                    lines.append(f"\n... 還有 {len(repos) - 15} 個倉庫")
+            elif result.get("message"):
+                lines.append(f"\n⚠️ 無法取得帳號倉庫: {result.get('message', '')[:100]}")
+            else:
+                lines.append("\n📭 帳號中沒有找到任何倉庫")
+                
+        except Exception as e:
+            logger.error(f"Error fetching repositories: {e}")
+            lines.append(f"\n⚠️ 取得倉庫時發生錯誤")
+    else:
+        lines.append("\n💡 啟用 Background Agent 以查看帳號中的所有倉庫")
 
     lines.append("\n<b>切換倉庫:</b>")
     lines.append("<code>/repo owner/repo-name</code>")
