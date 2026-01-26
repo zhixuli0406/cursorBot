@@ -102,6 +102,13 @@ CursorBot 是一個多平台 AI 編程助手，支援 <b>Telegram</b> 和 <b>Dis
 1️⃣ 使用 /model 選擇 AI 模型
 2️⃣ 使用 /repo 選擇 GitHub 倉庫
 3️⃣ 直接發送問題或使用 /agent 指令
+
+<b>✨ v0.3 新功能:</b>
+• 🧠 Thinking Mode - Claude 深度思考
+• 🔊 TTS 語音輸出
+• 🤖 Subagents 子代理
+• 📦 Sandbox 沙盒執行
+• 🔐 OAuth 認證
 4️⃣ AI 會自動執行任務並回報結果
 
 <b>✨ 核心功能:</b>
@@ -181,7 +188,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 <b>支援的提供者:</b>
 • OpenAI (GPT-4o, GPT-4o-mini)
-• Anthropic (Claude 3.5 Sonnet)
+• Anthropic (Claude 3.5 + Thinking Mode)
 • Google (Gemini 2.0 Flash)
 • OpenRouter (多種模型)
 • Ollama (本地模型)
@@ -257,12 +264,25 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • <b>Discord</b> - 相同功能，斜線指令
 
 ━━━━━━━━━━━━━━━━━━━━━━
+<b>✨ v0.3 新功能</b>
+━━━━━━━━━━━━━━━━━━━━━━
+• <b>Thinking Mode</b> - Claude 深度思考模式
+• <b>TTS 語音輸出</b> - 文字轉語音
+• <b>Subagents</b> - 子代理任務分解
+• <b>Sandbox</b> - 安全沙盒執行程式碼
+• <b>Compaction</b> - 對話壓縮省 Token
+• <b>OAuth</b> - GitHub/Google 認證
+• <b>Heartbeat</b> - 服務健康監控
+• <b>Queue</b> - 任務佇列管理
+
+━━━━━━━━━━━━━━━━━━━━━━
 <b>💡 使用提示</b>
 ━━━━━━━━━━━━━━━━━━━━━━
 • 使用 /model set 切換 AI 模型
 • /agent 會使用你選擇的模型
 • 發送語音會自動轉錄為文字
 • 發送圖片會附加到任務中
+• 長對話會自動壓縮以節省 Token
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 

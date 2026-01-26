@@ -22,13 +22,24 @@
 ### 進階功能（對標 ClawdBot）
 - **記憶系統** - 記住用戶偏好和對話歷史
 - **技能系統** - 可擴展的技能（翻譯、摘要、計算機、提醒）
-- **對話上下文** - 智慧追蹤多輪對話
+- **對話上下文** - 智慧追蹤多輪對話，支援對話壓縮
 - **審批系統** - 敏感操作需要確認
 - **排程任務** - 定時執行任務
 - **Webhook** - 支援 GitHub/GitLab 事件觸發
 - **Agent Loop** - 自主代理執行循環
 - **Browser 工具** - 網頁自動化和截圖
 - **代理工具** - 檔案操作、命令執行、網頁抓取
+
+### v0.3 新增功能
+- **Compaction** - 對話壓縮，自動摘要歷史對話以減少 Token 使用
+- **Thinking Mode** - 支援 Claude Extended Thinking 深度思考模式
+- **Subagents** - 子代理系統，可分解複雜任務給專門代理執行
+- **Sandbox** - 沙盒執行，安全隔離執行程式碼（Docker/Subprocess）
+- **TTS** - 語音輸出，支援 OpenAI、Edge TTS、ElevenLabs
+- **OAuth** - OAuth 2.0 認證，支援 GitHub、Google、Discord 登入
+- **Heartbeat** - 心跳機制，自動監控服務健康狀態
+- **Retry** - 重試機制，指數退避自動重試失敗請求
+- **Queue** - 任務佇列，優先級任務排程管理
 
 ## 運作原理
 
@@ -247,7 +258,17 @@ ollama serve
 
 可用模型：`llama3.2`, `llama3.1`, `mistral`, `codellama`, `phi3`, `qwen2.5`
 
-**方案六：自訂端點**
+**方案六：ElevenLabs TTS（可選）**
+
+高品質語音合成服務。
+
+```env
+ELEVENLABS_API_KEY=your_api_key
+```
+
+取得 API Key：[elevenlabs.io](https://elevenlabs.io/)
+
+**方案七：自訂端點**
 
 支援任何相容 OpenAI API 的端點（如 LM Studio, vLLM, LocalAI）。
 
@@ -629,6 +650,175 @@ class AdvancedSkill(AgentSkill):
 | `/schedule` | 查看排程 |
 | `/clear` | 清除對話上下文 |
 
+### v0.3 進階功能
+
+#### TTS 語音輸出
+
+支援將文字轉換為語音，可透過程式碼使用：
+
+```python
+from src.core import text_to_speech, TTSProvider
+
+# 使用 OpenAI TTS
+result = await text_to_speech("你好，這是語音測試", provider="openai")
+
+# 使用免費的 Edge TTS
+result = await text_to_speech("你好", provider="edge", voice="zh-TW-HsiaoChenNeural")
+
+# 使用 ElevenLabs 高品質語音
+result = await text_to_speech("Hello", provider="elevenlabs", voice="rachel")
+```
+
+**支援的 TTS 提供者：**
+
+| 提供者 | 環境變數 | 說明 |
+|--------|----------|------|
+| OpenAI | `OPENAI_API_KEY` | 高品質，6 種聲音 |
+| Edge TTS | 無需 API Key | 免費，多語言支援 |
+| ElevenLabs | `ELEVENLABS_API_KEY` | 最高品質，自然語音 |
+
+#### Sandbox 沙盒執行
+
+安全執行不受信任的程式碼：
+
+```python
+from src.core import execute_code, SandboxType
+
+# 使用 Subprocess 執行 Python
+result = await execute_code("print('Hello')", language="python")
+
+# 使用 Docker 隔離執行
+result = await execute_code(
+    "console.log('Hello')",
+    language="javascript",
+    sandbox_type="docker",
+    timeout=30.0
+)
+```
+
+**支援的沙盒類型：**
+
+| 類型 | 說明 | 隔離等級 |
+|------|------|----------|
+| `subprocess` | 子程序執行 | 低 |
+| `docker` | Docker 容器 | 高 |
+| `restricted` | 受限 Python | 中 |
+
+#### Subagents 子代理系統
+
+將複雜任務分解給專門的子代理執行：
+
+```python
+from src.core import get_subagent_orchestrator, SubagentType
+
+orchestrator = get_subagent_orchestrator()
+
+# 自動分解任務
+plan = await orchestrator.plan_task("實作一個 REST API 並撰寫測試")
+result = await orchestrator.execute_plan(plan)
+```
+
+**子代理類型：**
+
+| 類型 | 說明 |
+|------|------|
+| `researcher` | 資訊蒐集 |
+| `coder` | 程式碼撰寫 |
+| `reviewer` | 程式碼審查 |
+| `planner` | 任務規劃 |
+| `analyst` | 資料分析 |
+| `writer` | 文件撰寫 |
+
+#### Thinking Mode（Claude Extended Thinking）
+
+使用 Claude 的深度思考模式處理複雜問題：
+
+```python
+from src.core import get_llm_manager
+
+manager = get_llm_manager()
+
+# 啟用 Thinking Mode
+response = await manager.generate(
+    messages,
+    provider="anthropic",
+    thinking=True,
+    thinking_budget=10000  # 思考 token 預算
+)
+```
+
+#### 對話壓縮（Compaction）
+
+自動壓縮長對話歷史以節省 Token：
+
+```python
+from src.core import get_context_manager
+
+ctx_manager = get_context_manager()
+ctx = ctx_manager.get_context(user_id, chat_id)
+
+# 檢查是否需要壓縮
+if ctx.needs_compaction():
+    await ctx.compact()  # 自動摘要舊訊息
+
+# 取得包含摘要的上下文
+messages = ctx.get_context_with_summary()
+```
+
+#### 任務佇列
+
+優先級任務排程：
+
+```python
+from src.core import get_task_queue, TaskPriority
+
+queue = get_task_queue()
+await queue.start()
+
+# 提交任務
+task_id = await queue.submit(
+    my_async_function,
+    arg1, arg2,
+    priority=TaskPriority.HIGH,
+    timeout=60.0
+)
+
+# 等待結果
+task = await queue.wait_for_task(task_id)
+```
+
+#### 心跳監控
+
+監控服務健康狀態：
+
+```python
+from src.core import get_heartbeat_monitor
+
+monitor = get_heartbeat_monitor()
+
+# 註冊服務健康檢查
+monitor.register_service(
+    "database",
+    health_check=check_db_connection,
+    recovery_handler=reconnect_db
+)
+
+await monitor.start()
+```
+
+#### 重試機制
+
+自動重試失敗的請求：
+
+```python
+from src.core import with_retry, RetryConfig
+
+@with_retry(max_retries=3, initial_delay=1.0)
+async def call_external_api():
+    # 失敗會自動重試
+    return await api.request()
+```
+
 ## 專案結構
 
 ```
@@ -654,13 +844,20 @@ cursorBot/
 │   ├── core/                    # 核心功能（對標 ClawdBot）
 │   │   ├── memory.py            # 記憶系統
 │   │   ├── skills.py            # 技能系統
-│   │   ├── context.py           # 對話上下文
+│   │   ├── context.py           # 對話上下文 + Compaction
 │   │   ├── approvals.py         # 審批系統
 │   │   ├── scheduler.py         # 排程任務
 │   │   ├── webhooks.py          # Webhook 處理
 │   │   ├── tools.py             # 代理工具
 │   │   ├── browser.py           # 瀏覽器自動化
-│   │   └── agent_loop.py        # Agent 執行循環
+│   │   ├── agent_loop.py        # Agent 執行循環
+│   │   ├── llm_providers.py     # 多 LLM 提供者管理
+│   │   ├── heartbeat.py         # 心跳監控 + 重試機制
+│   │   ├── queue.py             # 任務佇列
+│   │   ├── tts.py               # 語音合成（TTS）
+│   │   ├── subagents.py         # 子代理系統
+│   │   ├── sandbox.py           # 沙盒執行
+│   │   └── oauth.py             # OAuth 認證
 │   ├── server/                  # API Server
 │   └── utils/                   # 工具模組
 ├── data/                        # 資料儲存
