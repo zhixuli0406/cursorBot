@@ -8,6 +8,11 @@ Write-Host "         CursorBot Quick Start"
 Write-Host "========================================" 
 Write-Host ""
 
+# Change to script directory
+Set-Location $PSScriptRoot
+Write-Host "[INFO] Working directory: $(Get-Location)" -ForegroundColor Cyan
+Write-Host ""
+
 # Check Python
 try {
     $pythonVersion = python --version 2>&1
@@ -18,31 +23,133 @@ try {
     exit 1
 }
 
-# Check/Install Rust (required for pydantic-core compilation)
+# ========================================
+# Check/Install Visual Studio Build Tools
+# ========================================
+Write-Host ""
+Write-Host "[INFO] Checking Visual Studio Build Tools..." -ForegroundColor Yellow
+
+$vsInstalled = $false
+
+# Check if cl.exe exists in PATH
+$clExists = Get-Command cl.exe -ErrorAction SilentlyContinue
+if ($clExists) {
+    $vsInstalled = $true
+    Write-Host "[OK] Visual Studio Build Tools found (cl.exe in PATH)" -ForegroundColor Green
+} else {
+    # Check common VS installation paths
+    $vsPaths = @(
+        "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC",
+        "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Tools\MSVC",
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
+    )
+    
+    foreach ($path in $vsPaths) {
+        if (Test-Path $path) {
+            $vsInstalled = $true
+            Write-Host "[OK] Visual Studio Build Tools found at: $path" -ForegroundColor Green
+            break
+        }
+    }
+}
+
+if (-not $vsInstalled) {
+    Write-Host "[WARN] Visual Studio Build Tools not found." -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Try winget first
+    $wingetExists = Get-Command winget -ErrorAction SilentlyContinue
+    if ($wingetExists) {
+        Write-Host "[INFO] Attempting to install via winget..." -ForegroundColor Yellow
+        Write-Host "[INFO] This requires administrator privileges." -ForegroundColor Yellow
+        Write-Host ""
+        
+        try {
+            $process = Start-Process -FilePath "winget" -ArgumentList "install", "Microsoft.VisualStudio.2022.BuildTools", "--override", "`"--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended`"" -Wait -PassThru
+            
+            if ($process.ExitCode -eq 0) {
+                Write-Host "[OK] Visual Studio Build Tools installed successfully" -ForegroundColor Green
+                Write-Host "[INFO] Please restart this script to use the new tools." -ForegroundColor Yellow
+                Read-Host "Press Enter to exit"
+                exit 0
+            } else {
+                Write-Host "[WARN] winget installation failed (exit code: $($process.ExitCode)), trying manual download..." -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Host "[WARN] winget installation failed: $_" -ForegroundColor Yellow
+        }
+    }
+    
+    # Manual download fallback
+    Write-Host "[INFO] Downloading Visual Studio Build Tools installer..." -ForegroundColor Yellow
+    $vsInstallerPath = "$env:TEMP\vs_buildtools.exe"
+    
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vs_buildtools.exe" -OutFile $vsInstallerPath -UseBasicParsing
+        
+        if (Test-Path $vsInstallerPath) {
+            Write-Host "[INFO] Installing Visual Studio Build Tools..." -ForegroundColor Yellow
+            Write-Host "[INFO] This will open the Visual Studio Installer." -ForegroundColor Cyan
+            Write-Host "[INFO] Please select 'Desktop development with C++' and click Install." -ForegroundColor Cyan
+            Write-Host ""
+            
+            $installProcess = Start-Process -FilePath $vsInstallerPath -ArgumentList "--add", "Microsoft.VisualStudio.Workload.VCTools", "--includeRecommended", "--passive" -Wait -PassThru
+            
+            Remove-Item $vsInstallerPath -Force -ErrorAction SilentlyContinue
+            
+            Write-Host ""
+            Write-Host "[INFO] Installation completed. Please restart this script." -ForegroundColor Yellow
+            Read-Host "Press Enter to exit"
+            exit 0
+        }
+    } catch {
+        Write-Host "[WARN] Could not download VS Build Tools installer: $_" -ForegroundColor Yellow
+        Write-Host "[INFO] Please install manually from:" -ForegroundColor Cyan
+        Write-Host "       https://visualstudio.microsoft.com/visual-cpp-build-tools/" -ForegroundColor White
+        Write-Host "[INFO] Continuing anyway - will try pre-built packages..." -ForegroundColor Yellow
+    }
+}
+
+# ========================================
+# Check/Install Rust
+# ========================================
+Write-Host ""
 Write-Host "[INFO] Checking Rust installation..." -ForegroundColor Yellow
+
 $rustInstalled = Get-Command rustc -ErrorAction SilentlyContinue
 if (-not $rustInstalled) {
     Write-Host "[WARN] Rust not found. Attempting to install..." -ForegroundColor Yellow
-    Write-Host "[INFO] Downloading rustup-init.exe..." -ForegroundColor Yellow
+    Write-Host ""
     
     try {
         # Download rustup-init.exe
         $rustupUrl = "https://win.rustup.rs/x86_64"
         $rustupPath = "$env:TEMP\rustup-init.exe"
+        
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -Uri $rustupUrl -OutFile $rustupPath -UseBasicParsing
         
         if (Test-Path $rustupPath) {
             Write-Host "[INFO] Installing Rust (this may take a few minutes)..." -ForegroundColor Yellow
             & $rustupPath -y --default-toolchain stable
-            Remove-Item $rustupPath -Force
+            Remove-Item $rustupPath -Force -ErrorAction SilentlyContinue
             
             # Add Rust to current PATH
             $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
             
-            Write-Host "[OK] Rust installed successfully" -ForegroundColor Green
-            Write-Host "[INFO] Please restart this script to ensure Rust is properly loaded" -ForegroundColor Yellow
-            Read-Host "Press Enter to exit"
-            exit 0
+            # Verify installation
+            $rustInstalled = Get-Command rustc -ErrorAction SilentlyContinue
+            if ($rustInstalled) {
+                $rustVersion = rustc --version
+                Write-Host "[OK] Rust installed successfully: $rustVersion" -ForegroundColor Green
+            } else {
+                Write-Host "[WARN] Rust installed but not in PATH." -ForegroundColor Yellow
+                Write-Host "[INFO] Please restart this script to load Rust." -ForegroundColor Yellow
+                Read-Host "Press Enter to exit"
+                exit 0
+            }
         }
     } catch {
         Write-Host "[WARN] Could not download Rust installer: $_" -ForegroundColor Yellow
