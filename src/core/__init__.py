@@ -48,6 +48,27 @@ from .oauth import (
     APITokenManager, APIToken,
     get_oauth_manager, get_api_token_manager,
 )
+from .doctor import (
+    Doctor, DiagnosticResult, DiagnosticReport, DiagnosticLevel,
+    get_doctor, run_diagnostics,
+)
+from .reactions import (
+    ReactionManager, Reaction, ReactionType,
+    react_to_message, react_status, get_reaction_manager,
+)
+from .patch import (
+    PatchManager, Patch, PatchResult, PatchStatus,
+    create_simple_patch, get_patch_manager,
+)
+from .chunking import (
+    MessageChunker, ChunkConfig,
+    chunk_message, iter_chunks,
+)
+from .tool_policy import (
+    ToolPolicyManager, ToolPolicy, PolicyCheckResult,
+    PermissionLevel, PolicyAction, RateLimit,
+    policy_check, get_tool_policy_manager,
+)
 
 __all__ = [
     # Memory
@@ -153,4 +174,39 @@ __all__ = [
     "APIToken",
     "get_oauth_manager",
     "get_api_token_manager",
+    # Doctor
+    "Doctor",
+    "DiagnosticResult",
+    "DiagnosticReport",
+    "DiagnosticLevel",
+    "get_doctor",
+    "run_diagnostics",
+    # Reactions
+    "ReactionManager",
+    "Reaction",
+    "ReactionType",
+    "react_to_message",
+    "react_status",
+    "get_reaction_manager",
+    # Patch
+    "PatchManager",
+    "Patch",
+    "PatchResult",
+    "PatchStatus",
+    "create_simple_patch",
+    "get_patch_manager",
+    # Chunking
+    "MessageChunker",
+    "ChunkConfig",
+    "chunk_message",
+    "iter_chunks",
+    # Tool Policy
+    "ToolPolicyManager",
+    "ToolPolicy",
+    "PolicyCheckResult",
+    "PermissionLevel",
+    "PolicyAction",
+    "RateLimit",
+    "policy_check",
+    "get_tool_policy_manager",
 ]

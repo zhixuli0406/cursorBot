@@ -106,9 +106,11 @@ CursorBot 是一個多平台 AI 編程助手，支援 <b>Telegram</b> 和 <b>Dis
 <b>✨ v0.3 新功能:</b>
 • 🧠 Thinking Mode - Claude 深度思考
 • 🔊 TTS 語音輸出
-• 🤖 Subagents 子代理
-• 📦 Sandbox 沙盒執行
+• 🤖 Subagents 子代理系統
+• 📦 Sandbox 安全沙盒
 • 🔐 OAuth 認證
+• 🩺 Doctor 系統診斷
+• 📝 Apply Patch 補丁管理
 4️⃣ AI 會自動執行任務並回報結果
 
 <b>✨ 核心功能:</b>
@@ -272,8 +274,9 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • <b>Sandbox</b> - 安全沙盒執行程式碼
 • <b>Compaction</b> - 對話壓縮省 Token
 • <b>OAuth</b> - GitHub/Google 認證
-• <b>Heartbeat</b> - 服務健康監控
-• <b>Queue</b> - 任務佇列管理
+• <b>Doctor</b> - 系統診斷工具
+• <b>Apply Patch</b> - Git 補丁管理
+• <b>Tool Policy</b> - 工具存取控制
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>💡 使用提示</b>

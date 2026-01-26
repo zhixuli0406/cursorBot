@@ -40,6 +40,12 @@
 - **Heartbeat** - 心跳機制，自動監控服務健康狀態
 - **Retry** - 重試機制，指數退避自動重試失敗請求
 - **Queue** - 任務佇列，優先級任務排程管理
+- **Doctor** - 系統診斷工具，全面健康檢查
+- **Reactions** - 訊息表情回應，UX 增強
+- **Apply Patch** - Git 補丁應用與管理
+- **Chunking** - 智慧訊息分塊，保留程式碼區塊完整性
+- **Tool Policy** - 工具存取控制與審計
+- **CLI Tool** - 命令列工具 `cursorbot`
 
 ## 運作原理
 
@@ -817,6 +823,30 @@ from src.core import with_retry, RetryConfig
 async def call_external_api():
     # 失敗會自動重試
     return await api.request()
+```
+
+#### CLI 工具
+
+CursorBot 提供命令列工具 `cursorbot` 進行管理：
+
+```bash
+# 查看系統狀態
+./cursorbot status
+
+# 運行診斷
+./cursorbot doctor
+
+# 查看配置
+./cursorbot config
+
+# 查看日誌
+./cursorbot logs -n 100
+
+# 查看會話
+./cursorbot sessions
+
+# 啟動 Bot
+./cursorbot start
 ```
 
 ## 專案結構

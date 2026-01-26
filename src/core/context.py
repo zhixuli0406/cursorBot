@@ -540,6 +540,225 @@ class ContextManager:
             logger.debug(f"Cleaned up {removed} old contexts")
 
         return removed
+    
+    # ============================================
+    # Session Pruning (Enhanced)
+    # ============================================
+    
+    def prune_expired_sessions(self) -> dict:
+        """
+        Remove all expired sessions.
+        
+        Returns:
+            dict with pruning statistics
+        """
+        expired_keys = []
+        
+        for key, ctx in self._contexts.items():
+            if ctx.is_expired:
+                expired_keys.append(key)
+        
+        for key in expired_keys:
+            del self._contexts[key]
+        
+        result = {
+            "pruned_count": len(expired_keys),
+            "remaining_count": len(self._contexts),
+            "pruned_sessions": expired_keys,
+        }
+        
+        if expired_keys:
+            logger.info(f"Pruned {len(expired_keys)} expired sessions")
+        
+        return result
+    
+    def prune_inactive_sessions(self, inactive_minutes: int = 60) -> dict:
+        """
+        Remove sessions that have been inactive for a specified duration.
+        
+        Args:
+            inactive_minutes: Minutes of inactivity before pruning
+        
+        Returns:
+            dict with pruning statistics
+        """
+        cutoff = datetime.now() - timedelta(minutes=inactive_minutes)
+        inactive_keys = []
+        
+        for key, ctx in self._contexts.items():
+            if ctx.last_activity < cutoff:
+                inactive_keys.append(key)
+        
+        for key in inactive_keys:
+            del self._contexts[key]
+        
+        result = {
+            "pruned_count": len(inactive_keys),
+            "remaining_count": len(self._contexts),
+            "inactive_threshold_minutes": inactive_minutes,
+        }
+        
+        if inactive_keys:
+            logger.info(f"Pruned {len(inactive_keys)} inactive sessions (>{inactive_minutes}m)")
+        
+        return result
+    
+    def prune_by_criteria(
+        self,
+        max_age_hours: int = None,
+        max_messages: int = None,
+        chat_types: list[str] = None,
+        keep_with_tasks: bool = True,
+    ) -> dict:
+        """
+        Prune sessions based on multiple criteria.
+        
+        Args:
+            max_age_hours: Remove sessions older than this
+            max_messages: Remove sessions with more than this many messages
+            chat_types: Only prune these chat types (e.g., ["group", "supergroup"])
+            keep_with_tasks: Keep sessions that have active tasks
+        
+        Returns:
+            dict with pruning statistics
+        """
+        to_prune = []
+        
+        for key, ctx in self._contexts.items():
+            should_prune = False
+            reason = None
+            
+            # Check age
+            if max_age_hours:
+                age = datetime.now() - ctx.created_at
+                if age > timedelta(hours=max_age_hours):
+                    should_prune = True
+                    reason = f"age>{max_age_hours}h"
+            
+            # Check message count
+            if max_messages and len(ctx.messages) > max_messages:
+                should_prune = True
+                reason = f"messages>{max_messages}"
+            
+            # Filter by chat type
+            if chat_types and ctx.chat_type not in chat_types:
+                should_prune = False
+            
+            # Keep sessions with active tasks
+            if keep_with_tasks and ctx.current_task_id:
+                should_prune = False
+            
+            if should_prune:
+                to_prune.append((key, reason))
+        
+        pruned_details = []
+        for key, reason in to_prune:
+            del self._contexts[key]
+            pruned_details.append({"session": key, "reason": reason})
+        
+        return {
+            "pruned_count": len(to_prune),
+            "remaining_count": len(self._contexts),
+            "pruned_details": pruned_details,
+        }
+    
+    def get_session_stats(self) -> dict:
+        """Get detailed statistics about all sessions."""
+        stats = {
+            "total_sessions": len(self._contexts),
+            "by_chat_type": {},
+            "by_status": {"active": 0, "expired": 0, "with_tasks": 0},
+            "oldest_session": None,
+            "newest_session": None,
+            "total_messages": 0,
+            "avg_messages_per_session": 0,
+        }
+        
+        if not self._contexts:
+            return stats
+        
+        oldest = None
+        newest = None
+        
+        for ctx in self._contexts.values():
+            # Count by chat type
+            ct = ctx.chat_type
+            stats["by_chat_type"][ct] = stats["by_chat_type"].get(ct, 0) + 1
+            
+            # Count by status
+            if ctx.is_expired:
+                stats["by_status"]["expired"] += 1
+            else:
+                stats["by_status"]["active"] += 1
+            
+            if ctx.current_task_id:
+                stats["by_status"]["with_tasks"] += 1
+            
+            # Track oldest/newest
+            if oldest is None or ctx.created_at < oldest.created_at:
+                oldest = ctx
+            if newest is None or ctx.created_at > newest.created_at:
+                newest = ctx
+            
+            # Count messages
+            stats["total_messages"] += len(ctx.messages)
+        
+        if oldest:
+            stats["oldest_session"] = {
+                "key": oldest.session_key,
+                "created_at": oldest.created_at.isoformat(),
+                "age_minutes": (datetime.now() - oldest.created_at).total_seconds() / 60,
+            }
+        
+        if newest:
+            stats["newest_session"] = {
+                "key": newest.session_key,
+                "created_at": newest.created_at.isoformat(),
+            }
+        
+        if stats["total_sessions"] > 0:
+            stats["avg_messages_per_session"] = stats["total_messages"] / stats["total_sessions"]
+        
+        return stats
+    
+    async def start_auto_pruning(
+        self,
+        interval_minutes: int = 30,
+        inactive_threshold_minutes: int = 60,
+    ) -> None:
+        """
+        Start automatic session pruning in background.
+        
+        Args:
+            interval_minutes: How often to run pruning
+            inactive_threshold_minutes: Prune sessions inactive for this long
+        """
+        import asyncio
+        
+        self._auto_pruning = True
+        logger.info(f"Started auto-pruning: interval={interval_minutes}m, threshold={inactive_threshold_minutes}m")
+        
+        while getattr(self, '_auto_pruning', False):
+            await asyncio.sleep(interval_minutes * 60)
+            
+            try:
+                # Prune expired
+                result1 = self.prune_expired_sessions()
+                
+                # Prune inactive
+                result2 = self.prune_inactive_sessions(inactive_threshold_minutes)
+                
+                total_pruned = result1["pruned_count"] + result2["pruned_count"]
+                if total_pruned > 0:
+                    logger.info(f"Auto-pruning completed: {total_pruned} sessions removed")
+                    
+            except Exception as e:
+                logger.error(f"Auto-pruning error: {e}")
+    
+    def stop_auto_pruning(self) -> None:
+        """Stop automatic session pruning."""
+        self._auto_pruning = False
+        logger.info("Stopped auto-pruning")
 
     def clear_context(
         self, 
