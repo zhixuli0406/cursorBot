@@ -13,6 +13,7 @@ Configuration is done via environment variables.
 """
 
 import asyncio
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
