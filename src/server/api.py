@@ -140,6 +140,16 @@ def create_app() -> FastAPI:
 
     # Register routes
     register_routes(application)
+    
+    # Register web interfaces
+    try:
+        from ..web import create_dashboard_router, create_webchat_router, create_control_router
+        application.include_router(create_dashboard_router())
+        application.include_router(create_webchat_router())
+        application.include_router(create_control_router())
+        logger.info("Web interfaces registered: /dashboard, /chat, /control")
+    except ImportError as e:
+        logger.warning(f"Web interfaces not available: {e}")
 
     return application
 

@@ -78,6 +78,46 @@ from .llm_task import (
     LLMTaskManager, TaskType, TaskTemplate, TaskResult,
     get_llm_task_manager,
 )
+from .channel_routing import (
+    ChannelRouter, ChannelConfig, ChannelType, RouteRule,
+    get_channel_router,
+)
+from .websocket import (
+    WebSocketManager, WSMessage, WSClient, WSMessageType,
+    get_websocket_manager,
+)
+from .location import (
+    LocationManager, Location, LocationShare,
+    get_location_manager,
+)
+from .gateway_lock import (
+    GatewayLock, LockInfo, LockReason,
+    get_gateway_lock,
+)
+from .gateway import (
+    Gateway, Platform, MessageType, UnifiedMessage, UnifiedUser,
+    OutgoingMessage, PlatformAdapter, get_gateway,
+)
+from .presence import (
+    PresenceManager, PresenceStatus, UserPresence,
+    get_presence_manager,
+)
+from .agent_send import (
+    AgentSendManager, AgentMessage, AgentMessageType, Agent,
+    get_agent_send_manager,
+)
+from .voice_wake import (
+    VoiceWakeManager, WakeConfig, WakeEvent, WakeWordEngine, ListeningState,
+    get_voice_wake_manager,
+)
+from .remote_gateway import (
+    RemoteGateway, GatewayConfig, GatewayNode, GatewayStatus,
+    get_remote_gateway,
+)
+from .draft_streaming import (
+    DraftStreamer, StreamConfig, DraftMessage, StreamState,
+    TelegramDraftStreamer, get_draft_streamer,
+)
 
 __all__ = [
     # Memory
@@ -232,4 +272,66 @@ __all__ = [
     "TaskTemplate",
     "TaskResult",
     "get_llm_task_manager",
+    # Channel Routing
+    "ChannelRouter",
+    "ChannelConfig",
+    "ChannelType",
+    "RouteRule",
+    "get_channel_router",
+    # WebSocket
+    "WebSocketManager",
+    "WSMessage",
+    "WSClient",
+    "WSMessageType",
+    "get_websocket_manager",
+    # Location
+    "LocationManager",
+    "Location",
+    "LocationShare",
+    "get_location_manager",
+    # Gateway Lock
+    "GatewayLock",
+    "LockInfo",
+    "LockReason",
+    "get_gateway_lock",
+    # Unified Gateway
+    "Gateway",
+    "Platform",
+    "MessageType",
+    "UnifiedMessage",
+    "UnifiedUser",
+    "OutgoingMessage",
+    "PlatformAdapter",
+    "get_gateway",
+    # Presence
+    "PresenceManager",
+    "PresenceStatus",
+    "UserPresence",
+    "get_presence_manager",
+    # Agent Send
+    "AgentSendManager",
+    "AgentMessage",
+    "AgentMessageType",
+    "Agent",
+    "get_agent_send_manager",
+    # Voice Wake
+    "VoiceWakeManager",
+    "WakeConfig",
+    "WakeEvent",
+    "WakeWordEngine",
+    "ListeningState",
+    "get_voice_wake_manager",
+    # Remote Gateway
+    "RemoteGateway",
+    "GatewayConfig",
+    "GatewayNode",
+    "GatewayStatus",
+    "get_remote_gateway",
+    # Draft Streaming
+    "DraftStreamer",
+    "StreamConfig",
+    "DraftMessage",
+    "StreamState",
+    "TelegramDraftStreamer",
+    "get_draft_streamer",
 ]

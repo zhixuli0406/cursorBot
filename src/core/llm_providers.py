@@ -29,6 +29,7 @@ class ProviderType(Enum):
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
     CUSTOM = "custom"
+    BEDROCK = "bedrock"
 
 
 @dataclass
@@ -810,6 +811,160 @@ class OllamaProvider(LLMProvider):
 
 
 # ============================================
+# AWS Bedrock Provider
+# ============================================
+
+class BedrockProvider(LLMProvider):
+    """AWS Bedrock provider for Claude and other models."""
+    
+    @property
+    def provider_type(self) -> ProviderType:
+        return ProviderType.BEDROCK
+    
+    def is_available(self) -> bool:
+        """Check if Bedrock is configured."""
+        return self.config.enabled and bool(self.config.extra.get("region"))
+    
+    async def fetch_models(self) -> list[str]:
+        """Fetch available models from AWS Bedrock."""
+        try:
+            import boto3
+            
+            region = self.config.extra.get("region", "us-east-1")
+            
+            bedrock = boto3.client(
+                service_name="bedrock",
+                region_name=region,
+            )
+            
+            response = bedrock.list_foundation_models()
+            
+            models = []
+            for model in response.get("modelSummaries", []):
+                model_id = model.get("modelId", "")
+                # Filter for text generation models
+                if "TEXT" in model.get("outputModalities", []):
+                    models.append(model_id)
+            
+            # Sort by provider
+            models.sort(key=lambda x: (
+                0 if "anthropic" in x else
+                1 if "amazon" in x else
+                2 if "meta" in x else
+                3 if "cohere" in x else 4
+            ))
+            
+            return models
+            
+        except ImportError:
+            logger.warning("boto3 not installed for Bedrock")
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to fetch Bedrock models: {e}")
+            return [
+                "anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "anthropic.claude-3-5-haiku-20241022-v1:0",
+                "anthropic.claude-3-opus-20240229-v1:0",
+                "amazon.titan-text-express-v1",
+                "meta.llama3-2-90b-instruct-v1:0",
+            ]
+    
+    async def generate(self, messages: list[dict], **kwargs) -> str:
+        """Generate response using AWS Bedrock."""
+        try:
+            import boto3
+            import json
+            
+            region = self.config.extra.get("region", "us-east-1")
+            model_id = kwargs.get("model") or self.config.model or "anthropic.claude-3-5-sonnet-20241022-v2:0"
+            
+            bedrock_runtime = boto3.client(
+                service_name="bedrock-runtime",
+                region_name=region,
+            )
+            
+            # Format messages for different model types
+            if "anthropic" in model_id:
+                # Claude format
+                system_prompt = kwargs.get("system_prompt", "")
+                
+                # Extract system message if present
+                formatted_messages = []
+                for msg in messages:
+                    if msg["role"] == "system":
+                        system_prompt = msg["content"]
+                    else:
+                        formatted_messages.append({
+                            "role": msg["role"],
+                            "content": msg["content"],
+                        })
+                
+                body = {
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+                    "messages": formatted_messages,
+                }
+                
+                if system_prompt:
+                    body["system"] = system_prompt
+                    
+            elif "amazon" in model_id:
+                # Titan format
+                prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+                body = {
+                    "inputText": prompt,
+                    "textGenerationConfig": {
+                        "maxTokenCount": kwargs.get("max_tokens", self.config.max_tokens),
+                        "temperature": kwargs.get("temperature", self.config.temperature),
+                    }
+                }
+                
+            elif "meta" in model_id:
+                # Llama format
+                prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+                body = {
+                    "prompt": prompt,
+                    "max_gen_len": kwargs.get("max_tokens", self.config.max_tokens),
+                    "temperature": kwargs.get("temperature", self.config.temperature),
+                }
+                
+            else:
+                # Generic format
+                prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+                body = {"prompt": prompt}
+            
+            # Run in executor since boto3 is synchronous
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: bedrock_runtime.invoke_model(
+                    modelId=model_id,
+                    body=json.dumps(body),
+                    contentType="application/json",
+                    accept="application/json",
+                )
+            )
+            
+            response_body = json.loads(response["body"].read())
+            
+            # Extract response based on model type
+            if "anthropic" in model_id:
+                return response_body.get("content", [{}])[0].get("text", "")
+            elif "amazon" in model_id:
+                return response_body.get("results", [{}])[0].get("outputText", "")
+            elif "meta" in model_id:
+                return response_body.get("generation", "")
+            else:
+                return str(response_body.get("completion", response_body))
+                
+        except ImportError:
+            raise ValueError("boto3 not installed. Run: pip install boto3")
+        except Exception as e:
+            logger.error(f"Bedrock API error: {e}")
+            raise ValueError(f"Bedrock API error: {e}")
+
+
+# ============================================
 # Custom OpenAI-Compatible Provider
 # ============================================
 
@@ -935,6 +1090,7 @@ class LLMProviderManager:
         ProviderType.OPENROUTER: OpenRouterProvider,
         ProviderType.OLLAMA: OllamaProvider,
         ProviderType.CUSTOM: CustomProvider,
+        ProviderType.BEDROCK: BedrockProvider,
     }
     
     # Default models for each provider
@@ -945,6 +1101,7 @@ class LLMProviderManager:
         ProviderType.OPENROUTER: "google/gemini-2.0-flash-exp:free",
         ProviderType.OLLAMA: "llama3.2",
         ProviderType.CUSTOM: "default",
+        ProviderType.BEDROCK: "anthropic.claude-3-5-sonnet-20241022-v2:0",
     }
     
     def __init__(self):

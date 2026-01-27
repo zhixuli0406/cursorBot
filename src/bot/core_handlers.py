@@ -1773,6 +1773,496 @@ async def elevate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 from datetime import datetime
 
 
+# ============================================
+# Lock - Gateway Lock Management
+# ============================================
+
+
+@authorized_only
+async def lock_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /lock command.
+    Control gateway locking.
+    
+    Usage:
+        /lock - Show lock status
+        /lock on [message] - Lock the bot
+        /lock off - Unlock the bot
+        /lock maintenance [minutes] - Enter maintenance mode
+        /lock user <id> - Lock a user
+        /lock group - Lock current group
+    """
+    args = context.args or []
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    try:
+        from ..core.gateway_lock import get_gateway_lock, LockReason
+        gl = get_gateway_lock()
+        
+        if not args:
+            # Show status
+            info = gl.get_lock_info()
+            stats = gl.get_stats()
+            
+            status = "🔒 已鎖定" if info.is_active() else "🔓 未鎖定"
+            
+            text = f"""🔐 <b>閘道鎖定狀態</b>
+
+狀態: {status}
+"""
+            if info.is_active():
+                text += f"原因: {info.reason.value}\n"
+                text += f"訊息: {info.message or '(無)'}\n"
+                remaining = info.time_remaining()
+                if remaining:
+                    text += f"剩餘: {remaining.seconds // 60} 分鐘\n"
+            
+            text += f"""
+<b>統計:</b>
+• 鎖定用戶: {stats['locked_users']}
+• 鎖定群組: {stats['locked_groups']}
+• IP 黑名單: {stats['blacklisted_ips']}
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+            return
+        
+        action = args[0].lower()
+        
+        if action in ("on", "lock"):
+            message = " ".join(args[1:]) if len(args) > 1 else "Bot is locked"
+            gl.lock(LockReason.MANUAL, message, locked_by=user_id)
+            await update.message.reply_text("🔒 閘道已鎖定")
+        
+        elif action in ("off", "unlock"):
+            if gl.unlock(user_id):
+                await update.message.reply_text("🔓 閘道已解鎖")
+            else:
+                await update.message.reply_text("閘道未處於鎖定狀態")
+        
+        elif action == "maintenance":
+            minutes = int(args[1]) if len(args) > 1 else 30
+            gl.maintenance_mode(minutes, locked_by=user_id)
+            await update.message.reply_text(f"🔧 已進入維護模式 ({minutes} 分鐘)")
+        
+        elif action == "emergency":
+            gl.emergency_lockdown(user_id)
+            await update.message.reply_text("🚨 緊急鎖定已啟動")
+        
+        elif action == "user" and len(args) >= 2:
+            target_id = int(args[1])
+            minutes = int(args[2]) if len(args) > 2 else None
+            gl.lock_user(target_id, duration_minutes=minutes)
+            await update.message.reply_text(f"🔒 已鎖定用戶 {target_id}")
+        
+        elif action == "group":
+            minutes = int(args[1]) if len(args) > 1 else None
+            gl.lock_group(chat_id, duration_minutes=minutes)
+            await update.message.reply_text("🔒 已鎖定此群組")
+        
+        elif action == "history":
+            history = gl.get_history(10)
+            if not history:
+                await update.message.reply_text("📜 沒有鎖定歷史")
+                return
+            
+            lines = ["📜 <b>鎖定歷史</b>\n"]
+            for h in history:
+                lines.append(f"• {h['action']} {h['target']} ({h['reason'] or '-'})")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        else:
+            await update.message.reply_text(
+                "🔐 <b>閘道鎖定</b>\n\n"
+                "<code>/lock</code> - 顯示狀態\n"
+                "<code>/lock on [訊息]</code> - 鎖定\n"
+                "<code>/lock off</code> - 解鎖\n"
+                "<code>/lock maintenance [分鐘]</code> - 維護模式\n"
+                "<code>/lock emergency</code> - 緊急鎖定\n"
+                "<code>/lock user &lt;id&gt; [分鐘]</code> - 鎖定用戶\n"
+                "<code>/lock group [分鐘]</code> - 鎖定群組\n"
+                "<code>/lock history</code> - 查看歷史",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Lock error: {e}")
+        await update.message.reply_text(f"❌ 鎖定操作失敗: {e}")
+
+
+# ============================================
+# Location - Location Sharing
+# ============================================
+
+
+@authorized_only
+async def location_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /location command.
+    Manage location sharing.
+    
+    Usage:
+        /location - Show location help
+        /location share - Share current location
+        /location get <id> - Get shared location
+        /location stop - Stop sharing
+    """
+    args = context.args or []
+    user_id = update.effective_user.id
+    
+    try:
+        from ..core.location import get_location_manager
+        lm = get_location_manager()
+        
+        if not args:
+            stats = lm.get_stats()
+            await update.message.reply_text(
+                f"📍 <b>位置服務</b>\n\n"
+                f"• 用戶位置: {stats['users_with_location']}\n"
+                f"• 活躍分享: {stats['active_shares']}\n"
+                f"• 即時分享: {stats['live_shares']}\n\n"
+                f"<b>指令:</b>\n"
+                f"<code>/location share</code> - 分享位置\n"
+                f"<code>/location get &lt;id&gt;</code> - 取得分享\n"
+                f"<code>/location stop</code> - 停止分享\n"
+                f"<code>/location my</code> - 我的位置\n\n"
+                f"<i>提示: 直接發送位置訊息即可分享</i>",
+                parse_mode="HTML"
+            )
+            return
+        
+        action = args[0].lower()
+        
+        if action == "share":
+            # User needs to send a location message
+            await update.message.reply_text(
+                "📍 請發送位置訊息來分享您的位置\n\n"
+                "點擊附件圖示 📎 -> 位置 -> 發送位置"
+            )
+        
+        elif action == "get" and len(args) >= 2:
+            share_id = args[1]
+            share = lm.get_shared_location(share_id)
+            
+            if not share:
+                await update.message.reply_text("❌ 找不到此位置分享或已過期")
+                return
+            
+            loc = share.location
+            await update.message.reply_location(
+                latitude=loc.latitude,
+                longitude=loc.longitude,
+            )
+            
+            await update.message.reply_text(
+                f"📍 <b>位置資訊</b>\n\n"
+                f"座標: {loc.latitude:.6f}, {loc.longitude:.6f}\n"
+                f"地址: {loc.address or '(未知)'}\n"
+                f"🔗 {loc.to_google_maps_url()}",
+                parse_mode="HTML"
+            )
+        
+        elif action == "stop":
+            lm.stop_live_sharing(user_id)
+            lm.clear_user_location(user_id)
+            await update.message.reply_text("✅ 已停止位置分享")
+        
+        elif action == "my":
+            loc = lm.get_user_location(user_id)
+            if not loc:
+                await update.message.reply_text("❌ 沒有您的位置記錄")
+                return
+            
+            await update.message.reply_text(
+                f"📍 <b>我的位置</b>\n\n"
+                f"座標: {loc.latitude:.6f}, {loc.longitude:.6f}\n"
+                f"更新: {loc.timestamp.strftime('%Y-%m-%d %H:%M')}\n"
+                f"🔗 {loc.to_google_maps_url()}",
+                parse_mode="HTML"
+            )
+        
+        else:
+            await update.message.reply_text("❓ 未知的子指令")
+            
+    except Exception as e:
+        logger.error(f"Location error: {e}")
+        await update.message.reply_text(f"❌ 位置操作失敗: {e}")
+
+
+# ============================================
+# Route - Channel Routing
+# ============================================
+
+
+@authorized_only
+async def route_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /route command.
+    Manage channel routing.
+    
+    Usage:
+        /route - Show routing stats
+        /route list - List channels
+        /route add <channel_id> <agent> - Add route
+        /route remove <channel_id> - Remove route
+    """
+    args = context.args or []
+    
+    try:
+        from ..core.channel_routing import get_channel_router
+        router = get_channel_router()
+        
+        if not args:
+            stats = router.get_stats()
+            await update.message.reply_text(
+                f"🔀 <b>頻道路由</b>\n\n"
+                f"• 總頻道數: {stats['total_channels']}\n"
+                f"• 活躍規則: {stats['active_rules']}\n"
+                f"• 處理器: {stats['registered_handlers']}\n"
+                f"• 轉發: {'啟用' if stats['forwarding_enabled'] else '停用'}\n"
+                f"• 已路由訊息: {stats['total_messages_routed']}",
+                parse_mode="HTML"
+            )
+            return
+        
+        action = args[0].lower()
+        
+        if action == "list":
+            channels = router.list_channels()
+            if not channels:
+                await update.message.reply_text("📭 沒有已註冊的頻道")
+                return
+            
+            lines = ["📋 <b>已註冊頻道</b>\n"]
+            for ch in channels[:10]:
+                status = "✅" if ch.enabled else "❌"
+                lines.append(f"• {status} <code>{ch.channel_id}</code>")
+                lines.append(f"  類型: {ch.channel_type.value}")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        elif action == "enable":
+            router.enable_forwarding()
+            await update.message.reply_text("✅ 已啟用訊息轉發")
+        
+        elif action == "disable":
+            router.disable_forwarding()
+            await update.message.reply_text("❌ 已停用訊息轉發")
+        
+        else:
+            await update.message.reply_text(
+                "🔀 <b>頻道路由</b>\n\n"
+                "<code>/route</code> - 顯示統計\n"
+                "<code>/route list</code> - 列出頻道\n"
+                "<code>/route enable</code> - 啟用轉發\n"
+                "<code>/route disable</code> - 停用轉發",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Route error: {e}")
+        await update.message.reply_text(f"❌ 路由操作失敗: {e}")
+
+
+# ============================================
+# Presence - Online Status
+# ============================================
+
+
+@authorized_only
+async def presence_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /presence command.
+    Manage user online status.
+    
+    Usage:
+        /presence - Show status
+        /presence online - Set online
+        /presence away - Set away
+        /presence busy [text] - Set busy
+        /presence offline - Set offline
+    """
+    args = context.args or []
+    user_id = update.effective_user.id
+    
+    try:
+        from ..core.presence import get_presence_manager, PresenceStatus
+        pm = get_presence_manager()
+        
+        if not args:
+            presence = pm.get_presence(user_id)
+            stats = pm.get_stats()
+            
+            status = presence.status.value if presence else "offline"
+            status_emoji = {
+                "online": "🟢",
+                "away": "🟡",
+                "busy": "🔴",
+                "offline": "⚫",
+                "invisible": "👻",
+            }.get(status, "⚪")
+            
+            text = f"""👤 <b>在線狀態</b>
+
+您的狀態: {status_emoji} {status}
+"""
+            if presence and presence.status_text:
+                text += f"狀態訊息: {presence.status_text}\n"
+            
+            text += f"""
+<b>全域統計:</b>
+• 在線用戶: {stats['online']}
+• 5分鐘內活躍: {stats['active_5min']}
+• 總追蹤: {stats['total_tracked']}
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+            return
+        
+        action = args[0].lower()
+        
+        if action == "online":
+            pm.set_online(user_id, "telegram")
+            await update.message.reply_text("🟢 已設為在線")
+        
+        elif action == "away":
+            pm.set_away(user_id)
+            await update.message.reply_text("🟡 已設為離開")
+        
+        elif action == "busy":
+            status_text = " ".join(args[1:]) if len(args) > 1 else ""
+            pm.set_busy(user_id, status_text)
+            await update.message.reply_text("🔴 已設為忙碌")
+        
+        elif action == "offline":
+            pm.set_offline(user_id)
+            await update.message.reply_text("⚫ 已設為離線")
+        
+        elif action == "invisible":
+            pm.set_invisible(user_id)
+            await update.message.reply_text("👻 已設為隱身")
+        
+        else:
+            await update.message.reply_text(
+                "👤 <b>在線狀態</b>\n\n"
+                "<code>/presence</code> - 顯示狀態\n"
+                "<code>/presence online</code> - 設為在線\n"
+                "<code>/presence away</code> - 設為離開\n"
+                "<code>/presence busy [訊息]</code> - 設為忙碌\n"
+                "<code>/presence offline</code> - 設為離線\n"
+                "<code>/presence invisible</code> - 設為隱身",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Presence error: {e}")
+        await update.message.reply_text(f"❌ 狀態操作失敗: {e}")
+
+
+# ============================================
+# Gateway - Unified Gateway Info
+# ============================================
+
+
+@authorized_only
+async def gateway_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /gateway command.
+    Show unified gateway information.
+    
+    Usage:
+        /gateway - Show gateway status
+    """
+    try:
+        from ..core.gateway import get_gateway
+        gw = get_gateway()
+        stats = gw.get_stats()
+        
+        adapters = ", ".join(stats.get("adapters", [])) or "(無)"
+        
+        text = f"""🌐 <b>統一閘道</b>
+
+狀態: {'🟢 運行中' if stats.get('running') else '⚫ 停止'}
+已註冊適配器: {adapters}
+
+<b>統計:</b>
+• 已接收訊息: {stats.get('messages_received', 0)}
+• 已發送訊息: {stats.get('messages_sent', 0)}
+• 錯誤: {stats.get('errors', 0)}
+• 處理器: {stats.get('handlers', 0)}
+• 中介軟體: {stats.get('middleware', 0)}
+"""
+        await update.message.reply_text(text, parse_mode="HTML")
+        
+    except Exception as e:
+        logger.error(f"Gateway error: {e}")
+        await update.message.reply_text(f"❌ 閘道查詢失敗: {e}")
+
+
+# ============================================
+# Agents - Agent Management
+# ============================================
+
+
+@authorized_only
+async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /agents command.
+    Manage registered agents.
+    
+    Usage:
+        /agents - List agents
+        /agents stats - Show statistics
+    """
+    args = context.args or []
+    
+    try:
+        from ..core.agent_send import get_agent_send_manager
+        asm = get_agent_send_manager()
+        
+        if not args or args[0] == "list":
+            agents = asm.list_agents()
+            
+            if not agents:
+                await update.message.reply_text("🤖 沒有已註冊的代理")
+                return
+            
+            lines = ["🤖 <b>已註冊代理</b>\n"]
+            for agent in agents:
+                status = "🟢" if agent.online else "⚫"
+                lines.append(f"• {status} <b>{agent.name}</b> (<code>{agent.agent_id}</code>)")
+                if agent.capabilities:
+                    lines.append(f"  能力: {', '.join(agent.capabilities[:3])}")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        elif args[0] == "stats":
+            stats = asm.get_stats()
+            
+            text = f"""🤖 <b>代理統計</b>
+
+• 已註冊: {stats['registered_agents']}
+• 在線: {stats['online_agents']}
+• 已發送訊息: {stats['messages_sent']}
+• 已送達: {stats['messages_delivered']}
+• 失敗: {stats['messages_failed']}
+• 待處理回應: {stats['pending_responses']}
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        else:
+            await update.message.reply_text(
+                "🤖 <b>代理管理</b>\n\n"
+                "<code>/agents</code> - 列出代理\n"
+                "<code>/agents stats</code> - 顯示統計",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Agents error: {e}")
+        await update.message.reply_text(f"❌ 代理查詢失敗: {e}")
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -1828,6 +2318,18 @@ def setup_core_handlers(app) -> None:
     app.add_handler(CommandHandler("permissions", permissions_handler))
     app.add_handler(CommandHandler("perm", permissions_handler))  # Alias
     app.add_handler(CommandHandler("elevate", elevate_handler))
+    
+    # v0.3 Extended commands
+    app.add_handler(CommandHandler("lock", lock_handler))
+    app.add_handler(CommandHandler("location", location_handler))
+    app.add_handler(CommandHandler("loc", location_handler))  # Alias
+    app.add_handler(CommandHandler("route", route_handler))
+    
+    # v0.3 New commands
+    app.add_handler(CommandHandler("presence", presence_handler))
+    app.add_handler(CommandHandler("status", presence_handler))  # Alias
+    app.add_handler(CommandHandler("gateway", gateway_handler))
+    app.add_handler(CommandHandler("agents", agents_handler))
 
     logger.info("Core handlers configured")
 
@@ -1851,5 +2353,11 @@ __all__ = [
     "usage_handler",
     "permissions_handler",
     "elevate_handler",
+    "lock_handler",
+    "location_handler",
+    "route_handler",
+    "presence_handler",
+    "gateway_handler",
+    "agents_handler",
     "setup_core_handlers",
 ]

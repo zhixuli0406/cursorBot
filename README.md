@@ -460,6 +460,20 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/permissions group` | 群組權限設定 |
 | `/elevate` | 查看提升狀態 |
 | `/elevate <分鐘>` | 請求權限提升 |
+| `/lock` | 查看閘道鎖定狀態 |
+| `/lock on` | 鎖定 Bot |
+| `/lock off` | 解鎖 Bot |
+| `/lock maintenance [分鐘]` | 進入維護模式 |
+| `/location` | 位置服務 |
+| `/location share` | 分享位置 |
+| `/route` | 頻道路由狀態 |
+| `/route list` | 列出頻道 |
+| `/presence` | 查看在線狀態 |
+| `/presence online/away/busy` | 設定狀態 |
+| `/gateway` | 統一閘道資訊 |
+| `/agents` | 列出已註冊代理 |
+| `/control` | 控制面板（Web） |
+| `/tui` | 終端介面說明 |
 
 **模型切換範例：**
 
