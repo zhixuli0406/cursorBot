@@ -71,102 +71,205 @@ DASHBOARD_HTML = """
     <title>CursorBot Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'gradient': 'gradient 8s ease infinite',
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-bg { 
+            background: linear-gradient(-45deg, #667eea, #764ba2, #6B8DD6, #8E37D7);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        .glass { 
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
+        .progress-bar { transition: width 0.5s ease; }
+        .status-dot { animation: pulse 2s infinite; }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen" x-data="dashboard()">
+<body class="bg-slate-50 min-h-screen" x-data="dashboard()">
     <!-- Header -->
-    <nav class="gradient-bg shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+    <nav class="gradient-bg shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4">
             <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <span class="text-2xl">🤖</span>
-                    <h1 class="text-xl font-bold text-white">CursorBot Dashboard</h1>
-                </div>
                 <div class="flex items-center space-x-4">
-                    <span class="text-white/80 text-sm" x-text="currentTime"></span>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium"
-                          :class="status === 'online' ? 'bg-green-400 text-green-900' : 'bg-red-400 text-red-900'"
-                          x-text="status === 'online' ? '線上' : '離線'"></span>
+                    <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">🤖</span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">CursorBot</h1>
+                        <p class="text-white/60 text-xs">Dashboard v0.3</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="hidden md:flex items-center space-x-2 text-white/80 text-sm">
+                        <span>🕐</span>
+                        <span x-text="currentTime"></span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="status-dot w-2 h-2 rounded-full"
+                              :class="status === 'online' ? 'bg-green-400' : 'bg-red-400'"></span>
+                        <span class="px-3 py-1.5 rounded-lg text-sm font-medium"
+                              :class="status === 'online' ? 'bg-green-400/20 text-green-100' : 'bg-red-400/20 text-red-100'"
+                              x-text="status === 'online' ? '線上運行' : '離線'"></span>
+                    </div>
+                    <a href="/chat" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition">
+                        💬 WebChat
+                    </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">運行時間</p>
-                        <p class="text-2xl font-bold text-gray-800" x-text="stats.uptime"></p>
-                    </div>
-                    <span class="text-3xl">⏱️</span>
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Stats Cards Row 1 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            <div class="glass rounded-2xl shadow-lg p-5 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-2xl">⏱️</span>
+                    <span class="text-xs text-green-500 font-medium bg-green-50 px-2 py-1 rounded-full">運行中</span>
                 </div>
+                <p class="text-slate-500 text-xs mb-1">運行時間</p>
+                <p class="text-xl font-bold text-slate-800" x-text="stats.uptime"></p>
             </div>
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">活躍會話</p>
-                        <p class="text-2xl font-bold text-gray-800" x-text="stats.active_sessions"></p>
-                    </div>
-                    <span class="text-3xl">💬</span>
+            <div class="glass rounded-2xl shadow-lg p-5 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-2xl">💬</span>
                 </div>
+                <p class="text-slate-500 text-xs mb-1">活躍會話</p>
+                <p class="text-xl font-bold text-slate-800" x-text="stats.active_sessions"></p>
             </div>
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">LLM 呼叫</p>
-                        <p class="text-2xl font-bold text-gray-800" x-text="stats.llm_calls"></p>
-                    </div>
-                    <span class="text-3xl">🧠</span>
+            <div class="glass rounded-2xl shadow-lg p-5 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-2xl">👥</span>
                 </div>
+                <p class="text-slate-500 text-xs mb-1">總用戶數</p>
+                <p class="text-xl font-bold text-slate-800" x-text="stats.total_users"></p>
             </div>
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">當前模型</p>
-                        <p class="text-lg font-bold text-gray-800 truncate" x-text="stats.current_model"></p>
-                    </div>
-                    <span class="text-3xl">🤖</span>
+            <div class="glass rounded-2xl shadow-lg p-5 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-2xl">📨</span>
                 </div>
+                <p class="text-slate-500 text-xs mb-1">總訊息數</p>
+                <p class="text-xl font-bold text-slate-800" x-text="stats.total_messages"></p>
+            </div>
+            <div class="glass rounded-2xl shadow-lg p-5 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-2xl">🧠</span>
+                </div>
+                <p class="text-slate-500 text-xs mb-1">LLM 呼叫</p>
+                <p class="text-xl font-bold text-slate-800" x-text="stats.llm_calls"></p>
+            </div>
+            <div class="glass rounded-2xl shadow-lg p-5 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-2xl">🤖</span>
+                </div>
+                <p class="text-slate-500 text-xs mb-1">當前模型</p>
+                <p class="text-sm font-bold text-slate-800 truncate" x-text="stats.current_model"></p>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- System Resources -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="glass rounded-2xl shadow-lg p-6 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-slate-800">💻 CPU 使用率</h3>
+                    <span class="text-2xl font-bold" :class="system.cpu > 80 ? 'text-red-500' : 'text-green-500'" x-text="system.cpu + '%'"></span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-3">
+                    <div class="h-3 rounded-full progress-bar" 
+                         :class="system.cpu > 80 ? 'bg-red-500' : system.cpu > 50 ? 'bg-yellow-500' : 'bg-green-500'"
+                         :style="'width: ' + system.cpu + '%'"></div>
+                </div>
+            </div>
+            <div class="glass rounded-2xl shadow-lg p-6 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-slate-800">🧮 記憶體使用</h3>
+                    <span class="text-2xl font-bold" :class="system.memory > 80 ? 'text-red-500' : 'text-green-500'" x-text="system.memory + '%'"></span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-3">
+                    <div class="h-3 rounded-full progress-bar"
+                         :class="system.memory > 80 ? 'bg-red-500' : system.memory > 50 ? 'bg-yellow-500' : 'bg-green-500'"
+                         :style="'width: ' + system.memory + '%'"></div>
+                </div>
+                <p class="text-xs text-slate-500 mt-2" x-text="system.memory_detail"></p>
+            </div>
+            <div class="glass rounded-2xl shadow-lg p-6 card-hover border border-white/50">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-slate-800">💾 磁碟空間</h3>
+                    <span class="text-2xl font-bold" :class="system.disk > 90 ? 'text-red-500' : 'text-green-500'" x-text="system.disk + '%'"></span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-3">
+                    <div class="h-3 rounded-full progress-bar"
+                         :class="system.disk > 90 ? 'bg-red-500' : system.disk > 70 ? 'bg-yellow-500' : 'bg-green-500'"
+                         :style="'width: ' + system.disk + '%'"></div>
+                </div>
+                <p class="text-xs text-slate-500 mt-2" x-text="system.disk_detail"></p>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <!-- Sessions Panel -->
-            <div class="lg:col-span-2 bg-white rounded-xl shadow-md overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                    <h2 class="text-lg font-semibold text-gray-800">📋 活躍會話</h2>
-                    <button @click="refreshSessions()" class="text-blue-500 hover:text-blue-700">
-                        🔄 重新整理
+            <div class="lg:col-span-2 glass rounded-2xl shadow-lg overflow-hidden card-hover border border-white/50">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-purple-50">
+                    <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <span>📋</span> 活躍會話
+                    </h2>
+                    <button @click="refreshSessions()" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition flex items-center gap-1">
+                        <span>🔄</span> 重新整理
                     </button>
                 </div>
                 <div class="p-6">
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead>
-                                <tr class="text-left text-gray-500 text-sm">
-                                    <th class="pb-3">用戶 ID</th>
-                                    <th class="pb-3">訊息數</th>
-                                    <th class="pb-3">最後活動</th>
-                                    <th class="pb-3">操作</th>
+                                <tr class="text-left text-slate-500 text-sm border-b border-slate-100">
+                                    <th class="pb-3 font-medium">用戶 ID</th>
+                                    <th class="pb-3 font-medium">訊息數</th>
+                                    <th class="pb-3 font-medium">最後活動</th>
+                                    <th class="pb-3 font-medium">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="session in sessions" :key="session.session_key">
-                                    <tr class="border-t border-gray-100">
-                                        <td class="py-3 font-medium" x-text="session.user_id"></td>
-                                        <td class="py-3" x-text="session.messages"></td>
-                                        <td class="py-3 text-gray-500 text-sm" x-text="session.last_activity"></td>
+                                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                                        <td class="py-3">
+                                            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium" x-text="session.user_id"></span>
+                                        </td>
+                                        <td class="py-3">
+                                            <span class="font-semibold" x-text="session.messages"></span>
+                                        </td>
+                                        <td class="py-3 text-slate-500 text-sm" x-text="session.last_activity"></td>
                                         <td class="py-3">
                                             <button @click="clearSession(session.session_key)"
-                                                    class="text-red-500 hover:text-red-700 text-sm">
+                                                    class="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-sm font-medium transition">
                                                 清除
                                             </button>
                                         </td>
@@ -174,74 +277,145 @@ DASHBOARD_HTML = """
                                 </template>
                             </tbody>
                         </table>
-                        <p x-show="sessions.length === 0" class="text-gray-500 text-center py-8">
-                            目前沒有活躍會話
-                        </p>
+                        <div x-show="sessions.length === 0" class="text-center py-12">
+                            <span class="text-4xl mb-4 block">📭</span>
+                            <p class="text-slate-500">目前沒有活躍會話</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-800">⚡ 快速操作</h2>
-                </div>
-                <div class="p-6 space-y-4">
-                    <button @click="runDoctor()" 
-                            class="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition">
-                        🩺 系統診斷
-                    </button>
-                    <button @click="clearAllSessions()"
-                            class="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition">
-                        🗑️ 清除所有會話
-                    </button>
-                    <button @click="toggleLock()"
-                            class="w-full py-3 px-4 rounded-lg font-medium transition"
-                            :class="locked ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'">
-                        <span x-text="locked ? '🔓 解除鎖定' : '🔒 鎖定 Bot'"></span>
-                    </button>
-                    <div class="pt-4 border-t border-gray-200">
-                        <h3 class="text-sm font-medium text-gray-600 mb-3">📢 發送廣播</h3>
-                        <textarea x-model="broadcastMsg" 
-                                  class="w-full p-3 border border-gray-300 rounded-lg text-sm"
-                                  placeholder="輸入廣播訊息..."
-                                  rows="3"></textarea>
-                        <button @click="sendBroadcast()"
-                                class="mt-2 w-full py-2 px-4 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition">
-                            發送廣播
+            <!-- Quick Actions & Providers -->
+            <div class="space-y-6">
+                <!-- Quick Actions -->
+                <div class="glass rounded-2xl shadow-lg overflow-hidden card-hover border border-white/50">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-orange-50 to-yellow-50">
+                        <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                            <span>⚡</span> 快速操作
+                        </h2>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <button @click="runDoctor()" 
+                                class="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+                            <span>🩺</span> 系統診斷
                         </button>
+                        <button @click="clearAllSessions()"
+                                class="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2">
+                            <span>🗑️</span> 清除所有會話
+                        </button>
+                        <button @click="toggleLock()"
+                                class="w-full py-3 px-4 rounded-xl font-medium transition shadow-lg flex items-center justify-center gap-2"
+                                :class="locked ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-green-500/25' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-red-500/25'">
+                            <span x-text="locked ? '🔓' : '🔒'"></span>
+                            <span x-text="locked ? '解除鎖定' : '鎖定 Bot'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Providers -->
+                <div class="glass rounded-2xl shadow-lg overflow-hidden card-hover border border-white/50">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-pink-50">
+                        <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                            <span>🤖</span> AI 提供者
+                        </h2>
+                    </div>
+                    <div class="p-4 space-y-2">
+                        <template x-for="(info, name) in providers" :key="name">
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-2 h-2 rounded-full" :class="info.available ? 'bg-green-500' : 'bg-slate-300'"></span>
+                                    <span class="font-medium text-slate-700 capitalize" x-text="name"></span>
+                                </div>
+                                <span class="text-xs px-2 py-1 rounded-lg" 
+                                      :class="info.available ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'"
+                                      x-text="info.available ? '可用' : '未設定'"></span>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- System Info -->
-        <div class="mt-6 bg-white rounded-xl shadow-md overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-800">💻 系統資訊</h2>
+        <!-- System Diagnostics -->
+        <div class="glass rounded-2xl shadow-lg overflow-hidden card-hover border border-white/50 mb-6">
+            <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-green-50 to-teal-50 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                    <span>🩺</span> 系統診斷
+                </h2>
+                <button @click="runDoctor()" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition">
+                    重新診斷
+                </button>
             </div>
             <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <p class="text-gray-500 text-sm">系統狀態</p>
-                        <p class="font-medium" x-text="stats.system_status"></p>
+                <div class="flex items-center gap-6 mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-green-500" x-text="diagnostics.passed"></div>
+                            <div class="text-xs text-slate-500">通過</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-yellow-500" x-text="diagnostics.warnings"></div>
+                            <div class="text-xs text-slate-500">警告</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-red-500" x-text="diagnostics.failed"></div>
+                            <div class="text-xs text-slate-500">失敗</div>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-gray-500 text-sm">總用戶數</p>
-                        <p class="font-medium" x-text="stats.total_users"></p>
+                    <div class="flex-1">
+                        <div class="flex gap-1 h-4 rounded-full overflow-hidden bg-slate-200">
+                            <div class="bg-green-500 transition-all" :style="'width: ' + (diagnostics.passed / diagnostics.total * 100) + '%'"></div>
+                            <div class="bg-yellow-500 transition-all" :style="'width: ' + (diagnostics.warnings / diagnostics.total * 100) + '%'"></div>
+                            <div class="bg-red-500 transition-all" :style="'width: ' + (diagnostics.failed / diagnostics.total * 100) + '%'"></div>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-gray-500 text-sm">總訊息數</p>
-                        <p class="font-medium" x-text="stats.total_messages"></p>
-                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <template x-for="result in diagnostics.results" :key="result.name">
+                        <div class="p-3 rounded-xl border" 
+                             :class="{
+                                 'bg-green-50 border-green-200': result.level === 'ok',
+                                 'bg-yellow-50 border-yellow-200': result.level === 'warning',
+                                 'bg-red-50 border-red-200': result.level === 'error' || result.level === 'critical',
+                                 'bg-blue-50 border-blue-200': result.level === 'info'
+                             }">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span x-text="result.level === 'ok' ? '✅' : result.level === 'warning' ? '⚠️' : result.level === 'info' ? 'ℹ️' : '❌'"></span>
+                                <span class="font-medium text-sm text-slate-700" x-text="result.name"></span>
+                            </div>
+                            <p class="text-xs text-slate-600" x-text="result.message"></p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Broadcast -->
+        <div class="glass rounded-2xl shadow-lg overflow-hidden card-hover border border-white/50">
+            <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-blue-50">
+                <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                    <span>📢</span> 發送廣播訊息
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="flex gap-4">
+                    <textarea x-model="broadcastMsg" 
+                              class="flex-1 p-4 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
+                              placeholder="輸入要發送給所有用戶的訊息..."
+                              rows="3"></textarea>
+                    <button @click="sendBroadcast()"
+                            class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl font-medium transition shadow-lg shadow-indigo-500/25 self-end">
+                        發送
+                    </button>
                 </div>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="mt-8 py-6 text-center text-gray-500 text-sm">
-        <p>CursorBot v0.3 Dashboard | Built with FastAPI & Alpine.js</p>
+    <footer class="mt-8 py-8 text-center border-t border-slate-200 bg-white">
+        <p class="text-slate-500 text-sm">CursorBot v0.3 Dashboard</p>
+        <p class="text-slate-400 text-xs mt-1">Built with FastAPI, Alpine.js & TailwindCSS</p>
     </footer>
 
     <script>
@@ -260,21 +434,42 @@ DASHBOARD_HTML = """
                     current_model: 'N/A',
                     system_status: 'Unknown'
                 },
+                system: {
+                    cpu: 0,
+                    memory: 0,
+                    memory_detail: '',
+                    disk: 0,
+                    disk_detail: ''
+                },
+                providers: {},
+                diagnostics: {
+                    passed: 0,
+                    warnings: 0,
+                    failed: 0,
+                    total: 1,
+                    results: []
+                },
                 sessions: [],
                 
                 init() {
                     this.updateTime();
                     setInterval(() => this.updateTime(), 1000);
-                    this.fetchStats();
-                    this.fetchSessions();
-                    setInterval(() => {
-                        this.fetchStats();
-                        this.fetchSessions();
-                    }, 10000);
+                    this.fetchAll();
+                    setInterval(() => this.fetchAll(), 10000);
                 },
                 
                 updateTime() {
                     this.currentTime = new Date().toLocaleString('zh-TW');
+                },
+                
+                async fetchAll() {
+                    await Promise.all([
+                        this.fetchStats(),
+                        this.fetchSessions(),
+                        this.fetchSystem(),
+                        this.fetchProviders(),
+                        this.fetchDiagnostics()
+                    ]);
                 },
                 
                 async fetchStats() {
@@ -295,9 +490,34 @@ DASHBOARD_HTML = """
                         if (res.ok) {
                             this.sessions = await res.json();
                         }
-                    } catch (e) {
-                        console.error('Failed to fetch sessions');
-                    }
+                    } catch (e) {}
+                },
+                
+                async fetchSystem() {
+                    try {
+                        const res = await fetch('/dashboard/api/system');
+                        if (res.ok) {
+                            this.system = await res.json();
+                        }
+                    } catch (e) {}
+                },
+                
+                async fetchProviders() {
+                    try {
+                        const res = await fetch('/dashboard/api/providers');
+                        if (res.ok) {
+                            this.providers = await res.json();
+                        }
+                    } catch (e) {}
+                },
+                
+                async fetchDiagnostics() {
+                    try {
+                        const res = await fetch('/dashboard/api/diagnostics');
+                        if (res.ok) {
+                            this.diagnostics = await res.json();
+                        }
+                    } catch (e) {}
                 },
                 
                 refreshSessions() {
@@ -315,7 +535,7 @@ DASHBOARD_HTML = """
                 },
                 
                 async clearAllSessions() {
-                    if (!confirm('確定要清除所有會話？')) return;
+                    if (!confirm('確定要清除所有會話？此操作無法復原！')) return;
                     try {
                         await fetch('/dashboard/api/sessions', { method: 'DELETE' });
                         this.fetchSessions();
@@ -326,9 +546,8 @@ DASHBOARD_HTML = """
                 
                 async runDoctor() {
                     try {
-                        const res = await fetch('/dashboard/api/doctor');
-                        const data = await res.json();
-                        alert(`診斷結果: ${data.summary}`);
+                        await this.fetchDiagnostics();
+                        alert(`診斷完成！\\n通過: ${this.diagnostics.passed}\\n警告: ${this.diagnostics.warnings}\\n失敗: ${this.diagnostics.failed}`);
                     } catch (e) {
                         alert('診斷失敗');
                     }
@@ -351,6 +570,7 @@ DASHBOARD_HTML = """
                 
                 async sendBroadcast() {
                     if (!this.broadcastMsg.trim()) return;
+                    if (!confirm('確定要發送此廣播訊息給所有用戶？')) return;
                     try {
                         await fetch('/dashboard/api/broadcast', {
                             method: 'POST',
@@ -485,6 +705,87 @@ def create_dashboard_router():
             }
         except Exception as e:
             return {"summary": f"Error: {e}"}
+    
+    @router.get("/api/system")
+    async def get_system_info():
+        """Get system resource information."""
+        try:
+            import psutil
+            
+            # CPU
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            
+            # Memory
+            mem = psutil.virtual_memory()
+            mem_used_gb = mem.used / (1024 ** 3)
+            mem_total_gb = mem.total / (1024 ** 3)
+            
+            # Disk
+            disk = psutil.disk_usage('/')
+            disk_used_gb = disk.used / (1024 ** 3)
+            disk_total_gb = disk.total / (1024 ** 3)
+            
+            return {
+                "cpu": round(cpu_percent, 1),
+                "memory": round(mem.percent, 1),
+                "memory_detail": f"{mem_used_gb:.1f}GB / {mem_total_gb:.1f}GB",
+                "disk": round(disk.percent, 1),
+                "disk_detail": f"{disk_used_gb:.1f}GB / {disk_total_gb:.1f}GB",
+            }
+        except Exception as e:
+            logger.error(f"System info error: {e}")
+            return {
+                "cpu": 0,
+                "memory": 0,
+                "memory_detail": "N/A",
+                "disk": 0,
+                "disk_detail": "N/A",
+            }
+    
+    @router.get("/api/providers")
+    async def get_providers():
+        """Get AI provider status."""
+        try:
+            from ..core.llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            
+            return manager.list_providers()
+        except Exception as e:
+            logger.error(f"Providers error: {e}")
+            return {}
+    
+    @router.get("/api/diagnostics")
+    async def get_diagnostics():
+        """Get detailed diagnostics."""
+        try:
+            from ..core.doctor import run_diagnostics
+            report = await run_diagnostics()
+            
+            results = []
+            for r in report.results:
+                results.append({
+                    "name": r.name,
+                    "level": r.level.value,
+                    "message": r.message,
+                    "recommendation": r.recommendation or "",
+                })
+            
+            return {
+                "passed": report.passed,
+                "warnings": report.warnings,
+                "failed": report.failed,
+                "total": len(report.results) or 1,
+                "results": results,
+            }
+        except Exception as e:
+            logger.error(f"Diagnostics error: {e}")
+            return {
+                "passed": 0,
+                "warnings": 0,
+                "failed": 1,
+                "total": 1,
+                "results": [{"name": "Error", "level": "error", "message": str(e), "recommendation": ""}],
+            }
     
     @router.post("/api/lock")
     async def toggle_lock(request: Request):

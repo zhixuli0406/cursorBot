@@ -180,12 +180,11 @@ class CursorCLIAgent:
         # Build command
         cmd = [self._cli_path]
         
-        # Add model if specified
-        if model or self.config.model:
-            cmd.extend(["--model", model or self.config.model])
+        # Use --print for non-interactive output
+        cmd.append("--print")
         
-        # Add non-interactive flag for automation
-        cmd.append("--non-interactive")
+        # Use text output format
+        cmd.extend(["--output-format", "text"])
         
         # Add the prompt
         cmd.append(prompt)
@@ -295,10 +294,85 @@ class CursorCLIAgent:
         if context:
             prompt = f"Context: {context}\n\nQuestion: {question}"
         
-        return await self.run(
+        return await self.run_ask(
             prompt=prompt,
             working_directory=working_directory,
         )
+    
+    async def run_ask(
+        self,
+        prompt: str,
+        working_directory: str = None,
+        timeout: int = None,
+    ) -> CLIResult:
+        """
+        Run in ask mode (read-only, Q&A style).
+        
+        Args:
+            prompt: The question
+            working_directory: Directory context
+            timeout: Timeout in seconds
+        
+        Returns:
+            CLIResult with the answer
+        """
+        if not self.is_available:
+            return CLIResult(
+                success=False,
+                error="Cursor CLI not installed",
+                exit_code=-1,
+            )
+        
+        start_time = datetime.now()
+        cwd = working_directory or self.config.working_directory or os.getcwd()
+        timeout = timeout or self.config.timeout
+        
+        # Build command with --mode ask
+        cmd = [self._cli_path, "--print", "--mode", "ask", prompt]
+        
+        logger.info(f"Running Cursor CLI (ask mode) in {cwd}")
+        
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=cwd,
+                env={**os.environ, "NO_COLOR": "1"},
+            )
+            
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=timeout,
+            )
+            
+            duration = (datetime.now() - start_time).total_seconds()
+            output = stdout.decode('utf-8', errors='replace')
+            error = stderr.decode('utf-8', errors='replace')
+            
+            return CLIResult(
+                success=proc.returncode == 0,
+                output=output,
+                error=error,
+                exit_code=proc.returncode,
+                duration=duration,
+            )
+            
+        except asyncio.TimeoutError:
+            proc.kill()
+            return CLIResult(
+                success=False,
+                error=f"CLI operation timed out after {timeout}s",
+                exit_code=-1,
+                duration=timeout,
+            )
+        except Exception as e:
+            logger.error(f"CLI ask error: {e}")
+            return CLIResult(
+                success=False,
+                error=str(e),
+                exit_code=-1,
+            )
     
     async def edit(
         self,
