@@ -267,11 +267,20 @@ WEBCHAT_HTML = """
                     const saved = localStorage.getItem('chatHistory');
                     if (saved) {
                         try {
-                            this.messages = JSON.parse(saved);
+                            const parsed = JSON.parse(saved);
+                            // Filter out invalid messages (undefined, null, or empty content)
+                            this.messages = parsed.filter(msg => 
+                                msg && msg.content && msg.content !== 'undefined' && msg.content.trim() !== ''
+                            );
                         } catch (e) {
                             this.messages = [];
                         }
                     }
+                },
+                
+                clearLocalStorage() {
+                    localStorage.removeItem('chatHistory');
+                    this.messages = [];
                 }
             }
         }
