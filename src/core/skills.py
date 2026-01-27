@@ -328,28 +328,72 @@ class FileOperationAgentSkill(AgentSkill):
 
 
 class CommandExecuteAgentSkill(AgentSkill):
-    """Execute shell commands."""
+    """Execute shell commands with security protections."""
+    
+    # Allowed commands whitelist
+    ALLOWED_COMMANDS = {
+        "ls", "cat", "head", "tail", "grep", "find", "wc",
+        "echo", "pwd", "date", "whoami",
+        "git", "npm", "yarn", "pnpm", "pip", "python",
+        "node", "deno", "bun", "curl", "wget",
+    }
+    
+    # Dangerous patterns
+    BLOCKED_PATTERNS = [
+        "rm -rf /", "rm -rf /*", "dd if=", "mkfs", ":(){",
+        "sudo", "chmod 777", "> /dev", "eval", "exec",
+        "/etc/passwd", "/etc/shadow", "bash -c", "sh -c",
+    ]
+    
+    # Dangerous shell metacharacters
+    DANGEROUS_CHARS = [";", "&&", "||", "`", "$(", "${", "\n", "\r"]
     
     @property
     def info(self) -> AgentSkillInfo:
         return AgentSkillInfo(
             name="execute_command",
-            description="Execute shell command in workspace",
+            description="Execute shell command in workspace (sandboxed)",
             parameters={"command": "Command to execute"},
             examples=["Run npm install", "Execute python script.py"],
             categories=["shell", "execute"],
         )
     
-    async def execute(self, **kwargs) -> dict:
-        command = kwargs.get("command", "")
-        if not command:
-            return {"error": "No command provided"}
+    def _validate_command(self, command: str) -> tuple[bool, str]:
+        """Validate command for security."""
+        if not command or not command.strip():
+            return False, "No command provided"
         
-        # Security: block dangerous commands
-        dangerous = ["rm -rf /", "rm -rf /*", "dd if=", "mkfs", ":(){"]
-        for d in dangerous:
-            if d in command:
-                return {"error": "Command blocked for security"}
+        # Check for dangerous shell metacharacters
+        for char in self.DANGEROUS_CHARS:
+            if char in command:
+                return False, f"Shell metacharacter not allowed: {repr(char)}"
+        
+        # Check blocked patterns
+        command_lower = command.lower()
+        for pattern in self.BLOCKED_PATTERNS:
+            if pattern.lower() in command_lower:
+                return False, f"Command blocked for security: {pattern}"
+        
+        # Check if base command is allowed
+        parts = command.split()
+        if not parts:
+            return False, "Invalid command"
+        
+        base_cmd = parts[0].split("/")[-1]  # Get basename
+        if base_cmd not in self.ALLOWED_COMMANDS:
+            return False, f"Command not in whitelist: {base_cmd}"
+        
+        return True, ""
+    
+    async def execute(self, **kwargs) -> dict:
+        import shlex
+        
+        command = kwargs.get("command", "")
+        
+        # Validate command
+        is_valid, error = self._validate_command(command)
+        if not is_valid:
+            return {"error": error}
         
         try:
             import asyncio
@@ -357,8 +401,15 @@ class CommandExecuteAgentSkill(AgentSkill):
             
             workspace = settings.effective_workspace_path or os.getcwd()
             
-            process = await asyncio.create_subprocess_shell(
-                command,
+            # Parse command into args (prevents shell injection)
+            try:
+                args = shlex.split(command)
+            except ValueError as e:
+                return {"error": f"Invalid command syntax: {e}"}
+            
+            # Use create_subprocess_exec instead of shell for security
+            process = await asyncio.create_subprocess_exec(
+                *args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=workspace,
@@ -377,9 +428,12 @@ class CommandExecuteAgentSkill(AgentSkill):
             }
             
         except asyncio.TimeoutError:
-            return {"error": "Command timed out"}
+            return {"error": "Command timed out (60s)"}
+        except FileNotFoundError:
+            return {"error": f"Command not found: {command.split()[0]}"}
         except Exception as e:
-            return {"error": str(e)}
+            # Sanitize error to prevent info leakage
+            return {"error": "Command execution failed"}
 
 
 class UrlFetchAgentSkill(AgentSkill):

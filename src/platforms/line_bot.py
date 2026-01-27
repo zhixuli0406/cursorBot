@@ -150,22 +150,39 @@ class LineBot:
         from aiohttp import web
         
         async def webhook_handler(request: web.Request) -> web.Response:
-            """Handle Line webhook events."""
-            # Verify signature
-            body = await request.read()
-            signature = request.headers.get("X-Line-Signature", "")
+            """Handle Line webhook events with security validation."""
+            try:
+                # Verify signature
+                body = await request.read()
+                signature = request.headers.get("X-Line-Signature", "")
+                
+                if not self._verify_signature(body, signature):
+                    logger.warning(f"Webhook signature verification failed from {request.remote}")
+                    return web.Response(status=403, text="Invalid signature")
+                
+                # Parse events
+                import json
+                try:
+                    data = json.loads(body)
+                except json.JSONDecodeError:
+                    logger.warning("Invalid JSON in webhook body")
+                    return web.Response(status=400, text="Invalid JSON")
+                
+                # Process events with timestamp validation
+                for event in data.get("events", []):
+                    # Validate timestamp to prevent replay attacks
+                    timestamp = event.get("timestamp", 0)
+                    if not self._validate_timestamp(timestamp):
+                        logger.warning(f"Skipping event with invalid timestamp: {timestamp}")
+                        continue
+                    
+                    await self._handle_event(event)
+                
+                return web.Response(status=200, text="OK")
             
-            if not self._verify_signature(body, signature):
-                return web.Response(status=403, text="Invalid signature")
-            
-            # Parse events
-            import json
-            data = json.loads(body)
-            
-            for event in data.get("events", []):
-                await self._handle_event(event)
-            
-            return web.Response(status=200, text="OK")
+            except Exception as e:
+                logger.error(f"Webhook handler error: {e}")
+                return web.Response(status=500, text="Internal error")
         
         app = web.Application()
         app.router.add_post(self.config.webhook_path, webhook_handler)
@@ -179,17 +196,66 @@ class LineBot:
         self._app = app
     
     def _verify_signature(self, body: bytes, signature: str) -> bool:
-        """Verify Line webhook signature."""
-        hash_value = hmac.new(
-            self.config.channel_secret.encode(),
-            body,
-            hashlib.sha256,
-        ).digest()
+        """
+        Verify Line webhook signature with security best practices.
         
-        import base64
-        expected = base64.b64encode(hash_value).decode()
+        Uses constant-time comparison to prevent timing attacks.
+        """
+        if not signature or not body:
+            logger.warning("Empty signature or body in webhook request")
+            return False
         
-        return hmac.compare_digest(signature, expected)
+        if not self.config.channel_secret:
+            logger.error("Channel secret not configured")
+            return False
+        
+        try:
+            # Compute expected signature
+            hash_value = hmac.new(
+                self.config.channel_secret.encode(),
+                body,
+                hashlib.sha256,
+            ).digest()
+            
+            import base64
+            expected = base64.b64encode(hash_value).decode()
+            
+            # Constant-time comparison (prevents timing attacks)
+            is_valid = hmac.compare_digest(signature, expected)
+            
+            if not is_valid:
+                logger.warning("Invalid webhook signature detected")
+            
+            return is_valid
+        except Exception as e:
+            logger.error(f"Signature verification error: {e}")
+            return False
+    
+    def _validate_timestamp(self, timestamp_ms: int, max_age_seconds: int = 300) -> bool:
+        """
+        Validate event timestamp to prevent replay attacks.
+        
+        Args:
+            timestamp_ms: Event timestamp in milliseconds
+            max_age_seconds: Maximum allowed age of event
+        
+        Returns:
+            True if timestamp is valid
+        """
+        import time
+        
+        if not timestamp_ms:
+            return False
+        
+        now_ms = int(time.time() * 1000)
+        age_ms = now_ms - timestamp_ms
+        
+        # Reject events older than max_age or from the future
+        if age_ms < -60000 or age_ms > (max_age_seconds * 1000):
+            logger.warning(f"Webhook event rejected: timestamp too old or future ({age_ms}ms)")
+            return False
+        
+        return True
     
     # ============================================
     # Event Handling

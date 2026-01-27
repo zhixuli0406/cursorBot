@@ -408,19 +408,38 @@ def get_webchat_manager() -> WebChatManager:
 # WebChat Router
 # ============================================
 
+from ..utils.security import RateLimiter, sanitize_html
+
+# Rate limiter for WebChat (prevent abuse)
+_webchat_rate_limiter = RateLimiter(requests_per_minute=30, block_duration=300)
+
+
 def create_webchat_router():
-    """Create WebChat router."""
+    """Create WebChat router with security protections."""
     router = APIRouter(prefix="/chat", tags=["webchat"])
     manager = get_webchat_manager()
     
     @router.get("/", response_class=HTMLResponse)
     async def webchat_page():
-        """Render WebChat page."""
+        """Render WebChat page (protected by AuthMiddleware)."""
         return HTMLResponse(content=WEBCHAT_HTML)
     
     @router.websocket("/ws/{session_id}")
     async def websocket_endpoint(websocket: WebSocket, session_id: str):
-        """WebSocket endpoint for chat."""
+        """WebSocket endpoint for chat with rate limiting."""
+        # Validate session_id format (prevent injection)
+        if not session_id or len(session_id) > 50 or not session_id.replace("_", "").isalnum():
+            await websocket.close(code=4001, reason="Invalid session ID")
+            return
+        
+        # Get client IP for rate limiting
+        client_ip = websocket.client.host if websocket.client else "unknown"
+        
+        # Check rate limit
+        if not _webchat_rate_limiter.is_allowed(f"ws_{client_ip}"):
+            await websocket.close(code=4029, reason="Rate limit exceeded")
+            return
+        
         await manager.connect(session_id, websocket)
         
         try:
@@ -428,8 +447,26 @@ def create_webchat_router():
                 data = await websocket.receive_json()
                 
                 if data.get("type") == "message":
+                    # Rate limit messages
+                    if not _webchat_rate_limiter.is_allowed(f"msg_{session_id}"):
+                        await manager.send_message(
+                            session_id, 
+                            "error", 
+                            "發送訊息過於頻繁，請稍後再試"
+                        )
+                        continue
+                    
                     content = data.get("content", "")
                     if content:
+                        # Validate message length
+                        if len(content) > 10000:
+                            await manager.send_message(
+                                session_id,
+                                "error",
+                                "訊息過長（最大 10000 字元）"
+                            )
+                            continue
+                        
                         response = await manager.process_message(session_id, content)
                         await manager.send_message(session_id, "response", response)
         
@@ -442,11 +479,17 @@ def create_webchat_router():
     @router.get("/history/{session_id}")
     async def get_history(session_id: str):
         """Get chat history."""
+        # Validate session_id
+        if not session_id or len(session_id) > 50:
+            raise HTTPException(status_code=400, detail="Invalid session ID")
         return manager.get_history(session_id)
     
     @router.delete("/history/{session_id}")
     async def clear_history(session_id: str):
         """Clear chat history."""
+        # Validate session_id
+        if not session_id or len(session_id) > 50:
+            raise HTTPException(status_code=400, detail="Invalid session ID")
         manager.clear_history(session_id)
         return {"status": "ok"}
     

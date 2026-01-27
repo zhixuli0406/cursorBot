@@ -19,6 +19,7 @@ from enum import Enum
 from typing import Optional, Callable
 
 from ..utils.logger import logger
+from ..utils.config import settings
 
 
 class CLIStatus(Enum):
@@ -177,13 +178,8 @@ class CursorCLIAgent:
         cwd = working_directory or self.config.working_directory or os.getcwd()
         timeout = timeout or self.config.timeout
         
-        # Build command
+        # Build command (API key passed via env var for security)
         cmd = [self._cli_path]
-        
-        # Add API key if available
-        api_key = os.getenv("CURSOR_API_KEY", "")
-        if api_key:
-            cmd.extend(["--api-key", api_key])
         
         # Use --print for non-interactive output
         cmd.append("--print")
@@ -194,7 +190,14 @@ class CursorCLIAgent:
         # Add the prompt
         cmd.append(prompt)
         
-        logger.info(f"Running Cursor CLI: {' '.join(cmd[:3])}... in {cwd}")
+        # Prepare environment with API key (safer than command line args)
+        # Command line args are visible in process list (ps aux)
+        process_env = {**os.environ, "NO_COLOR": "1"}
+        api_key = os.getenv("CURSOR_API_KEY", "")
+        if api_key:
+            process_env["CURSOR_API_KEY"] = api_key
+        
+        logger.info(f"Running Cursor CLI in {cwd}")
         
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -202,7 +205,7 @@ class CursorCLIAgent:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=cwd,
-                env={**os.environ, "NO_COLOR": "1"},  # Disable color codes
+                env=process_env,  # API key passed via env (not command line)
             )
             
             output_lines = []
@@ -332,15 +335,14 @@ class CursorCLIAgent:
         cwd = working_directory or self.config.working_directory or os.getcwd()
         timeout = timeout or self.config.timeout
         
-        # Build command with --mode ask
-        cmd = [self._cli_path]
+        # Build command with --mode ask (API key via env for security)
+        cmd = [self._cli_path, "--print", "--mode", "ask", prompt]
         
-        # Add API key if available
+        # Prepare environment with API key (safer than command line args)
+        process_env = {**os.environ, "NO_COLOR": "1"}
         api_key = os.getenv("CURSOR_API_KEY", "")
         if api_key:
-            cmd.extend(["--api-key", api_key])
-        
-        cmd.extend(["--print", "--mode", "ask", prompt])
+            process_env["CURSOR_API_KEY"] = api_key
         
         logger.info(f"Running Cursor CLI (ask mode) in {cwd}")
         
@@ -350,7 +352,7 @@ class CursorCLIAgent:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=cwd,
-                env={**os.environ, "NO_COLOR": "1"},
+                env=process_env,  # API key passed via env (not command line)
             )
             
             stdout, stderr = await asyncio.wait_for(
@@ -450,18 +452,38 @@ def get_cli_agent() -> CursorCLIAgent:
     """Get or create the global CLI agent instance."""
     global _cli_agent
     if _cli_agent is None:
+        # Priority: CURSOR_WORKING_DIR > settings.effective_workspace_path
+        # This ensures consistency with other modules that use CURSOR_WORKSPACE_PATH
+        working_dir = os.getenv("CURSOR_WORKING_DIR", "")
+        if not working_dir:
+            working_dir = settings.effective_workspace_path
+        
         config = CLIConfig(
-            working_directory=os.getenv("CURSOR_WORKING_DIR", ""),
+            working_directory=working_dir,
             model=os.getenv("CURSOR_CLI_MODEL", ""),
             timeout=int(os.getenv("CURSOR_CLI_TIMEOUT", "300")),
         )
         _cli_agent = CursorCLIAgent(config)
+        logger.info(f"CLI Agent initialized with working directory: {working_dir}")
     return _cli_agent
 
 
 def is_cli_available() -> bool:
     """Check if Cursor CLI is available."""
     return get_cli_agent().is_available
+
+
+def reset_cli_agent() -> None:
+    """Reset the global CLI agent instance (e.g., after workspace change)."""
+    global _cli_agent
+    _cli_agent = None
+    logger.info("CLI Agent reset, will reinitialize on next use")
+
+
+def get_cli_working_directory() -> str:
+    """Get the current working directory for CLI agent."""
+    agent = get_cli_agent()
+    return agent.config.working_directory or os.getcwd()
 
 
 __all__ = [
@@ -471,4 +493,6 @@ __all__ = [
     "CursorCLIAgent",
     "get_cli_agent",
     "is_cli_available",
+    "reset_cli_agent",
+    "get_cli_working_directory",
 ]

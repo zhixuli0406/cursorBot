@@ -16,7 +16,6 @@ from telegram.ext import (
     filters,
 )
 
-from ..cursor.agent import CursorAgent
 from ..cursor.background_agent import (
     CursorBackgroundAgent,
     get_background_agent,
@@ -26,8 +25,11 @@ from ..utils.auth import authorized_only
 from ..utils.config import settings
 from ..utils.logger import logger
 
-# Global Workspace Agent instance
-workspace_agent: CursorAgent = None
+# Import shared cursor agent instance from handlers_extended
+# This ensures all modules use the same workspace state
+from .handlers_extended import get_cursor_agent
+
+# Global Background Agent instance
 background_agent: Optional[CursorBackgroundAgent] = None
 
 # User chat mode settings (cli vs agent vs cursor)
@@ -64,12 +66,7 @@ def get_best_available_mode() -> str:
     return "agent"
 
 
-def get_cursor_agent() -> CursorAgent:
-    """Get or create the global Workspace Agent instance."""
-    global workspace_agent
-    if workspace_agent is None:
-        workspace_agent = CursorAgent()
-    return workspace_agent
+# Note: get_cursor_agent is imported from handlers_extended to share the same instance
 
 
 def is_background_agent_enabled() -> bool:
@@ -704,7 +701,7 @@ async def _poll_task_completion(
 async def file_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /file command.
-    File operations (read, list, etc.)
+    File operations (read, list, etc.) with path traversal protection.
     """
     if not context.args:
         await update.message.reply_text(
@@ -717,25 +714,61 @@ async def file_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     operation = context.args[0].lower()
     path = " ".join(context.args[1:]) if len(context.args) > 1 else "."
+    
+    # Path traversal protection
+    from ..utils.security import sanitize_path
+    from ..utils.config import settings
+    
+    # Get workspace as base directory
+    base_dir = settings.effective_workspace_path or os.getcwd()
+    
+    # Validate and sanitize path
+    is_valid, safe_path, error = sanitize_path(path, base_directory=base_dir)
+    if not is_valid:
+        await update.message.reply_text(
+            f"❌ <b>路徑錯誤</b>\n\n{_escape_html(error)}\n\n"
+            f"路徑必須在工作區內: <code>{_escape_html(base_dir)}</code>",
+            parse_mode="HTML",
+        )
+        return
 
     agent = get_cursor_agent()
 
     if operation == "read":
-        content = await agent.read_file(path)
-        if len(content) > 4000:
-            content = content[:4000] + "\n... (內容過長已截斷)"
-        await update.message.reply_text(
-            f"📄 <b>{path}</b>\n\n<pre>{content}</pre>",
-            parse_mode="HTML",
-        )
+        try:
+            content = await agent.read_file(safe_path)
+            if len(content) > 4000:
+                content = content[:4000] + "\n... (內容過長已截斷)"
+            # Escape HTML in content
+            content = _escape_html(content)
+            display_path = _escape_html(path)
+            await update.message.reply_text(
+                f"📄 <b>{display_path}</b>\n\n<pre>{content}</pre>",
+                parse_mode="HTML",
+            )
+        except FileNotFoundError:
+            await update.message.reply_text(f"❌ 檔案不存在: {_escape_html(path)}", parse_mode="HTML")
+        except PermissionError:
+            await update.message.reply_text(f"❌ 沒有權限讀取: {_escape_html(path)}", parse_mode="HTML")
+        except Exception as e:
+            await update.message.reply_text(f"❌ 讀取錯誤: {_escape_html(str(e)[:100])}", parse_mode="HTML")
     elif operation == "list":
-        files = await agent.list_files(path)
-        await update.message.reply_text(
-            f"📂 <b>{path}</b>\n\n{files}",
-            parse_mode="HTML",
-        )
+        try:
+            files = await agent.list_files(safe_path)
+            display_path = _escape_html(path)
+            files = _escape_html(files)
+            await update.message.reply_text(
+                f"📂 <b>{display_path}</b>\n\n{files}",
+                parse_mode="HTML",
+            )
+        except FileNotFoundError:
+            await update.message.reply_text(f"❌ 目錄不存在: {_escape_html(path)}", parse_mode="HTML")
+        except PermissionError:
+            await update.message.reply_text(f"❌ 沒有權限存取: {_escape_html(path)}", parse_mode="HTML")
+        except Exception as e:
+            await update.message.reply_text(f"❌ 列出錯誤: {_escape_html(str(e)[:100])}", parse_mode="HTML")
     else:
-        await update.message.reply_text(f"❌ 未知操作: {operation}")
+        await update.message.reply_text(f"❌ 未知操作: {_escape_html(operation)}", parse_mode="HTML")
 
 
 @authorized_only
@@ -1339,28 +1372,39 @@ async def _handle_cli_mode(
                 )
                 return
         
-        # Send processing message
+        # Get current workspace from workspace agent
+        workspace_agent = get_cursor_agent()
+        current_workspace = workspace_agent.get_current_workspace()
+        
+        # Send processing message (escape user input)
+        safe_workspace = _escape_html(workspace_agent.get_current_workspace_name())
+        safe_message = _escape_html(message_text[:100])
         status_msg = await update.message.reply_text(
             "💻 <b>Cursor CLI 處理中...</b>\n\n"
-            f"<code>{message_text[:100]}{'...' if len(message_text) > 100 else ''}</code>",
+            f"📂 工作區: <code>{safe_workspace}</code>\n"
+            f"<code>{safe_message}{'...' if len(message_text) > 100 else ''}</code>",
             parse_mode="HTML"
         )
         
-        # Run CLI
-        result = await cli.run(prompt=message_text)
+        # Run CLI with current workspace directory
+        result = await cli.run(prompt=message_text, working_directory=current_workspace)
         
         if result.success:
-            response = result.output or "任務完成"
+            # Escape HTML in output to prevent parsing errors
+            output_text = _escape_html(result.output) if result.output else "任務完成"
+            response = output_text
             
             # Add file modification info if any
             if result.files_modified:
-                files_info = "\n".join(f"• {f}" for f in result.files_modified[:5])
+                files_info = "\n".join(f"• {_escape_html(f)}" for f in result.files_modified[:5])
                 response += f"\n\n📁 <b>修改的檔案:</b>\n{files_info}"
             
             # Add duration
             response += f"\n\n⏱️ 耗時: {result.duration:.1f}s"
         else:
-            response = f"❌ <b>CLI 錯誤</b>\n\n<code>{result.error[:500]}</code>"
+            # Escape HTML in error message
+            error_text = _escape_html(result.error[:500]) if result.error else "未知錯誤"
+            response = f"❌ <b>CLI 錯誤</b>\n\n<code>{error_text}</code>"
         
         # Delete status message
         await status_msg.delete()
@@ -1375,8 +1419,9 @@ async def _handle_cli_mode(
             
     except Exception as e:
         logger.error(f"CLI mode error: {e}")
+        safe_error = _escape_html(str(e)[:500])
         await update.message.reply_text(
-            f"❌ <b>Cursor CLI 錯誤</b>\n\n<code>{str(e)[:500]}</code>",
+            f"❌ <b>Cursor CLI 錯誤</b>\n\n<code>{safe_error}</code>",
             parse_mode="HTML"
         )
 
@@ -1418,20 +1463,21 @@ async def _handle_agent_mode(
                 }
             )
             
-            # Format response
+            # Format response (escape HTML to prevent parsing errors)
             if result.success:
-                response = result.result or "任務完成"
+                response = _escape_html(result.result) if result.result else "任務完成"
             else:
-                response = f"❌ Agent 錯誤: {result.error or '未知錯誤'}"
+                error_msg = _escape_html(result.error) if result.error else "未知錯誤"
+                response = f"❌ Agent 錯誤: {error_msg}"
             
             # Send response (handle long messages)
             if len(response) > 4000:
                 # Split into chunks
                 chunks = [response[i:i+4000] for i in range(0, len(response), 4000)]
                 for chunk in chunks:
-                    await update.message.reply_text(chunk, parse_mode="HTML")
+                    await update.message.reply_text(chunk)  # No HTML parse mode for escaped content
             else:
-                await update.message.reply_text(response, parse_mode="HTML")
+                await update.message.reply_text(response)  # No HTML parse mode for escaped content
                 
         finally:
             # Restore original provider
@@ -1439,8 +1485,9 @@ async def _handle_agent_mode(
             
     except Exception as e:
         logger.error(f"Agent mode error: {e}")
+        safe_error = _escape_html(str(e)[:500])
         await update.message.reply_text(
-            f"❌ <b>Agent 錯誤</b>\n\n<code>{str(e)[:500]}</code>",
+            f"❌ <b>Agent 錯誤</b>\n\n<code>{safe_error}</code>",
             parse_mode="HTML"
         )
 
@@ -1450,9 +1497,10 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.error(f"Update {update} caused error {context.error}")
 
     if update and update.effective_message:
+        safe_error = _escape_html(str(context.error)[:200])
         await update.effective_message.reply_text(
             "❌ 發生錯誤,請稍後重試。\n\n"
-            f"<code>{str(context.error)[:200]}</code>",
+            f"<code>{safe_error}</code>",
             parse_mode="HTML",
         )
 

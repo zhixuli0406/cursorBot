@@ -641,17 +641,29 @@ DASHBOARD_HTML = """
 # ============================================
 
 def create_dashboard_router():
-    """Create dashboard router."""
+    """Create dashboard router with security protections."""
     from fastapi import APIRouter
+    from ..utils.security import RateLimiter, sanitize_log_message
     
     router = APIRouter(prefix="/dashboard", tags=["dashboard"])
     
     # Track start time
     _start_time = datetime.now()
     
+    # Rate limiters for sensitive operations
+    _api_rate_limiter = RateLimiter(requests_per_minute=120)
+    _admin_rate_limiter = RateLimiter(requests_per_minute=30, block_duration=300)
+    
+    def _get_client_ip(request: Request) -> str:
+        """Get client IP from request."""
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return request.client.host if request.client else "unknown"
+    
     @router.get("/", response_class=HTMLResponse)
     async def dashboard_page():
-        """Render dashboard page."""
+        """Render dashboard page (protected by AuthMiddleware)."""
         return HTMLResponse(content=DASHBOARD_HTML)
     
     @router.get("/api/stats")
@@ -717,27 +729,46 @@ def create_dashboard_router():
             return []
     
     @router.delete("/api/sessions/{session_key}")
-    async def delete_session(session_key: str):
-        """Delete a session."""
+    async def delete_session(request: Request, session_key: str):
+        """Delete a session (rate limited)."""
+        # Rate limiting
+        client_ip = _get_client_ip(request)
+        if not _admin_rate_limiter.is_allowed(f"delete_session_{client_ip}"):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        
+        # Validate session_key (prevent injection)
+        if not session_key or len(session_key) > 100 or ".." in session_key:
+            raise HTTPException(status_code=400, detail="Invalid session key")
+        
         try:
             from ..core.context import get_context_manager
             manager = get_context_manager()
             if session_key in manager._contexts:
                 del manager._contexts[session_key]
+            logger.info(f"Session deleted by {client_ip}: {session_key[:20]}...")
             return {"status": "ok"}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.error(f"Delete session error: {sanitize_log_message(str(e))}")
+            raise HTTPException(status_code=500, detail="Delete failed")
     
     @router.delete("/api/sessions")
-    async def delete_all_sessions():
-        """Delete all sessions."""
+    async def delete_all_sessions(request: Request):
+        """Delete all sessions (rate limited, admin only)."""
+        # Rate limiting
+        client_ip = _get_client_ip(request)
+        if not _admin_rate_limiter.is_allowed(f"delete_all_{client_ip}"):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        
         try:
             from ..core.context import get_context_manager
             manager = get_context_manager()
+            count = len(manager._contexts)
             manager._contexts.clear()
-            return {"status": "ok"}
+            logger.warning(f"All sessions cleared by {client_ip} ({count} sessions)")
+            return {"status": "ok", "cleared": count}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.error(f"Delete all sessions error: {sanitize_log_message(str(e))}")
+            raise HTTPException(status_code=500, detail="Delete failed")
     
     @router.get("/api/doctor")
     async def run_doctor():
@@ -845,7 +876,13 @@ def create_dashboard_router():
     
     @router.post("/api/lock")
     async def toggle_lock(request: Request):
-        """Toggle gateway lock."""
+        """Toggle gateway lock (rate limited, admin only)."""
+        client_ip = _get_client_ip(request)
+        
+        # Rate limiting
+        if not _admin_rate_limiter.is_allowed(f"lock_{client_ip}"):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        
         try:
             from ..core.gateway_lock import get_gateway_lock
             data = await request.json()
@@ -853,26 +890,46 @@ def create_dashboard_router():
             
             if data.get("lock"):
                 gl.lock(message="Locked from dashboard")
+                logger.warning(f"Gateway locked by {client_ip}")
             else:
                 gl.unlock()
+                logger.info(f"Gateway unlocked by {client_ip}")
             
             return {"status": "ok", "locked": gl.is_locked()}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.error(f"Lock error: {sanitize_log_message(str(e))}")
+            raise HTTPException(status_code=500, detail="Operation failed")
     
     @router.post("/api/broadcast")
     async def send_broadcast(request: Request):
-        """Send broadcast message."""
+        """Send broadcast message (rate limited, admin only)."""
+        client_ip = _get_client_ip(request)
+        
+        # Strict rate limiting for broadcast
+        if not _admin_rate_limiter.is_allowed(f"broadcast_{client_ip}"):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        
         try:
             data = await request.json()
             message = data.get("message", "")
             
-            # This would need the bot instance to actually send
-            logger.info(f"Broadcast requested: {message}")
+            # Validate message
+            if not message or len(message.strip()) == 0:
+                raise HTTPException(status_code=400, detail="Message cannot be empty")
+            
+            if len(message) > 1000:
+                raise HTTPException(status_code=400, detail="Message too long (max 1000 chars)")
+            
+            # Sanitize log message
+            safe_message = sanitize_log_message(message[:100])
+            logger.info(f"Broadcast requested by {client_ip}: {safe_message}...")
             
             return {"status": "ok", "message": "Broadcast queued"}
+        except HTTPException:
+            raise
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.error(f"Broadcast error: {sanitize_log_message(str(e))}")
+            raise HTTPException(status_code=500, detail="Broadcast failed")
     
     return router
 

@@ -7,6 +7,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, ContextTypes
 
 from ..cursor.agent import CursorAgent
+from ..cursor.cli_agent import reset_cli_agent
 from ..cursor.file_operations import FileOperations
 from ..cursor.terminal import TerminalManager
 from ..utils.auth import authorized_only
@@ -47,13 +48,18 @@ def get_terminal() -> TerminalManager:
 
 
 def update_workspace_instances():
-    """Update file_ops and terminal to use current workspace."""
+    """Update file_ops, terminal, and CLI agent to use current workspace."""
     global file_ops, terminal
     agent = get_cursor_agent()
     current_ws = agent.get_current_workspace()
 
     file_ops = FileOperations(current_ws)
     terminal = TerminalManager(current_ws)
+    
+    # Also reset CLI agent so it picks up the new workspace on next use
+    reset_cli_agent()
+    
+    logger.info(f"Workspace instances updated to: {current_ws}")
 
 
 # ============================================

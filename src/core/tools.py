@@ -244,7 +244,7 @@ class ListDirectoryTool(Tool):
 
 
 class ExecuteCommandTool(Tool):
-    """Execute shell commands (sandboxed)."""
+    """Execute shell commands (sandboxed) with security protections."""
 
     # Allowed commands (whitelist)
     ALLOWED_COMMANDS = {
@@ -254,11 +254,16 @@ class ExecuteCommandTool(Tool):
         "node", "deno", "bun",
     }
 
-    # Blocked patterns
+    # Blocked patterns - expanded for better security
     BLOCKED_PATTERNS = [
         "rm -rf", "sudo", "chmod 777", "> /dev",
         "mkfs", "dd if=", ":(){", "fork",
+        "eval", "exec", "/etc/passwd", "/etc/shadow",
+        "curl|", "wget|", "bash -c", "sh -c",
     ]
+    
+    # Dangerous shell metacharacters
+    DANGEROUS_CHARS = [";", "&&", "||", "|", "`", "$(", "${", "\n", "\r"]
 
     @property
     def name(self) -> str:
@@ -274,13 +279,26 @@ class ExecuteCommandTool(Tool):
 
     def _is_command_safe(self, command: str) -> tuple[bool, str]:
         """Check if command is safe to execute."""
+        if not command or not command.strip():
+            return False, "Empty command"
+        
+        # Check for dangerous shell metacharacters (command injection)
+        for char in self.DANGEROUS_CHARS:
+            if char in command:
+                return False, f"Dangerous character detected: {repr(char)}"
+        
         # Check blocked patterns
+        command_lower = command.lower()
         for pattern in self.BLOCKED_PATTERNS:
-            if pattern in command:
+            if pattern.lower() in command_lower:
                 return False, f"Blocked pattern: {pattern}"
 
         # Check if base command is allowed
-        base_cmd = command.split()[0] if command.split() else ""
+        parts = command.split()
+        if not parts:
+            return False, "Invalid command"
+        
+        base_cmd = parts[0].split("/")[-1]  # Get basename
         if base_cmd not in self.ALLOWED_COMMANDS:
             return False, f"Command not allowed: {base_cmd}"
 
@@ -293,15 +311,31 @@ class ExecuteCommandTool(Tool):
         timeout: int = 30,
         **kwargs
     ) -> ToolResult:
+        import shlex
+        
         try:
             # Safety check
             is_safe, reason = self._is_command_safe(command)
             if not is_safe:
                 return ToolResult(success=False, error=reason)
+            
+            # Validate and sanitize cwd path
+            if cwd:
+                from ..utils.security import sanitize_path
+                is_valid, sanitized_cwd, err = sanitize_path(cwd, allow_absolute=True)
+                if not is_valid:
+                    return ToolResult(success=False, error=f"Invalid path: {err}")
+                cwd = sanitized_cwd
 
-            # Execute command
-            process = await asyncio.create_subprocess_shell(
-                command,
+            # Use create_subprocess_exec instead of shell for better security
+            # This prevents shell injection attacks
+            try:
+                args = shlex.split(command)
+            except ValueError as e:
+                return ToolResult(success=False, error=f"Invalid command syntax: {e}")
+            
+            process = await asyncio.create_subprocess_exec(
+                *args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=cwd,
@@ -330,7 +364,10 @@ class ExecuteCommandTool(Tool):
             )
 
         except Exception as e:
-            return ToolResult(success=False, error=str(e))
+            # Sanitize error message to prevent info leakage
+            from ..utils.security import sanitize_log_message
+            safe_error = sanitize_log_message(str(e))
+            return ToolResult(success=False, error=safe_error)
 
 
 # ============================================
