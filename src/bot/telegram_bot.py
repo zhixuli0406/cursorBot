@@ -8,6 +8,7 @@ from typing import Optional
 
 from telegram import Bot, Update
 from telegram.ext import Application, ApplicationBuilder
+from telegram.request import HTTPXRequest
 
 from ..utils.config import settings
 from ..utils.logger import logger
@@ -40,11 +41,21 @@ class CursorTelegramBot:
         """
         logger.info("Initializing Telegram Bot...")
 
-        # Build application
+        # Build application with extended timeouts for long-running AI operations
+        # Default timeouts are too short for complex AI tasks
+        request = HTTPXRequest(
+            connect_timeout=30.0,    # Connection timeout
+            read_timeout=300.0,      # Read timeout (5 min for long AI responses)
+            write_timeout=60.0,      # Write timeout
+            pool_timeout=30.0,       # Pool timeout
+        )
+        
         self.app = (
             ApplicationBuilder()
             .token(self.token)
             .concurrent_updates(True)
+            .request(request)
+            .get_updates_request(request)
             .build()
         )
 
