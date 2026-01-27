@@ -1251,6 +1251,14 @@ class CopilotProvider(LLMProvider):
                 
                 if response.status_code != 200:
                     error_text = response.text
+                    if response.status_code == 401:
+                        if "models" in error_text.lower():
+                            raise ValueError(
+                                "GitHub Token 缺少 'models' 權限。請前往 "
+                                "https://github.com/settings/tokens 建立新的 Token，"
+                                "並勾選 'models' 權限。"
+                            )
+                        raise ValueError(f"GitHub Token 無效或已過期: {error_text}")
                     raise ValueError(f"GitHub Models API error: {response.status_code} - {error_text}")
                 
                 data = response.json()
@@ -1258,6 +1266,8 @@ class CopilotProvider(LLMProvider):
                 
         except httpx.HTTPError as e:
             raise ValueError(f"GitHub Models HTTP error: {e}")
+        except ValueError:
+            raise
         except Exception as e:
             raise ValueError(f"GitHub Models error: {e}")
     
@@ -1902,6 +1912,7 @@ class LLMProviderManager:
             # Priority order for failover
             priority = [
                 ProviderType.OPENROUTER,
+                ProviderType.COPILOT,
                 ProviderType.OPENAI,
                 ProviderType.ANTHROPIC,
                 ProviderType.GOOGLE,

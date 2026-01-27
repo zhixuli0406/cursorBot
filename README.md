@@ -347,8 +347,16 @@ COPILOT_ENABLED=true
 COPILOT_MODEL=gpt-5-main
 ```
 
-取得 Token：[github.com/settings/tokens](https://github.com/settings/tokens)
-啟用 GitHub Models：[github.com/marketplace/models](https://github.com/marketplace/models)
+**設定步驟：**
+1. 前往 [github.com/settings/tokens](https://github.com/settings/tokens)
+2. 建立 **Personal Access Token (classic)**
+3. 勾選以下權限：
+   - `read:user` - 讀取使用者資料
+   - `user:email` - 讀取 email
+   - `models` - **必要！** GitHub Models API 存取
+4. 啟用 GitHub Models：[github.com/marketplace/models](https://github.com/marketplace/models)
+
+> ⚠️ 如果出現 401 錯誤，請確認 Token 有 `models` 權限
 
 可用模型（2026）：
 | 模型 | 說明 |
