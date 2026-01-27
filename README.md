@@ -344,7 +344,7 @@ ollama serve
 ```env
 GITHUB_TOKEN=ghp_xxxxxxxxxxxx
 COPILOT_ENABLED=true
-COPILOT_MODEL=openai/gpt-5
+COPILOT_MODEL=gpt-4o
 ```
 
 **設定步驟：**
@@ -357,19 +357,20 @@ COPILOT_MODEL=openai/gpt-5
 4. 啟用 GitHub Models：[github.com/marketplace/models](https://github.com/marketplace/models)
 
 > ⚠️ 如果出現 401 錯誤，請確認 Token 有 `models` 權限
+> ⚠️ GPT-5 系列模型目前可能在預覽階段，建議使用 `gpt-4o` 作為穩定選擇
 
-可用模型（GitHub Models API，使用 `publisher/model` 格式）：
+可用模型（GitHub Models API，使用簡單模型名稱）：
 | 模型 | 說明 |
 |------|------|
-| `openai/gpt-5` | OpenAI GPT-5（推薦） |
-| `openai/gpt-5-mini` | OpenAI GPT-5 Mini |
-| `openai/gpt-5-nano` | OpenAI GPT-5 Nano（輕量） |
-| `openai/gpt-5-chat` | OpenAI GPT-5 Chat (preview) |
-| `openai/gpt-4.1` | OpenAI GPT-4.1 |
-| `openai/gpt-4.1-mini` | OpenAI GPT-4.1 Mini |
-| `openai/gpt-4o` | OpenAI GPT-4o |
-| `openai/gpt-4o-mini` | OpenAI GPT-4o Mini |
-| `deepseek/deepseek-v3-0324` | DeepSeek V3 |
+| `gpt-4o` | OpenAI GPT-4o（推薦，穩定可用） |
+| `gpt-4o-mini` | OpenAI GPT-4o Mini |
+| `gpt-4.1` | OpenAI GPT-4.1 |
+| `gpt-4.1-mini` | OpenAI GPT-4.1 Mini |
+| `gpt-4.1-nano` | OpenAI GPT-4.1 Nano（輕量） |
+| `o1` | OpenAI o1 推理模型 |
+| `o1-mini` | OpenAI o1 Mini |
+| `o1-preview` | OpenAI o1 Preview |
+| `deepseek-v3-0324` | DeepSeek V3 |
 | `meta/llama-4-scout-17b-16e-instruct` | Meta Llama 4 Scout 17B |
 
 **方案七：ElevenLabs TTS（可選）**

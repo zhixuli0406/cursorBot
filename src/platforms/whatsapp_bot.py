@@ -285,6 +285,12 @@ class WhatsAppBot:
     
     async def _dispatch_message(self, message: WhatsAppMessage) -> None:
         """Dispatch message to handlers."""
+        # Check for commands (starts with /)
+        if message.content.startswith("/"):
+            handled = await self._handle_command(message)
+            if handled:
+                return
+        
         for handler in self._message_handlers:
             try:
                 if asyncio.iscoroutinefunction(handler):
@@ -293,6 +299,36 @@ class WhatsAppBot:
                     handler(message)
             except Exception as e:
                 logger.error(f"Handler error: {e}")
+    
+    async def _handle_command(self, message: WhatsAppMessage) -> bool:
+        """Handle command message using unified command handler."""
+        from ..core.unified_commands import execute_command, CommandContext
+        
+        # Parse command and args
+        parts = message.content[1:].split()
+        if not parts:
+            return False
+        
+        command = parts[0].lower()
+        args = parts[1:] if len(parts) > 1 else []
+        
+        # Create context
+        ctx = CommandContext(
+            user_id=message.sender,
+            user_name=message.sender_name or message.sender,
+            platform="whatsapp",
+            args=args,
+            raw_text=message.content,
+        )
+        
+        # Execute command
+        result = await execute_command(command, ctx)
+        
+        if result:
+            await self.send_message(message.chat_id, result.message)
+            return True
+        
+        return False
     
     # ============================================
     # Sending Messages

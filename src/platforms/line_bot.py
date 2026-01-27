@@ -298,6 +298,11 @@ class LineBot:
             room_id=source.get("roomId", ""),
         )
         
+        # Check for commands (starts with /)
+        if message.content.startswith("/"):
+            await self._handle_command(message)
+            return
+        
         # Dispatch to handlers
         for handler in self._message_handlers:
             try:
@@ -307,6 +312,47 @@ class LineBot:
                     handler(message)
             except Exception as e:
                 logger.error(f"Handler error: {e}")
+    
+    async def _handle_command(self, message: LineMessage) -> None:
+        """Handle command message using unified command handler."""
+        from ..core.unified_commands import execute_command, CommandContext
+        
+        # Parse command and args
+        parts = message.content[1:].split()
+        if not parts:
+            return
+        
+        command = parts[0].lower()
+        args = parts[1:] if len(parts) > 1 else []
+        
+        # Get user profile for name
+        profile = await self.get_profile(message.user_id)
+        user_name = profile.display_name if profile else "User"
+        
+        # Create context
+        ctx = CommandContext(
+            user_id=message.user_id,
+            user_name=user_name,
+            platform="line",
+            args=args,
+            raw_text=message.content,
+        )
+        
+        # Execute command
+        result = await execute_command(command, ctx)
+        
+        if result:
+            await self.reply_message(message.reply_token, result.message)
+        else:
+            # Unknown command - pass to normal message handler
+            for handler in self._message_handlers:
+                try:
+                    if asyncio.iscoroutinefunction(handler):
+                        await handler(message)
+                    else:
+                        handler(message)
+                except Exception as e:
+                    logger.error(f"Handler error: {e}")
     
     async def _handle_follow_event(self, event: dict) -> None:
         """Handle follow event (user adds bot as friend)."""

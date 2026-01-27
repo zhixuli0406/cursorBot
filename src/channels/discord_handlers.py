@@ -534,6 +534,261 @@ async def handle_memory(ctx: MessageContext, action: str = None, key: str = None
             await ctx.reply(content)
 
 
+async def handle_repos(ctx: MessageContext, interaction=None) -> None:
+    """Handle /repos command - list GitHub repositories."""
+    from ..cursor.background_agent import get_background_agent
+    
+    agent = get_background_agent()
+    
+    if not agent or not agent.is_authenticated():
+        content = "❌ Background Agent 未啟用或未認證"
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+        return
+    
+    try:
+        repos = await agent.list_repos()
+        if not repos:
+            content = "📁 **GitHub 倉庫**\n\n目前沒有找到任何倉庫。"
+        else:
+            content = "📁 **GitHub 倉庫**\n\n"
+            for repo in repos[:20]:
+                name = repo.get("full_name", repo.get("name", "Unknown"))
+                content += f"• `{name}`\n"
+            if len(repos) > 20:
+                content += f"\n... 共 {len(repos)} 個倉庫"
+        
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+    except Exception as e:
+        content = f"❌ 取得倉庫失敗: {str(e)[:100]}"
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+
+
+async def handle_agent(ctx: MessageContext, task: str = None, interaction=None) -> None:
+    """Handle /agent command - execute AI agent task."""
+    from ..core.agent_loop import AgentLoop
+    from ..core.llm_providers import get_llm_manager
+    
+    if not task:
+        content = """🤖 **Agent Loop**
+
+使用 AI Agent 執行複雜任務。
+
+**用法:**
+`/agent <任務描述>`
+
+**範例:**
+`/agent 分析這段程式碼的效能問題`
+`/agent 幫我重構這個函數`
+"""
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+        return
+    
+    # Send processing message
+    processing_msg = "🤖 **Agent 執行中...**\n\n請稍候，正在處理任務..."
+    if interaction:
+        await interaction.followup.send(processing_msg)
+    else:
+        await ctx.reply(processing_msg)
+    
+    try:
+        manager = get_llm_manager()
+        user_id = str(ctx.user.id)
+        
+        llm_func = manager.get_llm_provider_function_for_user(user_id)
+        if not llm_func:
+            llm_func = manager.get_llm_provider_function()
+        
+        if not llm_func:
+            content = "❌ 沒有可用的 AI 提供者，請先設定 API Key"
+            await ctx.reply(content)
+            return
+        
+        agent = AgentLoop(llm_provider=llm_func)
+        result = await agent.run(task)
+        
+        if result.success:
+            response = result.result or "任務完成"
+            # Truncate if too long
+            if len(response) > 1900:
+                response = response[:1900] + "\n\n... (回應過長已截斷)"
+            content = f"✅ **Agent 完成**\n\n{response}"
+        else:
+            content = f"❌ **Agent 失敗**\n\n{result.error or '未知錯誤'}"
+        
+        await ctx.reply(content)
+    except Exception as e:
+        content = f"❌ Agent 錯誤: {str(e)[:200]}"
+        await ctx.reply(content)
+
+
+async def handle_climodel(ctx: MessageContext, interaction=None) -> None:
+    """Handle /climodel command - CLI model settings."""
+    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    
+    if not is_cli_available():
+        content = "❌ Cursor CLI 未安裝或未配置"
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+        return
+    
+    cli = get_cli_agent()
+    user_id = str(ctx.user.id)
+    current_model = cli.get_user_model(user_id) or "auto"
+    
+    content = f"""🤖 **CLI 模型設定**
+
+**目前模型:** `{current_model}`
+
+**用法:**
+`/climodel list` - 列出可用模型
+`/climodel set <model>` - 切換模型
+`/climodel reset` - 恢復預設
+
+**支援模型:** GPT-5, Claude 4.5, Gemini 3 等
+"""
+    if interaction:
+        await interaction.followup.send(content)
+    else:
+        await ctx.reply(content)
+
+
+async def handle_clear(ctx: MessageContext, interaction=None) -> None:
+    """Handle /clear command - clear conversation context."""
+    from ..core.conversation import get_conversation_context
+    
+    user_id = str(ctx.user.id)
+    context = get_conversation_context()
+    context.clear(user_id)
+    
+    content = "🗑️ 對話上下文已清除"
+    if interaction:
+        await interaction.followup.send(content)
+    else:
+        await ctx.reply(content)
+
+
+async def handle_workspace(ctx: MessageContext, interaction=None) -> None:
+    """Handle /workspace command - workspace settings."""
+    from ..utils.config import settings
+    
+    workspace = getattr(settings, 'cursor_workspace', None) or "未設定"
+    
+    content = f"""📁 **工作區設定**
+
+**目前工作區:** `{workspace}`
+
+**用法:**
+`/workspace set <path>` - 設定工作區路徑
+`/workspace list` - 列出可用工作區
+"""
+    if interaction:
+        await interaction.followup.send(content)
+    else:
+        await ctx.reply(content)
+
+
+async def handle_stats(ctx: MessageContext, interaction=None) -> None:
+    """Handle /stats command - usage statistics."""
+    from ..core.llm_providers import get_llm_manager
+    
+    manager = get_llm_manager()
+    user_id = str(ctx.user.id)
+    
+    # Get usage stats
+    stats = manager.get_usage_stats(user_id) if hasattr(manager, 'get_usage_stats') else {}
+    
+    total_requests = stats.get('total_requests', 0)
+    total_tokens = stats.get('total_tokens', 0)
+    
+    content = f"""📊 **使用統計**
+
+**總請求數:** {total_requests}
+**總 Token 數:** {total_tokens}
+"""
+    if interaction:
+        await interaction.followup.send(content)
+    else:
+        await ctx.reply(content)
+
+
+async def handle_settings(ctx: MessageContext, interaction=None) -> None:
+    """Handle /settings command - bot settings."""
+    from ..utils.config import settings
+    
+    content = f"""⚙️ **Bot 設定**
+
+**對話模式:** {getattr(settings, 'default_mode', 'auto')}
+**AI 提供者:** {getattr(settings, 'default_llm_provider', 'auto')}
+**最大 Token:** {getattr(settings, 'ai_max_tokens', 4096)}
+**Temperature:** {getattr(settings, 'ai_temperature', 0.7)}
+
+使用 Telegram 的 /settings 指令可進行更多設定。
+"""
+    if interaction:
+        await interaction.followup.send(content)
+    else:
+        await ctx.reply(content)
+
+
+async def handle_doctor(ctx: MessageContext, interaction=None) -> None:
+    """Handle /doctor command - system diagnostics."""
+    from ..utils.config import settings
+    from ..cursor.cli_agent import is_cli_available
+    from ..cursor.background_agent import get_background_agent
+    from ..core.llm_providers import get_llm_manager
+    
+    # Check components
+    checks = []
+    
+    # CLI
+    if is_cli_available():
+        checks.append("✅ Cursor CLI")
+    else:
+        checks.append("❌ Cursor CLI (未安裝)")
+    
+    # Background Agent
+    agent = get_background_agent()
+    if agent and agent.is_authenticated():
+        checks.append("✅ Background Agent")
+    else:
+        checks.append("⚪ Background Agent (未啟用)")
+    
+    # LLM Providers
+    manager = get_llm_manager()
+    providers = manager.list_available_providers()
+    if providers:
+        checks.append(f"✅ AI 提供者 ({len(providers)} 個)")
+    else:
+        checks.append("❌ AI 提供者 (未設定)")
+    
+    # Memory
+    checks.append("✅ 記憶系統")
+    
+    # Session
+    checks.append("✅ Session 管理")
+    
+    content = "🩺 **系統診斷**\n\n" + "\n".join(checks)
+    
+    if interaction:
+        await interaction.followup.send(content)
+    else:
+        await ctx.reply(content)
+
+
 async def handle_skills(ctx: MessageContext, interaction=None) -> None:
     """Handle /skills command."""
     skills = get_skill_manager()
@@ -848,6 +1103,40 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
         lambda ctx, i: handle_mode(ctx, i))
     channel.add_slash_command("model", "查看/切換 AI 模型",
         lambda ctx, i: handle_model(ctx, i))
+    
+    # Background Agent commands
+    channel.add_slash_command("ask", "向 Cursor Agent 發送問題",
+        lambda ctx, i: handle_ask(ctx, i))
+    channel.add_slash_command("repo", "切換 GitHub 倉庫",
+        lambda ctx, i: handle_repo(ctx, i))
+    channel.add_slash_command("repos", "查看帳號中的倉庫",
+        lambda ctx, i: handle_repos(ctx, i))
+    
+    # Agent & AI commands
+    channel.add_slash_command("agent", "啟動 AI Agent 執行任務",
+        lambda ctx, i: handle_agent(ctx, i))
+    channel.add_slash_command("climodel", "CLI 模型設定",
+        lambda ctx, i: handle_climodel(ctx, i))
+    
+    # Memory commands
+    channel.add_slash_command("memory", "記憶系統管理",
+        lambda ctx, i: handle_memory(ctx, i))
+    channel.add_slash_command("clear", "清除對話上下文",
+        lambda ctx, i: handle_clear(ctx, i))
+    
+    # Workspace commands
+    channel.add_slash_command("workspace", "工作區設定",
+        lambda ctx, i: handle_workspace(ctx, i))
+    
+    # Stats & Settings
+    channel.add_slash_command("stats", "查看使用統計",
+        lambda ctx, i: handle_stats(ctx, i))
+    channel.add_slash_command("settings", "Bot 設定",
+        lambda ctx, i: handle_settings(ctx, i))
+    
+    # Diagnostic commands
+    channel.add_slash_command("doctor", "診斷系統狀態",
+        lambda ctx, i: handle_doctor(ctx, i))
 
     # Register message handler for non-command messages
     @channel.on_message

@@ -4,6 +4,7 @@ Integrates memory, skills, approvals, and other core features
 """
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
 
 from ..core import (
@@ -1519,7 +1520,13 @@ async def model_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
             # Add success message
             success_text = f"✅ 已切換至 <code>{provider}/{model}</code>\n\n" + text
             
-            await query.message.edit_text(success_text, parse_mode="HTML", reply_markup=keyboard)
+            try:
+                await query.message.edit_text(success_text, parse_mode="HTML", reply_markup=keyboard)
+            except BadRequest as e:
+                if "message is not modified" in str(e).lower():
+                    pass  # Ignore - content unchanged
+                else:
+                    raise
             await query.answer("✅ 模型已切換")
         else:
             await query.answer("❌ 切換失敗", show_alert=True)
@@ -1829,7 +1836,11 @@ async def climodel_callback_handler(update: Update, context: ContextTypes.DEFAUL
         text, keyboard = _create_climodel_list_view(models, page, model_id)
         
         success_text = f"✅ 已切換至 <code>{model_id}</code>\n\n" + text
-        await query.message.edit_text(success_text, parse_mode="HTML", reply_markup=keyboard)
+        try:
+            await query.message.edit_text(success_text, parse_mode="HTML", reply_markup=keyboard)
+        except BadRequest as e:
+            if "message is not modified" not in str(e).lower():
+                raise
     
     elif data.startswith("climodel_list:"):
         page = int(data.split(":")[1])

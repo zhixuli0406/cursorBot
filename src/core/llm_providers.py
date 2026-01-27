@@ -1201,26 +1201,25 @@ class CopilotProvider(LLMProvider):
             logger.debug(f"Failed to fetch Copilot models: {e}")
         
         # Return default models if API fails
-        # GitHub Models API requires publisher/model format
+        # GitHub Models uses simple model names (not publisher/model format)
         return [
-            "openai/gpt-5",
-            "openai/gpt-5-mini",
-            "openai/gpt-5-nano",
-            "openai/gpt-5-chat",
-            "openai/gpt-4.1",
-            "openai/gpt-4.1-mini",
-            "openai/gpt-4.1-nano",
-            "openai/gpt-4o",
-            "openai/gpt-4o-mini",
-            "deepseek/deepseek-v3-0324",
-            "meta/llama-4-scout-17b-16e-instruct",
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4.1-nano",
+            "o1",
+            "o1-mini",
+            "o1-preview",
+            "deepseek-v3-0324",
+            "llama-4-scout-17b-16e-instruct",
         ]
     
     async def generate(self, messages: list[dict], **kwargs) -> str:
         """Generate response using GitHub Models API."""
         import httpx
         
-        model = kwargs.get("model") or self.config.model or "openai/gpt-4o"
+        model = kwargs.get("model") or self.config.model or "gpt-4o"
         
         # Log the model being used for debugging
         logger.debug(f"GitHub Models: using model '{model}', config model: '{self.config.model}'")
@@ -1278,7 +1277,7 @@ class CopilotProvider(LLMProvider):
         """Generate streaming response using GitHub Models API."""
         import httpx
         
-        model = kwargs.get("model") or self.config.model or "openai/gpt-4o"
+        model = kwargs.get("model") or self.config.model or "gpt-4o"
         api_base = self.config.api_base or self.API_BASE
         
         payload = {
@@ -1468,7 +1467,7 @@ class LLMProviderManager:
         ProviderType.BEDROCK: "anthropic.claude-sonnet-4-5-20250929-v1:0",
         ProviderType.MOONSHOT: "moonshot-v1-128k",
         ProviderType.GLM: "glm-4.7-flash",
-        ProviderType.COPILOT: "openai/gpt-5",
+        ProviderType.COPILOT: "gpt-4o",  # GitHub Models uses simple model names
     }
     
     def __init__(self):

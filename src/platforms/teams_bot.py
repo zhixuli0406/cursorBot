@@ -258,6 +258,12 @@ class TeamsBot:
             mentions=[m.mentioned.id for m in (activity.entities or []) if hasattr(m, "mentioned")],
         )
         
+        # Check for commands (starts with /)
+        if message.content.startswith("/"):
+            handled = await self._handle_command(message, turn_context)
+            if handled:
+                return
+        
         # Dispatch to handlers
         for handler in self._message_handlers:
             try:
@@ -271,6 +277,36 @@ class TeamsBot:
                     
             except Exception as e:
                 logger.error(f"Handler error: {e}")
+    
+    async def _handle_command(self, message: TeamsMessage, turn_context) -> bool:
+        """Handle command message using unified command handler."""
+        from ..core.unified_commands import execute_command, CommandContext
+        
+        # Parse command and args
+        parts = message.content[1:].split()
+        if not parts:
+            return False
+        
+        command = parts[0].lower()
+        args = parts[1:] if len(parts) > 1 else []
+        
+        # Create context
+        ctx = CommandContext(
+            user_id=message.user.id,
+            user_name=message.user.name,
+            platform="teams",
+            args=args,
+            raw_text=message.content,
+        )
+        
+        # Execute command
+        result = await execute_command(command, ctx)
+        
+        if result:
+            await turn_context.send_activity(result.message)
+            return True
+        
+        return False
     
     def _check_permissions(self, activity) -> bool:
         """Check if user/tenant has permission."""
