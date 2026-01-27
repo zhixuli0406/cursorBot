@@ -118,6 +118,10 @@ from .draft_streaming import (
     DraftStreamer, StreamConfig, DraftMessage, StreamState,
     TelegramDraftStreamer, get_draft_streamer,
 )
+from .tailscale import (
+    TailscaleManager, TailscaleConfig, TailscaleDevice, TailscaleNetwork,
+    TailscaleStatus, get_tailscale_manager,
+)
 
 __all__ = [
     # Memory
@@ -334,4 +338,11 @@ __all__ = [
     "StreamState",
     "TelegramDraftStreamer",
     "get_draft_streamer",
+    # Tailscale
+    "TailscaleManager",
+    "TailscaleConfig",
+    "TailscaleDevice",
+    "TailscaleNetwork",
+    "TailscaleStatus",
+    "get_tailscale_manager",
 ]

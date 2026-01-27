@@ -9,7 +9,10 @@
 ### 多平台支援
 - **Telegram** - 完整的 Telegram Bot 支援
 - **Discord** - 完整的 Discord Bot 支援（斜線指令、按鈕）
-- **統一介面** - 兩個平台使用相同的功能
+- **WhatsApp** - WhatsApp Web 整合（透過 Node.js 橋接）
+- **MS Teams** - Microsoft Teams Bot Framework 整合
+- **Slack** - Slack 工作區整合（Socket Mode）
+- **統一介面** - 所有平台使用相同的功能
 
 ### 核心功能
 - **完全遠端** - 無需開啟 IDE，雲端執行
@@ -46,6 +49,19 @@
 - **Chunking** - 智慧訊息分塊，保留程式碼區塊完整性
 - **Tool Policy** - 工具存取控制與審計
 - **CLI Tool** - 命令列工具 `cursorbot`
+- **WhatsApp** - WhatsApp 整合，透過 whatsapp-web.js 橋接
+- **MS Teams** - Microsoft Teams 整合，Bot Framework 支援
+- **iMessage** - macOS iMessage 整合，AppleScript 支援
+- **Discord Voice** - Discord 語音頻道監聯與轉錄
+- **Tailscale** - Tailscale VPN 整合，安全遠端存取
+- **Chrome Extension** - 瀏覽器擴展，網頁整合
+- **Moonshot AI** - 月之暗面 AI 整合，中國市場支援
+- **GLM 智譜** - ChatGLM AI 整合，中國市場支援
+- **Line Bot** - Line Messaging API 整合，亞洲市場
+- **macOS Menu Bar** - macOS 選單列快速存取應用
+- **Web Dashboard** - 網頁管理儀表板
+- **WebChat** - 瀏覽器即時聊天介面
+- **Control UI** - 網頁控制台配置管理
 
 ## 運作原理
 
@@ -472,8 +488,26 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/presence online/away/busy` | 設定狀態 |
 | `/gateway` | 統一閘道資訊 |
 | `/agents` | 列出已註冊代理 |
-| `/control` | 控制面板（Web） |
+| `/control` | 系統控制面板 |
+| `/control status` | 系統狀態 |
+| `/control providers` | AI 提供者列表 |
+| `/control url` | Web 介面網址 |
+| `/mode` | 查看/切換對話模式 |
+| `/mode agent` | 切換到 Agent Loop 模式 |
+| `/mode cursor` | 切換到 Cursor Agent 模式 |
 | `/tui` | 終端介面說明 |
+| `/whatsapp` | WhatsApp 整合狀態 |
+| `/whatsapp qr` | 顯示 WhatsApp 登入 QR Code |
+| `/teams` | MS Teams 整合狀態 |
+| `/tailscale` | Tailscale VPN 狀態 |
+| `/tailscale devices` | 列出 Tailscale 裝置 |
+| `/tailscale ping <device>` | Ping Tailscale 裝置 |
+| `/imessage` | iMessage 狀態 (macOS) |
+| `/imessage chats` | 列出 iMessage 聊天 |
+| `/imessage send <recipient> <msg>` | 發送 iMessage |
+| `/line` | Line Bot 狀態 |
+| `/line setup` | Line 設定說明 |
+| `/menubar` | macOS Menu Bar 說明 |
 
 **模型切換範例：**
 

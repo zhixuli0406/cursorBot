@@ -2263,6 +2263,784 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(f"❌ 代理查詢失敗: {e}")
 
 
+# ============================================
+# WhatsApp - WhatsApp Integration
+# ============================================
+
+
+@authorized_only
+async def whatsapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /whatsapp command.
+    Manage WhatsApp integration.
+    
+    Usage:
+        /whatsapp - Show status
+        /whatsapp qr - Show QR code for login
+        /whatsapp chats - List chats
+    """
+    args = context.args or []
+    
+    try:
+        from ..platforms.whatsapp_bot import WhatsAppBot, WhatsAppStatus
+        import os
+        
+        # Check if WhatsApp is enabled
+        if not os.getenv("WHATSAPP_ENABLED", "").lower() == "true":
+            await update.message.reply_text(
+                "📱 <b>WhatsApp 整合</b>\n\n"
+                "❌ WhatsApp 未啟用\n\n"
+                "<b>啟用方式:</b>\n"
+                "1. 設定 <code>WHATSAPP_ENABLED=true</code>\n"
+                "2. 安裝 Node.js 並執行 WhatsApp Bridge\n"
+                "3. 使用 <code>/whatsapp qr</code> 掃描登入",
+                parse_mode="HTML"
+            )
+            return
+        
+        if not args or args[0] == "status":
+            # Show status
+            text = """📱 <b>WhatsApp 整合狀態</b>
+
+• 狀態: 🟡 等待連線
+• 需要掃描 QR Code 登入
+
+<b>指令:</b>
+• <code>/whatsapp qr</code> - 顯示登入 QR Code
+• <code>/whatsapp chats</code> - 列出聊天室
+
+<b>設定:</b>
+• Bridge 端口: {port}
+• 允許號碼: {allowed}
+""".format(
+                port=os.getenv("WHATSAPP_BRIDGE_PORT", "3000"),
+                allowed=os.getenv("WHATSAPP_ALLOWED_NUMBERS", "全部") or "全部"
+            )
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        elif args[0] == "qr":
+            await update.message.reply_text(
+                "📱 <b>WhatsApp 登入</b>\n\n"
+                "請訪問以下網址掃描 QR Code:\n"
+                f"<code>http://localhost:{os.getenv('WHATSAPP_BRIDGE_PORT', '3000')}/qr</code>\n\n"
+                "或使用 WhatsApp > 設定 > 已連結的裝置 > 連結裝置",
+                parse_mode="HTML"
+            )
+        
+        elif args[0] == "chats":
+            await update.message.reply_text(
+                "📱 請先確保 WhatsApp Bridge 正在運行並已登入"
+            )
+        
+        else:
+            await update.message.reply_text(
+                "📱 <b>WhatsApp 指令</b>\n\n"
+                "<code>/whatsapp</code> - 狀態\n"
+                "<code>/whatsapp qr</code> - 登入 QR Code\n"
+                "<code>/whatsapp chats</code> - 聊天列表",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"WhatsApp error: {e}")
+        await update.message.reply_text(f"❌ WhatsApp 錯誤: {e}")
+
+
+# ============================================
+# MS Teams - Teams Integration
+# ============================================
+
+
+@authorized_only
+async def teams_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /teams command.
+    Manage MS Teams integration.
+    
+    Usage:
+        /teams - Show status
+        /teams setup - Setup instructions
+    """
+    args = context.args or []
+    
+    try:
+        import os
+        
+        app_id = os.getenv("TEAMS_APP_ID", "")
+        
+        if not args or args[0] == "status":
+            if app_id:
+                status = "🟢 已設定"
+                app_info = f"App ID: <code>{app_id[:8]}...</code>"
+            else:
+                status = "⚪ 未設定"
+                app_info = "需要 Azure AD 設定"
+            
+            text = f"""💼 <b>MS Teams 整合狀態</b>
+
+• 狀態: {status}
+• {app_info}
+• 端口: {os.getenv('TEAMS_PORT', '3978')}
+
+<b>指令:</b>
+• <code>/teams setup</code> - 設定說明
+
+<b>功能:</b>
+• 直接訊息與頻道訊息
+• Adaptive Cards 支援
+• Bot Framework 整合
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        elif args[0] == "setup":
+            text = """💼 <b>MS Teams 設定指南</b>
+
+<b>步驟 1: Azure AD 設定</b>
+1. 前往 Azure Portal
+2. 建立 App Registration
+3. 取得 App ID 和 Password
+
+<b>步驟 2: Bot Framework</b>
+1. 前往 Bot Framework Portal
+2. 建立 Bot Channel Registration
+3. 設定 Messaging Endpoint
+
+<b>步驟 3: 環境變數</b>
+<code>TEAMS_ENABLED=true
+TEAMS_APP_ID=your-app-id
+TEAMS_APP_PASSWORD=your-password</code>
+
+<b>步驟 4: Teams App</b>
+1. 建立 Teams App manifest
+2. 上傳至 Teams
+
+詳細文件: https://docs.microsoft.com/azure/bot-service/
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        else:
+            await update.message.reply_text(
+                "💼 <b>MS Teams 指令</b>\n\n"
+                "<code>/teams</code> - 狀態\n"
+                "<code>/teams setup</code> - 設定說明",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Teams error: {e}")
+        await update.message.reply_text(f"❌ Teams 錯誤: {e}")
+
+
+# ============================================
+# Tailscale - VPN Integration
+# ============================================
+
+
+@authorized_only
+async def tailscale_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /tailscale command.
+    Manage Tailscale VPN integration.
+    
+    Usage:
+        /tailscale - Show status
+        /tailscale devices - List devices
+        /tailscale ping <device> - Ping device
+        /tailscale ip - Show Tailscale IP
+    """
+    args = context.args or []
+    
+    try:
+        from ..core.tailscale import get_tailscale_manager, TailscaleStatus
+        
+        ts = get_tailscale_manager()
+        
+        if not args or args[0] == "status":
+            status = await ts.get_status()
+            self_device = await ts.get_self()
+            
+            status_emoji = {
+                TailscaleStatus.RUNNING: "🟢",
+                TailscaleStatus.STOPPED: "⚪",
+                TailscaleStatus.NEEDS_LOGIN: "🟡",
+                TailscaleStatus.ERROR: "🔴",
+                TailscaleStatus.NOT_INSTALLED: "❌",
+            }.get(status, "❓")
+            
+            text = f"""🔐 <b>Tailscale VPN 狀態</b>
+
+• 狀態: {status_emoji} {status.value}
+"""
+            if self_device:
+                text += f"""• 主機名: {self_device.hostname}
+• IP: {', '.join(self_device.ip_addresses[:2])}
+• 系統: {self_device.os}
+"""
+            
+            text += """
+<b>指令:</b>
+• <code>/tailscale devices</code> - 列出裝置
+• <code>/tailscale ping &lt;device&gt;</code> - Ping 裝置
+• <code>/tailscale ip</code> - 顯示 IP
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        elif args[0] == "devices":
+            devices = await ts.get_devices()
+            
+            if not devices:
+                await update.message.reply_text("🔐 沒有找到 Tailscale 裝置")
+                return
+            
+            lines = ["🔐 <b>Tailscale 裝置</b>\n"]
+            for device in devices:
+                status = "🟢" if device.online else "⚫"
+                lines.append(f"• {status} <b>{device.name}</b>")
+                lines.append(f"  {', '.join(device.ip_addresses[:1])}")
+                if device.is_self:
+                    lines.append("  (本機)")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        elif args[0] == "ping" and len(args) >= 2:
+            target = args[1]
+            await update.message.reply_text(f"🔐 正在 Ping {target}...")
+            
+            latency = await ts.ping(target, count=3)
+            
+            if latency is not None:
+                await update.message.reply_text(f"🔐 Ping {target}: {latency:.1f}ms")
+            else:
+                await update.message.reply_text(f"❌ 無法 Ping {target}")
+        
+        elif args[0] == "ip":
+            ip = await ts.get_ip()
+            if ip:
+                await update.message.reply_text(f"🔐 Tailscale IP: <code>{ip}</code>", parse_mode="HTML")
+            else:
+                await update.message.reply_text("❌ 無法取得 Tailscale IP")
+        
+        else:
+            await update.message.reply_text(
+                "🔐 <b>Tailscale 指令</b>\n\n"
+                "<code>/tailscale</code> - 狀態\n"
+                "<code>/tailscale devices</code> - 裝置列表\n"
+                "<code>/tailscale ping &lt;device&gt;</code> - Ping\n"
+                "<code>/tailscale ip</code> - IP 地址",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Tailscale error: {e}")
+        await update.message.reply_text(f"❌ Tailscale 錯誤: {e}")
+
+
+# ============================================
+# iMessage - iMessage Integration (macOS)
+# ============================================
+
+
+@authorized_only
+async def imessage_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /imessage command.
+    Manage iMessage integration (macOS only).
+    
+    Usage:
+        /imessage - Show status
+        /imessage chats - List recent chats
+        /imessage send <recipient> <message> - Send message
+    """
+    args = context.args or []
+    
+    try:
+        import platform
+        
+        # Check if macOS
+        if platform.system() != "Darwin":
+            await update.message.reply_text(
+                "💬 <b>iMessage 整合</b>\n\n"
+                "❌ iMessage 僅支援 macOS\n\n"
+                "你目前的系統: " + platform.system(),
+                parse_mode="HTML"
+            )
+            return
+        
+        from ..platforms.imessage_bot import IMessageBot, IMessageStatus
+        
+        bot = IMessageBot()
+        
+        if not args or args[0] == "status":
+            # Show status
+            is_macos = bot.is_macos()
+            has_access = bot.has_db_access()
+            
+            status_text = "🟢 可用" if (is_macos and has_access) else "⚪ 未設定"
+            access_text = "✅ 已授權" if has_access else "❌ 需要授權"
+            
+            text = f"""💬 <b>iMessage 整合狀態</b>
+
+• 系統: macOS ✅
+• 狀態: {status_text}
+• 資料庫存取: {access_text}
+
+<b>指令:</b>
+• <code>/imessage chats</code> - 列出聊天
+• <code>/imessage send &lt;號碼&gt; &lt;訊息&gt;</code> - 發送
+
+<b>設定:</b>
+需要在系統偏好設定 > 安全性與隱私 > 完整磁碟存取權 中授權
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        elif args[0] == "chats":
+            if not bot.has_db_access():
+                await update.message.reply_text(
+                    "❌ 無法存取 Messages 資料庫\n"
+                    "請在系統偏好設定中授權"
+                )
+                return
+            
+            chats = await bot.get_recent_chats(limit=10)
+            
+            if not chats:
+                await update.message.reply_text("💬 沒有找到聊天記錄")
+                return
+            
+            lines = ["💬 <b>最近聊天</b>\n"]
+            for chat in chats:
+                emoji = "👥" if chat.is_group else "👤"
+                lines.append(f"• {emoji} {chat.name}")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        elif args[0] == "send" and len(args) >= 3:
+            recipient = args[1]
+            message = " ".join(args[2:])
+            
+            success = await bot.send_message(recipient, message)
+            
+            if success:
+                await update.message.reply_text(f"✅ 已發送訊息給 {recipient}")
+            else:
+                await update.message.reply_text(f"❌ 發送失敗")
+        
+        else:
+            await update.message.reply_text(
+                "💬 <b>iMessage 指令</b>\n\n"
+                "<code>/imessage</code> - 狀態\n"
+                "<code>/imessage chats</code> - 聊天列表\n"
+                "<code>/imessage send &lt;號碼&gt; &lt;訊息&gt;</code> - 發送訊息",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"iMessage error: {e}")
+        await update.message.reply_text(f"❌ iMessage 錯誤: {e}")
+
+
+# ============================================
+# Line - Line Bot Integration
+# ============================================
+
+
+@authorized_only
+async def line_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /line command.
+    Manage Line bot integration.
+    
+    Usage:
+        /line - Show status
+        /line setup - Setup instructions
+    """
+    args = context.args or []
+    
+    try:
+        import os
+        
+        token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
+        
+        if not args or args[0] == "status":
+            if token:
+                status = "🟢 已設定"
+                token_info = f"Token: <code>{token[:10]}...</code>"
+            else:
+                status = "⚪ 未設定"
+                token_info = "需要 Line Developer 設定"
+            
+            text = f"""📱 <b>Line Bot 整合狀態</b>
+
+• 狀態: {status}
+• {token_info}
+• Webhook: {os.getenv('LINE_WEBHOOK_PORT', '8080')}
+
+<b>指令:</b>
+• <code>/line setup</code> - 設定說明
+
+<b>支援功能:</b>
+• 文字訊息
+• Quick Reply
+• Flex Message
+• Rich Menu
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        elif args[0] == "setup":
+            text = """📱 <b>Line Bot 設定指南</b>
+
+<b>步驟 1: Line Developer Console</b>
+1. 前往 https://developers.line.biz/
+2. 建立 Provider 和 Channel
+3. 選擇 Messaging API
+
+<b>步驟 2: 取得憑證</b>
+1. Channel Access Token (長期)
+2. Channel Secret
+
+<b>步驟 3: 環境變數</b>
+<code>LINE_ENABLED=true
+LINE_CHANNEL_ACCESS_TOKEN=your-token
+LINE_CHANNEL_SECRET=your-secret</code>
+
+<b>步驟 4: Webhook 設定</b>
+1. 設定 Webhook URL
+2. 格式: https://your-domain/webhook/line
+3. 開啟 Use webhook
+
+<b>特點:</b>
+• 日本、台灣、泰國等亞洲市場
+• 豐富的 Flex Message 格式
+• Quick Reply 按鈕
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        else:
+            await update.message.reply_text(
+                "📱 <b>Line 指令</b>\n\n"
+                "<code>/line</code> - 狀態\n"
+                "<code>/line setup</code> - 設定說明",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Line error: {e}")
+        await update.message.reply_text(f"❌ Line 錯誤: {e}")
+
+
+# ============================================
+# Menu Bar - macOS Menu Bar App
+# ============================================
+
+
+@authorized_only
+async def menubar_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /menubar command.
+    Information about macOS Menu Bar app.
+    
+    Usage:
+        /menubar - Show info and installation
+    """
+    import platform
+    
+    is_macos = platform.system() == "Darwin"
+    
+    text = f"""🖥️ <b>macOS Menu Bar 應用</b>
+
+• 系統: {'macOS ✅' if is_macos else platform.system() + ' ❌'}
+
+<b>功能:</b>
+• 狀態列快速存取
+• 即時聊天視窗
+• 伺服器狀態顯示
+• 最近對話
+
+<b>安裝:</b>
+<code>pip install rumps</code>
+
+<b>執行:</b>
+<code>python -m src.macos.menubar</code>
+
+<b>自動啟動:</b>
+<code>python -m src.macos.menubar --install</code>
+
+<b>環境變數:</b>
+<code>CURSORBOT_SERVER_URL=http://localhost:8000</code>
+
+注意: 僅支援 macOS
+"""
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+# ============================================
+# Control Panel - System Control
+# ============================================
+
+
+@authorized_only
+async def control_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /control command.
+    System control panel and quick actions.
+    
+    Usage:
+        /control - Show control panel
+        /control status - System status
+        /control restart - Restart bot (admin only)
+        /control providers - List AI providers
+        /control url - Show Web UI URL
+    """
+    import os
+    args = context.args or []
+    
+    try:
+        # Get server URL
+        server_url = os.getenv("CURSORBOT_SERVER_URL", "http://localhost:8000")
+        api_port = os.getenv("API_PORT", "8000")
+        
+        if not args or args[0] == "status":
+            # Get system status
+            import psutil
+            import platform
+            
+            cpu = psutil.cpu_percent(interval=0.1)
+            mem = psutil.virtual_memory()
+            
+            # Get provider status
+            from ..core import LLMProviderManager
+            manager = LLMProviderManager()
+            providers = list(manager.list_providers().keys())
+            provider_count = len(providers)
+            
+            text = f"""⚙️ <b>CursorBot 控制面板</b>
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>📊 系統狀態</b>
+━━━━━━━━━━━━━━━━━━━━━━
+• CPU: {cpu}%
+• 記憶體: {mem.percent}% ({mem.used // (1024**3)}GB / {mem.total // (1024**3)}GB)
+• 系統: {platform.system()} {platform.release()}
+• Python: {platform.python_version()}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🤖 Bot 狀態</b>
+━━━━━━━━━━━━━━━━━━━━━━
+• AI 提供者: {provider_count} 個已設定
+• 已載入: {', '.join(providers[:3])}{'...' if len(providers) > 3 else ''}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🌐 Web 介面</b>
+━━━━━━━━━━━━━━━━━━━━━━
+• Dashboard: {server_url}/dashboard
+• WebChat: {server_url}/chat
+• Control UI: {server_url}/control
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>📋 可用指令</b>
+━━━━━━━━━━━━━━━━━━━━━━
+<code>/control status</code> - 系統狀態
+<code>/control providers</code> - AI 提供者列表
+<code>/control url</code> - Web 介面網址
+<code>/control restart</code> - 重啟 Bot
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        elif args[0] == "providers":
+            from ..core import LLMProviderManager
+            manager = LLMProviderManager()
+            providers_info = manager.list_providers()
+            
+            lines = ["⚙️ <b>AI 提供者狀態</b>\n"]
+            
+            for name, info in providers_info.items():
+                status = "🟢" if info.get("available", False) else "⚪"
+                model = info.get("model", "N/A")
+                lines.append(f"{status} <b>{name}</b>: {model}")
+            
+            if not providers_info:
+                lines.append("尚未設定任何 AI 提供者")
+            
+            lines.append("\n使用 <code>/model</code> 切換模型")
+            
+            await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+        
+        elif args[0] == "url":
+            text = f"""🌐 <b>Web 介面網址</b>
+
+• <b>Dashboard</b>
+  {server_url}/dashboard
+  系統監控和統計
+
+• <b>WebChat</b>
+  {server_url}/chat
+  網頁版聊天介面
+
+• <b>Control Panel</b>
+  {server_url}/control
+  設定和管理
+
+• <b>API Docs</b>
+  {server_url}/docs
+  API 文件 (Swagger)
+
+伺服器埠: {api_port}
+"""
+            await update.message.reply_text(text, parse_mode="HTML")
+        
+        elif args[0] == "restart":
+            # Check if user is admin
+            admin_ids = os.getenv("ADMIN_USER_IDS", "").split(",")
+            user_id = str(update.effective_user.id)
+            
+            if user_id not in admin_ids and admin_ids[0] != "":
+                await update.message.reply_text("❌ 僅管理員可執行重啟操作")
+                return
+            
+            await update.message.reply_text(
+                "⚠️ <b>確認重啟</b>\n\n"
+                "這將重啟 CursorBot 服務。\n"
+                "請透過 Web Control Panel 執行:\n"
+                f"{server_url}/control",
+                parse_mode="HTML"
+            )
+        
+        else:
+            await update.message.reply_text(
+                "⚙️ <b>Control 指令</b>\n\n"
+                "<code>/control</code> - 控制面板\n"
+                "<code>/control status</code> - 系統狀態\n"
+                "<code>/control providers</code> - AI 提供者\n"
+                "<code>/control url</code> - Web 介面網址\n"
+                "<code>/control restart</code> - 重啟 Bot",
+                parse_mode="HTML"
+            )
+            
+    except Exception as e:
+        logger.error(f"Control error: {e}")
+        await update.message.reply_text(f"❌ 控制面板錯誤: {e}")
+
+
+# ============================================
+# Mode - Switch Chat Mode (Agent vs Cursor)
+# ============================================
+
+
+@authorized_only
+async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /mode command.
+    Switch between Agent and Cursor Background Agent for default chat.
+    
+    Usage:
+        /mode - Show current mode
+        /mode agent - Use Agent Loop for chat
+        /mode cursor - Use Cursor Background Agent for chat
+    """
+    from .handlers import get_user_chat_mode, set_user_chat_mode, is_background_agent_enabled
+    
+    user_id = update.effective_user.id
+    args = context.args or []
+    
+    current_mode = get_user_chat_mode(user_id)
+    
+    if not args:
+        # Show current mode and options
+        mode_icon = "🤖" if current_mode == "agent" else "💻"
+        mode_name = "Agent Loop" if current_mode == "agent" else "Cursor Background Agent"
+        
+        # Check availability
+        cursor_available = is_background_agent_enabled()
+        
+        text = f"""⚡ <b>對話模式設定</b>
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>目前模式</b>
+━━━━━━━━━━━━━━━━━━━━━━
+{mode_icon} <b>{mode_name}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>可用模式</b>
+━━━━━━━━━━━━━━━━━━━━━━
+🤖 <b>Agent Loop</b> (<code>/mode agent</code>)
+   使用內建 AI Agent 處理對話
+   支援多種 AI 模型 (OpenAI/Claude/Gemini/GLM)
+   可執行複雜任務、使用技能和工具
+   {'✅ 可用' if True else '❌ 不可用'}
+
+💻 <b>Cursor Background Agent</b> (<code>/mode cursor</code>)
+   使用 Cursor IDE 的 Background Agent
+   專注於程式碼任務和專案操作
+   需要設定 CURSOR_API_KEY
+   {'✅ 可用' if cursor_available else '⚠️ 未設定'}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>切換指令</b>
+━━━━━━━━━━━━━━━━━━━━━━
+<code>/mode agent</code> - 切換到 Agent Loop
+<code>/mode cursor</code> - 切換到 Cursor Agent
+
+設定後，直接發送訊息即可使用選定模式。
+"""
+        await update.message.reply_text(text, parse_mode="HTML")
+    
+    elif args[0].lower() == "agent":
+        set_user_chat_mode(user_id, "agent")
+        
+        # Get current model info
+        from ..core.llm_providers import get_llm_manager
+        manager = get_llm_manager()
+        current_model = manager.get_user_model(str(user_id))
+        model_info = f"{current_model[0]}/{current_model[1]}" if current_model else "預設模型"
+        
+        await update.message.reply_text(
+            "🤖 <b>已切換到 Agent Loop 模式</b>\n\n"
+            f"模型: <code>{model_info}</code>\n\n"
+            "現在直接發送訊息將由 Agent Loop 處理。\n"
+            "Agent 可以:\n"
+            "• 回答問題和對話\n"
+            "• 執行複雜任務\n"
+            "• 使用已載入的技能\n"
+            "• 呼叫各種工具\n\n"
+            "使用 <code>/model</code> 切換 AI 模型",
+            parse_mode="HTML"
+        )
+    
+    elif args[0].lower() == "cursor":
+        if not is_background_agent_enabled():
+            await update.message.reply_text(
+                "⚠️ <b>Cursor Background Agent 未啟用</b>\n\n"
+                "請設定以下環境變數:\n"
+                "<code>CURSOR_API_KEY=your-key</code>\n"
+                "<code>BACKGROUND_AGENT_ENABLED=true</code>\n\n"
+                "目前模式保持不變。",
+                parse_mode="HTML"
+            )
+            return
+        
+        set_user_chat_mode(user_id, "cursor")
+        
+        await update.message.reply_text(
+            "💻 <b>已切換到 Cursor Background Agent 模式</b>\n\n"
+            "現在直接發送訊息將由 Cursor Agent 處理。\n"
+            "適合:\n"
+            "• 程式碼相關任務\n"
+            "• 專案檔案操作\n"
+            "• IDE 整合功能\n\n"
+            "使用 <code>/repo</code> 設定工作目錄",
+            parse_mode="HTML"
+        )
+    
+    else:
+        await update.message.reply_text(
+            "⚡ <b>Mode 指令</b>\n\n"
+            "<code>/mode</code> - 查看目前模式\n"
+            "<code>/mode agent</code> - Agent Loop 模式\n"
+            "<code>/mode cursor</code> - Cursor Agent 模式",
+            parse_mode="HTML"
+        )
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -2270,6 +3048,9 @@ def setup_core_handlers(app) -> None:
     Args:
         app: Telegram Application instance
     """
+    # Mode switching command
+    app.add_handler(CommandHandler("mode", mode_handler))
+    
     # Agent command
     app.add_handler(CommandHandler("agent", agent_handler))
     
@@ -2327,9 +3108,21 @@ def setup_core_handlers(app) -> None:
     
     # v0.3 New commands
     app.add_handler(CommandHandler("presence", presence_handler))
-    app.add_handler(CommandHandler("status", presence_handler))  # Alias
     app.add_handler(CommandHandler("gateway", gateway_handler))
     app.add_handler(CommandHandler("agents", agents_handler))
+    
+    # v0.3 Platform integration commands
+    app.add_handler(CommandHandler("whatsapp", whatsapp_handler))
+    app.add_handler(CommandHandler("wa", whatsapp_handler))  # Alias
+    app.add_handler(CommandHandler("teams", teams_handler))
+    app.add_handler(CommandHandler("tailscale", tailscale_handler))
+    app.add_handler(CommandHandler("ts", tailscale_handler))  # Alias
+    app.add_handler(CommandHandler("imessage", imessage_handler))
+    app.add_handler(CommandHandler("imsg", imessage_handler))  # Alias
+    app.add_handler(CommandHandler("line", line_handler))
+    app.add_handler(CommandHandler("menubar", menubar_handler))
+    app.add_handler(CommandHandler("control", control_handler))
+    app.add_handler(CommandHandler("ctrl", control_handler))  # Alias
 
     logger.info("Core handlers configured")
 
@@ -2359,5 +3152,13 @@ __all__ = [
     "presence_handler",
     "gateway_handler",
     "agents_handler",
+    "whatsapp_handler",
+    "teams_handler",
+    "tailscale_handler",
+    "imessage_handler",
+    "line_handler",
+    "menubar_handler",
+    "control_handler",
+    "mode_handler",
     "setup_core_handlers",
 ]

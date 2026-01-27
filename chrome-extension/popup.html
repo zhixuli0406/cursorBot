@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CursorBot</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 320px;
+      min-height: 400px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    .header {
+      padding: 16px;
+      background: #2d2d2d;
+      border-bottom: 1px solid #3d3d3d;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .status {
+      margin-left: auto;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+
+    .status.offline {
+      background: #ef4444;
+    }
+
+    .content {
+      padding: 16px;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .action-btn {
+      padding: 12px;
+      background: #2d2d2d;
+      border: 1px solid #3d3d3d;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    .action-btn:hover {
+      background: #3d3d3d;
+    }
+
+    .action-btn .icon {
+      display: block;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 10px 12px;
+      background: #2d2d2d;
+      border: 1px solid #3d3d3d;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .chat-input input:focus {
+      border-color: #3b82f6;
+    }
+
+    .chat-input button {
+      padding: 10px 16px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .chat-input button:hover {
+      background: #2563eb;
+    }
+
+    .recent {
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .recent-item {
+      padding: 10px 12px;
+      background: #2d2d2d;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #ccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+
+    .recent-item:hover {
+      background: #3d3d3d;
+    }
+
+    .footer {
+      padding: 12px 16px;
+      background: #2d2d2d;
+      border-top: 1px solid #3d3d3d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-link {
+      color: #888;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .footer-link:hover {
+      color: #fff;
+    }
+
+    .model-badge {
+      background: #3d3d3d;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">C</div>
+    <div class="title">CursorBot</div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="content">
+    <div class="quick-actions">
+      <button class="action-btn" id="btn-chat">
+        <span class="icon">💬</span>
+        Chat
+      </button>
+      <button class="action-btn" id="btn-summarize">
+        <span class="icon">📝</span>
+        Summarize
+      </button>
+      <button class="action-btn" id="btn-translate">
+        <span class="icon">🌐</span>
+        Translate
+      </button>
+      <button class="action-btn" id="btn-explain">
+        <span class="icon">💡</span>
+        Explain
+      </button>
+    </div>
+
+    <div class="chat-input">
+      <input type="text" id="input" placeholder="Ask anything..." />
+      <button id="send">Send</button>
+    </div>
+
+    <div class="recent">
+      <div class="section-title">Recent</div>
+      <div id="recent-list">
+        <div class="recent-item">No recent queries</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="#" class="footer-link" id="settings">Settings</a>
+    <span class="model-badge" id="model">gpt-4o-mini</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

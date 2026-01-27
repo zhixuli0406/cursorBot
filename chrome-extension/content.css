@@ -1,0 +1,273 @@
+/**
+ * CursorBot Chrome Extension - Content Styles
+ */
+
+/* ============================================
+   Chat Overlay
+   ============================================ */
+
+#cursorbot-overlay {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.cursorbot-chat {
+  width: 360px;
+  height: 480px;
+  background: #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cursorbot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3d3d3d;
+}
+
+.cursorbot-title {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.cursorbot-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.cursorbot-close:hover {
+  color: #fff;
+}
+
+.cursorbot-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.cursorbot-message {
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  max-width: 85%;
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.cursorbot-user {
+  background: #3b82f6;
+  color: #fff;
+  margin-left: auto;
+}
+
+.cursorbot-assistant {
+  background: #2d2d2d;
+  color: #e5e5e5;
+}
+
+.cursorbot-loading {
+  background: #2d2d2d;
+  color: #888;
+  font-style: italic;
+}
+
+.cursorbot-error {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.cursorbot-input-area {
+  display: flex;
+  padding: 12px;
+  gap: 8px;
+  background: #2d2d2d;
+  border-top: 1px solid #3d3d3d;
+}
+
+.cursorbot-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: #1a1a1a;
+  border: 1px solid #3d3d3d;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.cursorbot-input:focus {
+  border-color: #3b82f6;
+}
+
+.cursorbot-send {
+  padding: 8px 16px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cursorbot-send:hover {
+  background: #2563eb;
+}
+
+/* ============================================
+   Result Overlay
+   ============================================ */
+
+#cursorbot-result {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.cursorbot-result-content {
+  background: #1a1a1a;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.cursorbot-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #2d2d2d;
+  border-radius: 12px 12px 0 0;
+  color: #fff;
+  font-weight: 600;
+}
+
+.cursorbot-result-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.cursorbot-result-close:hover {
+  color: #fff;
+}
+
+.cursorbot-result-body {
+  padding: 20px;
+  color: #e5e5e5;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-y: auto;
+  flex: 1;
+  white-space: pre-wrap;
+}
+
+.cursorbot-error-text {
+  color: #fca5a5;
+}
+
+.cursorbot-result-actions {
+  padding: 12px 20px;
+  background: #2d2d2d;
+  border-radius: 0 0 12px 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cursorbot-copy {
+  padding: 8px 16px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cursorbot-copy:hover {
+  background: #2563eb;
+}
+
+/* Loading state */
+.cursorbot-result-content.cursorbot-loading {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.cursorbot-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #3d3d3d;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: cursorbot-spin 1s linear infinite;
+}
+
+@keyframes cursorbot-spin {
+  to { transform: rotate(360deg); }
+}
+
+.cursorbot-loading-text {
+  color: #888;
+  font-size: 14px;
+}
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+
+.cursorbot-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #1a1a1a;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 2147483647;
+  transition: transform 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.cursorbot-toast-show {
+  transform: translateX(-50%) translateY(0);
+}

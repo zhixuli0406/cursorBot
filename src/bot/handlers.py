@@ -29,6 +29,24 @@ from ..utils.logger import logger
 workspace_agent: CursorAgent = None
 background_agent: Optional[CursorBackgroundAgent] = None
 
+# User chat mode settings (agent vs cursor)
+# Key: user_id, Value: "agent" or "cursor"
+_user_chat_modes: dict[int, str] = {}
+
+# Default chat mode
+DEFAULT_CHAT_MODE = "cursor"  # "agent" or "cursor"
+
+
+def get_user_chat_mode(user_id: int) -> str:
+    """Get user's chat mode preference."""
+    return _user_chat_modes.get(user_id, DEFAULT_CHAT_MODE)
+
+
+def set_user_chat_mode(user_id: int, mode: str) -> None:
+    """Set user's chat mode preference."""
+    if mode in ("agent", "cursor"):
+        _user_chat_modes[user_id] = mode
+
 
 def get_cursor_agent() -> CursorAgent:
     """Get or create the global Workspace Agent instance."""
@@ -104,20 +122,19 @@ CursorBot 是一個多平台 AI 編程助手，支援 <b>Telegram</b> 和 <b>Dis
 3️⃣ 直接發送問題或使用 /agent 指令
 
 <b>✨ v0.3 新功能:</b>
-• ⚙️ Control UI - 設定管理介面
-• 💼 Slack Bot - 企業 Slack 整合
-• 🎤 Voice Wake - 語音喚醒
-• 🌐 Remote Gateway - 遠端閘道
-• 💻 TUI - 終端聊天介面
-• 📝 Draft Streaming - 草稿串流
-4️⃣ AI 會自動執行任務並回報結果
+• 📱 Line - 亞洲市場訊息平台
+• 🧠 GLM 智譜 - 中國 ChatGLM AI
+• 🖥️ Menu Bar - macOS 選單列應用
+• 💬 iMessage - macOS 訊息整合
+• 🌐 Chrome Extension - 瀏覽器整合
+• 🌙 Moonshot AI - 中國月之暗面
 
 <b>✨ 核心功能:</b>
-• <b>多模型 AI</b> - OpenAI/Claude/Gemini/Ollama
+• <b>多模型 AI</b> - OpenAI/Claude/Gemini/GLM
 • <b>Agent Loop</b> - 自主任務執行與 Skills
 • <b>AI 編程</b> - Cursor Background Agent
 • <b>多媒體支援</b> - 語音轉錄、圖片附件
-• <b>多平台</b> - Telegram + Discord 同步
+• <b>多平台</b> - TG/DC/WhatsApp/Teams/Line
 • <b>記憶系統</b> - 儲存常用資訊和偏好
 
 <b>📋 常用指令:</b>
@@ -263,6 +280,9 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 ━━━━━━━━━━━━━━━━━━━━━━
 • <b>Telegram</b> - 你正在使用
 • <b>Discord</b> - 相同功能，斜線指令
+• <b>WhatsApp</b> - 透過 whatsapp-web.js
+• <b>MS Teams</b> - Bot Framework 整合
+• <b>Slack</b> - 企業工作區整合
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>✨ v0.3 新功能指令</b>
@@ -274,24 +294,32 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /presence - 在線狀態
 /gateway - 統一閘道
 /agents - 代理管理
+/whatsapp - WhatsApp 狀態
+/teams - MS Teams 狀態
+/tailscale - Tailscale VPN 狀態
+/imessage - iMessage 狀態 (macOS)
+/line - Line Bot 狀態
+/menubar - macOS Menu Bar 說明
+/control - 系統控制面板
+/mode - 切換對話模式 (Agent/Cursor)
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>🛠️ v0.3 功能特色</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-• <b>Control UI</b> - 設定管理介面
-• <b>Slack Bot</b> - 企業 Slack 整合
-• <b>Voice Wake</b> - 語音喚醒
-• <b>Remote Gateway</b> - 遠端閘道
-• <b>TUI</b> - 終端聊天介面
-• <b>Draft Streaming</b> - 草稿串流
+• <b>Line</b> - 亞洲市場訊息平台
+• <b>GLM (智譜)</b> - 中國 AI ChatGLM
+• <b>Menu Bar</b> - macOS 選單列應用
+• <b>iMessage</b> - macOS 訊息整合
+• <b>Chrome Extension</b> - 瀏覽器擴展
+• <b>Moonshot AI</b> - 中國月之暗面
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>💡 使用提示</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-• 訪問 /control 管理設定
-• 使用 cursorbot tui 終端聊天
-• /model set bedrock 使用 AWS
-• /presence 管理在線狀態
+• /model set glm 使用智譜 AI
+• /line setup 查看 Line 設定
+• /menubar 查看 Menu Bar 說明
+• Chrome Extension 安裝見文件
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 
@@ -1202,6 +1230,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     """
     Handle regular text messages.
     Supports @mention in groups and session isolation.
+    Routes to Agent Loop or Cursor Background Agent based on user mode.
     """
     # Check if we should respond (handles group @mention)
     should_respond, message_text = _should_respond_in_group(update, context)
@@ -1225,15 +1254,82 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     # Show typing indicator
     await update.effective_chat.send_action("typing")
 
-    # Check if Background Agent is enabled
-    if is_background_agent_enabled():
-        await _handle_background_agent_ask(update, message_text, user_id, username, chat_id)
+    # Get user's chat mode preference
+    chat_mode = get_user_chat_mode(user_id)
+    
+    if chat_mode == "agent":
+        # Use Agent Loop mode
+        await _handle_agent_mode(update, message_text, user_id, username, chat_id)
     else:
+        # Use Cursor Background Agent mode (default)
+        if is_background_agent_enabled():
+            await _handle_background_agent_ask(update, message_text, user_id, username, chat_id)
+        else:
+            # Fallback to Agent mode if Cursor not configured
+            await _handle_agent_mode(update, message_text, user_id, username, chat_id)
+
+
+async def _handle_agent_mode(
+    update: Update,
+    message_text: str,
+    user_id: int,
+    username: str,
+    chat_id: int,
+) -> None:
+    """Handle message using Agent Loop mode."""
+    from ..core import get_agent_loop
+    from ..core.llm_providers import get_llm_manager
+    
+    try:
+        # Get user's model settings
+        manager = get_llm_manager()
+        user_provider = manager.get_llm_provider_function_for_user(str(user_id))
+        current_model = manager.get_user_model(str(user_id))
+        
+        # Get agent loop
+        agent = get_agent_loop()
+        
+        # Use user's provider if set
+        original_provider = agent.llm_provider
+        if user_provider:
+            agent.llm_provider = user_provider
+        
+        try:
+            # Run agent
+            result = await agent.run(
+                task=message_text,
+                context={
+                    "user_id": str(user_id),
+                    "username": username,
+                    "chat_id": str(chat_id),
+                    "platform": "telegram",
+                }
+            )
+            
+            # Format response
+            if result.success:
+                response = result.result or "任務完成"
+            else:
+                response = f"❌ Agent 錯誤: {result.error or '未知錯誤'}"
+            
+            # Send response (handle long messages)
+            if len(response) > 4000:
+                # Split into chunks
+                chunks = [response[i:i+4000] for i in range(0, len(response), 4000)]
+                for chunk in chunks:
+                    await update.message.reply_text(chunk, parse_mode="HTML")
+            else:
+                await update.message.reply_text(response, parse_mode="HTML")
+                
+        finally:
+            # Restore original provider
+            agent.llm_provider = original_provider
+            
+    except Exception as e:
+        logger.error(f"Agent mode error: {e}")
         await update.message.reply_text(
-            "⚠️ <b>Background Agent 未啟用</b>\n\n"
-            "請設定 CURSOR_API_KEY 和 BACKGROUND_AGENT_ENABLED=true\n\n"
-            "或使用 /help 查看其他可用指令",
-            parse_mode="HTML",
+            f"❌ <b>Agent 錯誤</b>\n\n<code>{str(e)[:500]}</code>",
+            parse_mode="HTML"
         )
 
 

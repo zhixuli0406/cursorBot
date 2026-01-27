@@ -30,6 +30,8 @@ class ProviderType(Enum):
     OLLAMA = "ollama"
     CUSTOM = "custom"
     BEDROCK = "bedrock"
+    MOONSHOT = "moonshot"
+    GLM = "glm"
 
 
 @dataclass
@@ -965,6 +967,185 @@ class BedrockProvider(LLMProvider):
 
 
 # ============================================
+# Moonshot AI Provider (月之暗面)
+# ============================================
+
+class MoonshotProvider(LLMProvider):
+    """Moonshot AI (月之暗面) provider for Chinese market."""
+    
+    API_BASE = "https://api.moonshot.cn/v1"
+    
+    @property
+    def provider_type(self) -> ProviderType:
+        return ProviderType.MOONSHOT
+    
+    def is_available(self) -> bool:
+        """Check if Moonshot API key is configured."""
+        return bool(self.config.api_key) and self.config.enabled
+    
+    async def fetch_models(self) -> list[str]:
+        """Return available Moonshot models."""
+        return [
+            "moonshot-v1-8k",      # 8K context
+            "moonshot-v1-32k",     # 32K context
+            "moonshot-v1-128k",    # 128K context (long context)
+        ]
+    
+    async def generate(self, messages: list[dict], **kwargs) -> str:
+        """Generate response using Moonshot API (OpenAI compatible)."""
+        import httpx
+        
+        if not self.is_available():
+            raise ValueError("Moonshot API key not configured")
+        
+        model = kwargs.get("model") or self.config.model or "moonshot-v1-8k"
+        max_tokens = kwargs.get("max_tokens", self.config.max_tokens)
+        temperature = kwargs.get("temperature", self.config.temperature)
+        
+        # Moonshot uses OpenAI-compatible API
+        headers = {
+            "Authorization": f"Bearer {self.config.api_key}",
+            "Content-Type": "application/json",
+        }
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                response = await client.post(
+                    f"{self.API_BASE}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    raise ValueError(f"Moonshot API error: {response.status_code} - {error_text}")
+                
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
+                
+        except httpx.HTTPError as e:
+            raise ValueError(f"Moonshot HTTP error: {e}")
+        except Exception as e:
+            raise ValueError(f"Moonshot error: {e}")
+
+
+# ============================================
+# GLM (智譜) Provider
+# ============================================
+
+class GLMProvider(LLMProvider):
+    """GLM (智譜 ChatGLM) provider for Chinese market."""
+    
+    API_BASE = "https://open.bigmodel.cn/api/paas/v4"
+    
+    @property
+    def provider_type(self) -> ProviderType:
+        return ProviderType.GLM
+    
+    def is_available(self) -> bool:
+        """Check if GLM API key is configured."""
+        return bool(self.config.api_key) and self.config.enabled
+    
+    async def fetch_models(self) -> list[str]:
+        """Return available GLM models."""
+        return [
+            "glm-4-plus",       # Most powerful
+            "glm-4",            # Standard
+            "glm-4-long",       # Long context (1M tokens)
+            "glm-4-flash",      # Fast and cheap
+            "glm-4v-plus",      # Vision model
+            "glm-4-alltools",   # With tool calling
+        ]
+    
+    async def generate(self, messages: list[dict], **kwargs) -> str:
+        """Generate response using GLM API."""
+        import httpx
+        import time
+        import jwt
+        
+        if not self.is_available():
+            raise ValueError("GLM API key not configured")
+        
+        model = kwargs.get("model") or self.config.model or "glm-4-flash"
+        max_tokens = kwargs.get("max_tokens", self.config.max_tokens)
+        temperature = kwargs.get("temperature", self.config.temperature)
+        
+        # Generate JWT token for authentication
+        token = self._generate_token()
+        
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                response = await client.post(
+                    f"{self.API_BASE}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    raise ValueError(f"GLM API error: {response.status_code} - {error_text}")
+                
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
+                
+        except httpx.HTTPError as e:
+            raise ValueError(f"GLM HTTP error: {e}")
+        except Exception as e:
+            raise ValueError(f"GLM error: {e}")
+    
+    def _generate_token(self) -> str:
+        """Generate JWT token for GLM API authentication."""
+        import time
+        
+        try:
+            import jwt
+        except ImportError:
+            # Fallback: use API key directly if jwt not available
+            return self.config.api_key
+        
+        # API key format: {id}.{secret}
+        api_key = self.config.api_key
+        if "." not in api_key:
+            return api_key
+        
+        key_id, secret = api_key.split(".", 1)
+        
+        now = int(time.time() * 1000)
+        
+        payload = {
+            "api_key": key_id,
+            "exp": now + 3600 * 1000,  # 1 hour
+            "timestamp": now,
+        }
+        
+        return jwt.encode(
+            payload,
+            secret,
+            algorithm="HS256",
+            headers={"alg": "HS256", "sign_type": "SIGN"},
+        )
+
+
+# ============================================
 # Custom OpenAI-Compatible Provider
 # ============================================
 
@@ -1091,6 +1272,8 @@ class LLMProviderManager:
         ProviderType.OLLAMA: OllamaProvider,
         ProviderType.CUSTOM: CustomProvider,
         ProviderType.BEDROCK: BedrockProvider,
+        ProviderType.MOONSHOT: MoonshotProvider,
+        ProviderType.GLM: GLMProvider,
     }
     
     # Default models for each provider
@@ -1102,6 +1285,8 @@ class LLMProviderManager:
         ProviderType.OLLAMA: "llama3.2",
         ProviderType.CUSTOM: "default",
         ProviderType.BEDROCK: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        ProviderType.MOONSHOT: "moonshot-v1-8k",
+        ProviderType.GLM: "glm-4-flash",
     }
     
     def __init__(self):
@@ -1186,6 +1371,32 @@ class LLMProviderManager:
             )
             self._providers[ProviderType.CUSTOM] = CustomProvider(config)
             logger.info(f"Loaded Custom provider: {settings.custom_api_base}")
+        
+        # Moonshot (月之暗面)
+        moonshot_key = getattr(settings, 'moonshot_api_key', None) or os.getenv("MOONSHOT_API_KEY")
+        if moonshot_key:
+            moonshot_model = getattr(settings, 'moonshot_model', None) or os.getenv("MOONSHOT_MODEL", "moonshot-v1-8k")
+            config = ProviderConfig(
+                provider_type=ProviderType.MOONSHOT,
+                api_key=moonshot_key,
+                model=moonshot_model,
+                enabled=True,
+            )
+            self._providers[ProviderType.MOONSHOT] = MoonshotProvider(config)
+            logger.info(f"Loaded Moonshot provider with model: {moonshot_model}")
+        
+        # GLM (智譜)
+        glm_key = getattr(settings, 'glm_api_key', None) or os.getenv("GLM_API_KEY")
+        if glm_key:
+            glm_model = getattr(settings, 'glm_model', None) or os.getenv("GLM_MODEL", "glm-4-flash")
+            config = ProviderConfig(
+                provider_type=ProviderType.GLM,
+                api_key=glm_key,
+                model=glm_model,
+                enabled=True,
+            )
+            self._providers[ProviderType.GLM] = GLMProvider(config)
+            logger.info(f"Loaded GLM provider with model: {glm_model}")
         
         # Set default provider based on priority
         self._set_default_provider(settings)

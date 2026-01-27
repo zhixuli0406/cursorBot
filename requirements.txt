@@ -31,3 +31,4 @@ playwright>=1.40.0
 # Development
 pytest==8.2.2
 pytest-asyncio==0.23.7
+psutil>=5.9.0
