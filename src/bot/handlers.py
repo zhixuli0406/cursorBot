@@ -1404,11 +1404,18 @@ async def _handle_cli_mode(
         
         # Run CLI with current workspace directory and user context
         # Pass user_id to enable conversation memory (--resume)
+        logger.info(f"Sending to CLI: {message_text[:80]}... (user: {user_id})")
+        
         result = await cli.run(
             prompt=message_text,
             working_directory=current_workspace,
             user_id=str(user_id),
         )
+        
+        # Log result for debugging
+        logger.info(f"CLI result: success={result.success}, output_len={len(result.output or '')}")
+        if result.output:
+            logger.debug(f"CLI output preview: {result.output[:150]}...")
         
         if result.success:
             # Escape HTML in output to prevent parsing errors

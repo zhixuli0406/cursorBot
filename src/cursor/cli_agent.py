@@ -311,9 +311,12 @@ class CursorCLIAgent:
         cmd.extend(["--output-format", "text"])
         
         # Check for existing chat session (context memory)
+        # Can be disabled via CLI_DISABLE_RESUME=1 if causing issues
         chat_id = None
         new_chat_created = False
-        if user_id:
+        use_resume = os.getenv("CLI_DISABLE_RESUME", "").lower() not in ("1", "true", "yes")
+        
+        if user_id and use_resume:
             chat_id = self.get_user_chat_id(user_id)
             if not chat_id:
                 # Create a new chat session for context memory
@@ -326,6 +329,8 @@ class CursorCLIAgent:
                 # Resume existing conversation (or newly created one)
                 cmd.extend(["--resume", chat_id])
                 logger.info(f"{'Starting new' if new_chat_created else 'Resuming'} chat {chat_id} for user {user_id}")
+        elif user_id and not use_resume:
+            logger.info(f"CLI resume disabled, running without context memory for user {user_id}")
         
         # Add model if specified
         if model or self.config.model:
@@ -341,7 +346,11 @@ class CursorCLIAgent:
         if api_key:
             process_env["CURSOR_API_KEY"] = api_key
         
+        # Log the full command (without API key) for debugging
+        safe_cmd = [c for c in cmd]  # Don't log API key
         logger.info(f"Running Cursor CLI in {cwd}" + (f" (chat: {chat_id})" if chat_id else " (new chat)"))
+        logger.debug(f"CLI command: {' '.join(safe_cmd)}")
+        logger.debug(f"Prompt: {prompt[:100]}...")
         
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -379,6 +388,14 @@ class CursorCLIAgent:
             duration = (datetime.now() - start_time).total_seconds()
             output = "".join(output_lines)
             error = "".join(error_lines)
+            
+            # Log output for debugging
+            logger.info(f"CLI completed in {duration:.1f}s, exit code: {proc.returncode}")
+            logger.debug(f"CLI output length: {len(output)} chars")
+            if output:
+                logger.debug(f"CLI output preview: {output[:200]}...")
+            if error:
+                logger.warning(f"CLI stderr: {error[:200]}...")
             
             # Extract modified files from output
             files_modified = self._extract_modified_files(output)
