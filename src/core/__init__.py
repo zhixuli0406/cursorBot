@@ -69,6 +69,15 @@ from .tool_policy import (
     PermissionLevel, PolicyAction, RateLimit,
     policy_check, get_tool_policy_manager,
 )
+from .permissions import (
+    PermissionManager, Role, Permission,
+    UserPermissions, GroupSettings,
+    get_permission_manager, require_permission,
+)
+from .llm_task import (
+    LLMTaskManager, TaskType, TaskTemplate, TaskResult,
+    get_llm_task_manager,
+)
 
 __all__ = [
     # Memory
@@ -209,4 +218,18 @@ __all__ = [
     "RateLimit",
     "policy_check",
     "get_tool_policy_manager",
+    # Permissions
+    "PermissionManager",
+    "Role",
+    "Permission",
+    "UserPermissions",
+    "GroupSettings",
+    "get_permission_manager",
+    "require_permission",
+    # LLM Task
+    "LLMTaskManager",
+    "TaskType",
+    "TaskTemplate",
+    "TaskResult",
+    "get_llm_task_manager",
 ]

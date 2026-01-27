@@ -452,6 +452,14 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/policy audit` | 查看審計日誌 |
 | `/tts <文字>` | 文字轉語音 |
 | `/tts providers` | 列出可用 TTS 服務 |
+| `/broadcast <訊息>` | 廣播訊息給所有用戶 |
+| `/usage` | 顯示使用統計 |
+| `/usage me` | 顯示我的使用統計 |
+| `/permissions` | 顯示權限系統狀態 |
+| `/permissions user <id>` | 查看用戶權限 |
+| `/permissions group` | 群組權限設定 |
+| `/elevate` | 查看提升狀態 |
+| `/elevate <分鐘>` | 請求權限提升 |
 
 **模型切換範例：**
 
@@ -868,6 +876,15 @@ CursorBot 提供命令列工具 `cursorbot` 進行管理：
 
 # 啟動 Bot
 ./cursorbot start
+
+# 發送訊息給用戶
+./cursorbot message --user-id 123456 --text "Hello"
+
+# 廣播訊息
+./cursorbot broadcast --text "System announcement"
+
+# 重置 Bot 資料
+./cursorbot reset --confirm
 ```
 
 ## 專案結構

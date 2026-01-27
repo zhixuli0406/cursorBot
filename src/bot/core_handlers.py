@@ -1427,6 +1427,352 @@ async def tts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text(f"❌ TTS 錯誤: {e}")
 
 
+# ============================================
+# Broadcast - Send message to all users
+# ============================================
+
+
+@authorized_only
+async def broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /broadcast command.
+    Send message to all allowed users.
+    
+    Usage:
+        /broadcast <message> - Send message to all users
+    """
+    args = context.args or []
+    
+    if not args:
+        await update.message.reply_text(
+            "📢 <b>廣播訊息</b>\n\n"
+            "<code>/broadcast &lt;訊息&gt;</code> - 發送訊息給所有用戶",
+            parse_mode="HTML"
+        )
+        return
+    
+    message = " ".join(args)
+    
+    try:
+        from ..utils.config import settings
+        
+        allowed_users = settings.telegram_allowed_users
+        if not allowed_users:
+            await update.message.reply_text("❌ 沒有設定允許的用戶")
+            return
+        
+        await update.message.reply_text(f"📢 正在廣播訊息給 {len(allowed_users)} 位用戶...")
+        
+        success_count = 0
+        failed_count = 0
+        
+        for user_id in allowed_users:
+            try:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=f"📢 <b>系統廣播</b>\n\n{message}",
+                    parse_mode="HTML"
+                )
+                success_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to send broadcast to {user_id}: {e}")
+                failed_count += 1
+        
+        await update.message.reply_text(
+            f"📢 <b>廣播完成</b>\n\n"
+            f"✅ 成功: {success_count}\n"
+            f"❌ 失敗: {failed_count}",
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Broadcast error: {e}")
+        await update.message.reply_text(f"❌ 廣播失敗: {e}")
+
+
+# ============================================
+# Usage - Show usage statistics
+# ============================================
+
+
+@authorized_only
+async def usage_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /usage command.
+    Show usage statistics.
+    
+    Usage:
+        /usage - Show usage stats
+        /usage me - Show my usage
+    """
+    args = context.args or []
+    user_id = update.effective_user.id
+    
+    try:
+        from ..core.llm_providers import get_llm_manager
+        manager = get_llm_manager()
+        stats = manager.get_usage_stats()
+        
+        if args and args[0] == "me":
+            # Show user's usage
+            user_calls = stats.get("by_user", {}).get(user_id, 0)
+            await update.message.reply_text(
+                f"📊 <b>我的使用統計</b>\n\n"
+                f"API 呼叫次數: <b>{user_calls}</b>",
+                parse_mode="HTML"
+            )
+        else:
+            # Show overall stats
+            text = f"""📊 <b>使用統計</b>
+
+總 API 呼叫: <b>{stats.get('total_calls', 0)}</b>
+
+<b>按提供者:</b>
+"""
+            for provider, count in stats.get('by_provider', {}).items():
+                text += f"  • {provider}: {count}\n"
+            
+            text += "\n<b>前 5 名用戶:</b>\n"
+            sorted_users = sorted(
+                stats.get('by_user', {}).items(),
+                key=lambda x: x[1],
+                reverse=True
+            )[:5]
+            for uid, count in sorted_users:
+                text += f"  • 用戶 {uid}: {count}\n"
+            
+            await update.message.reply_text(text, parse_mode="HTML")
+            
+    except Exception as e:
+        logger.error(f"Usage error: {e}")
+        await update.message.reply_text(f"❌ 無法取得使用統計: {e}")
+
+
+# ============================================
+# Permissions - Manage permissions
+# ============================================
+
+
+@authorized_only
+async def permissions_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /permissions command.
+    Manage user and group permissions.
+    
+    Usage:
+        /permissions - Show permission status
+        /permissions user <id> - Show user permissions
+        /permissions group - Show group settings
+        /permissions admin add <id> - Add group admin
+        /permissions whitelist add <id> - Add to whitelist
+    """
+    args = context.args or []
+    chat_id = update.effective_chat.id
+    chat_type = update.effective_chat.type
+    
+    try:
+        from ..core.permissions import get_permission_manager, Role
+        pm = get_permission_manager()
+        
+        if not args:
+            # Show overall stats
+            stats = pm.get_stats()
+            await update.message.reply_text(
+                f"🔐 <b>權限系統狀態</b>\n\n"
+                f"• 全域管理員: {stats['global_admins']}\n"
+                f"• 全域黑名單: {stats['global_blacklist']}\n"
+                f"• 已設定用戶: {stats['users_with_permissions']}\n"
+                f"• 已設定群組: {stats['groups_configured']}\n"
+                f"• 提升中用戶: {stats['elevated_users']}",
+                parse_mode="HTML"
+            )
+            return
+        
+        if args[0] == "user" and len(args) >= 2:
+            # Show user permissions
+            target_id = int(args[1])
+            perms = pm.get_user_permissions(target_id)
+            
+            await update.message.reply_text(
+                f"👤 <b>用戶權限</b> ({target_id})\n\n"
+                f"• 角色: {perms.role.value}\n"
+                f"• 全域管理員: {'是' if pm.is_global_admin(target_id) else '否'}\n"
+                f"• 提升中: {'是' if pm.is_elevated(target_id) else '否'}\n"
+                f"• 自訂權限: {len(perms.custom_permissions)}\n"
+                f"• 拒絕權限: {len(perms.denied_permissions)}",
+                parse_mode="HTML"
+            )
+            return
+        
+        if args[0] == "group":
+            # Show group settings
+            if chat_type == "private":
+                await update.message.reply_text("此指令僅限群組使用")
+                return
+            
+            group = pm.get_group_settings(chat_id)
+            await update.message.reply_text(
+                f"👥 <b>群組設定</b>\n\n"
+                f"• 已啟用: {'是' if group.enabled else '否'}\n"
+                f"• 白名單模式: {'是' if group.whitelist_mode else '否'}\n"
+                f"• 管理員數: {len(group.admins)}\n"
+                f"• 版主數: {len(group.moderators)}\n"
+                f"• 白名單: {len(group.whitelist)}\n"
+                f"• 黑名單: {len(group.blacklist)}\n"
+                f"• 停用指令: {len(group.disabled_commands)}",
+                parse_mode="HTML"
+            )
+            return
+        
+        if args[0] == "admin" and len(args) >= 3:
+            action = args[1]
+            target_id = int(args[2])
+            
+            if chat_type == "private":
+                await update.message.reply_text("此指令僅限群組使用")
+                return
+            
+            if action == "add":
+                pm.add_group_admin(chat_id, target_id)
+                await update.message.reply_text(f"✅ 已將用戶 {target_id} 設為群組管理員")
+            elif action == "remove":
+                pm.remove_group_admin(chat_id, target_id)
+                await update.message.reply_text(f"✅ 已移除用戶 {target_id} 的管理員權限")
+            return
+        
+        if args[0] == "whitelist" and len(args) >= 3:
+            action = args[1]
+            target_id = int(args[2])
+            
+            if chat_type == "private":
+                await update.message.reply_text("此指令僅限群組使用")
+                return
+            
+            if action == "add":
+                pm.add_to_whitelist(chat_id, target_id)
+                await update.message.reply_text(f"✅ 已將用戶 {target_id} 加入白名單")
+            elif action == "remove":
+                group = pm.get_group_settings(chat_id)
+                group.whitelist.discard(target_id)
+                await update.message.reply_text(f"✅ 已將用戶 {target_id} 從白名單移除")
+            return
+        
+        if args[0] == "blacklist" and len(args) >= 3:
+            action = args[1]
+            target_id = int(args[2])
+            
+            if action == "add":
+                if chat_type == "private":
+                    pm.add_to_global_blacklist(target_id)
+                    await update.message.reply_text(f"✅ 已將用戶 {target_id} 加入全域黑名單")
+                else:
+                    pm.add_to_blacklist(chat_id, target_id)
+                    await update.message.reply_text(f"✅ 已將用戶 {target_id} 加入群組黑名單")
+            elif action == "remove":
+                if chat_type == "private":
+                    pm.remove_from_global_blacklist(target_id)
+                    await update.message.reply_text(f"✅ 已將用戶 {target_id} 從全域黑名單移除")
+            return
+        
+        # Show help
+        await update.message.reply_text(
+            "🔐 <b>權限管理</b>\n\n"
+            "<code>/permissions</code> - 顯示狀態\n"
+            "<code>/permissions user &lt;id&gt;</code> - 查看用戶\n"
+            "<code>/permissions group</code> - 群組設定\n"
+            "<code>/permissions admin add|remove &lt;id&gt;</code>\n"
+            "<code>/permissions whitelist add|remove &lt;id&gt;</code>\n"
+            "<code>/permissions blacklist add|remove &lt;id&gt;</code>",
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Permissions error: {e}")
+        await update.message.reply_text(f"❌ 權限操作失敗: {e}")
+
+
+# ============================================
+# Elevate - Temporary elevated permissions
+# ============================================
+
+
+@authorized_only
+async def elevate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /elevate command.
+    Grant or check elevated permissions.
+    
+    Usage:
+        /elevate - Check elevation status
+        /elevate <minutes> - Request elevation
+        /elevate revoke - Revoke elevation
+    """
+    args = context.args or []
+    user_id = update.effective_user.id
+    
+    try:
+        from ..core.permissions import get_permission_manager
+        pm = get_permission_manager()
+        
+        if not args:
+            # Check status
+            is_elevated = pm.is_elevated(user_id)
+            perms = pm.get_user_permissions(user_id)
+            
+            if is_elevated:
+                remaining = (perms.elevated_until - datetime.now()).total_seconds() / 60
+                await update.message.reply_text(
+                    f"⬆️ <b>提升狀態</b>\n\n"
+                    f"狀態: 🟢 已提升\n"
+                    f"剩餘時間: {remaining:.0f} 分鐘",
+                    parse_mode="HTML"
+                )
+            else:
+                await update.message.reply_text(
+                    f"⬆️ <b>提升狀態</b>\n\n"
+                    f"狀態: ⚪ 未提升\n\n"
+                    f"使用 <code>/elevate &lt;分鐘&gt;</code> 請求提升",
+                    parse_mode="HTML"
+                )
+            return
+        
+        if args[0] == "revoke":
+            pm.revoke_elevation(user_id)
+            await update.message.reply_text("✅ 已撤銷提升權限")
+            return
+        
+        # Request elevation
+        try:
+            minutes = int(args[0])
+            if minutes < 1 or minutes > 120:
+                await update.message.reply_text("⚠️ 提升時間需在 1-120 分鐘之間")
+                return
+            
+            # Check if user is allowed to self-elevate
+            if not pm.is_global_admin(user_id):
+                await update.message.reply_text("❌ 只有全域管理員可以自行提升權限")
+                return
+            
+            pm.elevate_user(user_id, minutes)
+            await update.message.reply_text(
+                f"⬆️ <b>權限已提升</b>\n\n"
+                f"持續時間: {minutes} 分鐘\n"
+                f"您現在擁有提升權限",
+                parse_mode="HTML"
+            )
+            
+        except ValueError:
+            await update.message.reply_text("❌ 請輸入有效的分鐘數")
+            
+    except Exception as e:
+        logger.error(f"Elevate error: {e}")
+        await update.message.reply_text(f"❌ 提升操作失敗: {e}")
+
+
+# Need to import datetime for elevate handler
+from datetime import datetime
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -1475,6 +1821,13 @@ def setup_core_handlers(app) -> None:
     app.add_handler(CommandHandler("patch", patch_handler))
     app.add_handler(CommandHandler("policy", policy_handler))
     app.add_handler(CommandHandler("tts", tts_handler))
+    
+    # v0.3 Additional commands
+    app.add_handler(CommandHandler("broadcast", broadcast_handler))
+    app.add_handler(CommandHandler("usage", usage_handler))
+    app.add_handler(CommandHandler("permissions", permissions_handler))
+    app.add_handler(CommandHandler("perm", permissions_handler))  # Alias
+    app.add_handler(CommandHandler("elevate", elevate_handler))
 
     logger.info("Core handlers configured")
 
@@ -1494,5 +1847,9 @@ __all__ = [
     "patch_handler",
     "policy_handler",
     "tts_handler",
+    "broadcast_handler",
+    "usage_handler",
+    "permissions_handler",
+    "elevate_handler",
     "setup_core_handlers",
 ]

@@ -9,6 +9,9 @@ Usage:
     cursorbot config          - Show configuration
     cursorbot logs            - Show recent logs
     cursorbot sessions        - List active sessions
+    cursorbot message         - Send message to user
+    cursorbot broadcast       - Broadcast to all users
+    cursorbot reset           - Reset bot data
     cursorbot version         - Show version
 """
 
@@ -178,6 +181,150 @@ def cmd_version(args):
     print("https://github.com/your-repo/cursorBot")
 
 
+def cmd_message(args):
+    """Send message to a user."""
+    user_id = args.user_id
+    text = args.text
+    
+    if not user_id or not text:
+        print("Error: --user-id and --text are required")
+        return
+    
+    async def send_message():
+        try:
+            import httpx
+            
+            api_port = os.getenv("API_PORT", "8000")
+            api_url = f"http://localhost:{api_port}/api/message"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(api_url, json={
+                    "user_id": user_id,
+                    "text": text,
+                })
+                
+                if response.status_code == 200:
+                    print(f"✓ Message sent to user {user_id}")
+                else:
+                    print(f"✗ Failed to send message: {response.text}")
+                    
+        except httpx.ConnectError:
+            print("Error: Could not connect to API server")
+            print("Make sure the bot is running with API enabled")
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    asyncio.run(send_message())
+
+
+def cmd_broadcast(args):
+    """Broadcast message to all users."""
+    text = args.text
+    
+    if not text:
+        print("Error: --text is required")
+        return
+    
+    async def send_broadcast():
+        try:
+            import httpx
+            
+            api_port = os.getenv("API_PORT", "8000")
+            api_url = f"http://localhost:{api_port}/api/broadcast"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(api_url, json={
+                    "message": text,
+                    "parse_mode": "HTML" if args.html else None,
+                })
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    print(f"✓ Broadcast sent")
+                    print(f"  Success: {result.get('success_count', 0)}")
+                    print(f"  Failed: {result.get('failed_count', 0)}")
+                else:
+                    print(f"✗ Failed to broadcast: {response.text}")
+                    
+        except httpx.ConnectError:
+            print("Error: Could not connect to API server")
+            print("Make sure the bot is running with API enabled")
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    asyncio.run(send_broadcast())
+
+
+def cmd_reset(args):
+    """Reset bot data."""
+    if not args.confirm:
+        print("Warning: This will delete all bot data!")
+        print("Use --confirm to proceed")
+        return
+    
+    import shutil
+    
+    # Data directories to reset
+    data_dirs = [
+        Path("data"),
+        Path("logs"),
+    ]
+    
+    # Specific files to keep
+    keep_files = [".env", "env.example"]
+    
+    print("Resetting CursorBot data...")
+    
+    for dir_path in data_dirs:
+        if dir_path.exists():
+            try:
+                shutil.rmtree(dir_path)
+                print(f"  ✓ Deleted {dir_path}")
+            except Exception as e:
+                print(f"  ✗ Failed to delete {dir_path}: {e}")
+    
+    # Clear sessions
+    async def clear_sessions():
+        try:
+            from src.core.context import get_context_manager
+            manager = get_context_manager()
+            manager._contexts.clear()
+            print("  ✓ Cleared all sessions")
+        except Exception:
+            pass
+    
+    asyncio.run(clear_sessions())
+    
+    print("\n✓ Reset complete")
+    print("Restart the bot to apply changes")
+
+
+def cmd_usage(args):
+    """Show usage statistics."""
+    print("CursorBot Usage Statistics")
+    print("=" * 40)
+    
+    async def show_usage():
+        try:
+            from src.core.llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            stats = manager.get_usage_stats()
+            
+            print(f"\nTotal API Calls: {stats.get('total_calls', 0)}")
+            print(f"\nBy Provider:")
+            for provider, count in stats.get('by_provider', {}).items():
+                print(f"  {provider}: {count}")
+            
+            print(f"\nBy User:")
+            for user_id, count in list(stats.get('by_user', {}).items())[:10]:
+                print(f"  User {user_id}: {count}")
+                
+        except Exception as e:
+            print(f"Could not get usage stats: {e}")
+    
+    asyncio.run(show_usage())
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="CursorBot CLI Tool",
@@ -207,6 +354,23 @@ def main():
     # sessions
     subparsers.add_parser("sessions", help="List active sessions")
     
+    # message
+    message_parser = subparsers.add_parser("message", help="Send message to user")
+    message_parser.add_argument("--user-id", type=int, required=True, help="Target user ID")
+    message_parser.add_argument("--text", required=True, help="Message text")
+    
+    # broadcast
+    broadcast_parser = subparsers.add_parser("broadcast", help="Broadcast to all users")
+    broadcast_parser.add_argument("--text", required=True, help="Message text")
+    broadcast_parser.add_argument("--html", action="store_true", help="Parse as HTML")
+    
+    # reset
+    reset_parser = subparsers.add_parser("reset", help="Reset bot data")
+    reset_parser.add_argument("--confirm", action="store_true", help="Confirm reset")
+    
+    # usage
+    subparsers.add_parser("usage", help="Show usage statistics")
+    
     # version
     subparsers.add_parser("version", help="Show version")
     
@@ -228,6 +392,10 @@ def main():
         "config": cmd_config,
         "logs": cmd_logs,
         "sessions": cmd_sessions,
+        "message": cmd_message,
+        "broadcast": cmd_broadcast,
+        "reset": cmd_reset,
+        "usage": cmd_usage,
         "version": cmd_version,
     }
     
