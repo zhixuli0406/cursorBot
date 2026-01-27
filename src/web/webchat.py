@@ -161,9 +161,10 @@ WEBCHAT_HTML = """
                 isTyping: false,
                 connected: false,
                 ws: null,
-                sessionId: localStorage.getItem('chatSessionId') || this.generateSessionId(),
+                sessionId: '',
                 
                 init() {
+                    this.sessionId = localStorage.getItem('chatSessionId') || this.generateSessionId();
                     localStorage.setItem('chatSessionId', this.sessionId);
                     this.connect();
                     this.loadHistory();
