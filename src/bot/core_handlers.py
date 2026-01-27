@@ -2930,14 +2930,17 @@ async def control_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /mode command.
-    Switch between Agent and Cursor Background Agent for default chat.
+    Switch between Agent, Cursor CLI, and Cursor Background Agent.
     
     Usage:
         /mode - Show current mode
+        /mode auto - Auto select best mode (CLI -> Agent -> Cursor)
+        /mode cli - Use Cursor CLI for chat
         /mode agent - Use Agent Loop for chat
         /mode cursor - Use Cursor Background Agent for chat
     """
-    from .handlers import get_user_chat_mode, set_user_chat_mode, is_background_agent_enabled
+    from .handlers import get_user_chat_mode, set_user_chat_mode, is_background_agent_enabled, get_best_available_mode
+    from ..cursor.cli_agent import is_cli_available, get_cli_agent
     
     user_id = update.effective_user.id
     args = context.args or []
@@ -2946,43 +2949,93 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     if not args:
         # Show current mode and options
-        mode_icon = "🤖" if current_mode == "agent" else "💻"
-        mode_name = "Agent Loop" if current_mode == "agent" else "Cursor Background Agent"
+        mode_icons = {"auto": "🔄", "cli": "⌨️", "agent": "🤖", "cursor": "💻"}
+        mode_names = {
+            "auto": "自動選擇",
+            "cli": "Cursor CLI",
+            "agent": "Agent Loop",
+            "cursor": "Background Agent",
+        }
+        mode_icon = mode_icons.get(current_mode, "🔄")
+        mode_name = mode_names.get(current_mode, "自動選擇")
         
         # Check availability
         cursor_available = is_background_agent_enabled()
+        cli_available = is_cli_available()
+        
+        # Get effective mode if auto
+        effective_mode = ""
+        if current_mode == "auto":
+            best = get_best_available_mode()
+            effective_mode = f"\n   實際使用: {mode_names.get(best, best)}"
+        
+        # Get CLI info
+        cli_info = ""
+        if cli_available:
+            cli = get_cli_agent()
+            info = await cli.check_installation()
+            cli_info = f"版本: {info.get('version', 'unknown')}"
         
         text = f"""⚡ <b>對話模式設定</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>目前模式</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-{mode_icon} <b>{mode_name}</b>
+{mode_icon} <b>{mode_name}</b>{effective_mode}
 
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>可用模式</b>
+<b>可用模式</b> (優先順序: CLI → Agent → Cursor)
 ━━━━━━━━━━━━━━━━━━━━━━
+🔄 <b>自動選擇</b> (<code>/mode auto</code>) ⭐ 預設
+   自動選擇最佳可用模式
+   優先順序: CLI → Agent → Background Agent
+
+⌨️ <b>Cursor CLI</b> (<code>/mode cli</code>)
+   使用官方 Cursor CLI (agent 指令)
+   直接與 Cursor AI 互動
+   支援檔案編輯、程式碼生成
+   {f'✅ 可用 ({cli_info})' if cli_available else '⚠️ 未安裝'}
+
 🤖 <b>Agent Loop</b> (<code>/mode agent</code>)
    使用內建 AI Agent 處理對話
    支援多種 AI 模型 (OpenAI/Claude/Gemini/GLM)
    可執行複雜任務、使用技能和工具
-   {'✅ 可用' if True else '❌ 不可用'}
+   ✅ 可用
 
-💻 <b>Cursor Background Agent</b> (<code>/mode cursor</code>)
-   使用 Cursor IDE 的 Background Agent
-   專注於程式碼任務和專案操作
+💻 <b>Background Agent</b> (<code>/mode cursor</code>)
+   使用 Cursor IDE 的 Background Agent API
    需要設定 CURSOR_API_KEY
    {'✅ 可用' if cursor_available else '⚠️ 未設定'}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>切換指令</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-<code>/mode agent</code> - 切換到 Agent Loop
-<code>/mode cursor</code> - 切換到 Cursor Agent
+<code>/mode auto</code> - 自動選擇 ⭐
+<code>/mode cli</code> - Cursor CLI 模式
+<code>/mode agent</code> - Agent Loop 模式
+<code>/mode cursor</code> - Background Agent 模式
 
 設定後，直接發送訊息即可使用選定模式。
 """
         await update.message.reply_text(text, parse_mode="HTML")
+    
+    elif args[0].lower() == "auto":
+        set_user_chat_mode(user_id, "auto")
+        
+        # Get best mode
+        best = get_best_available_mode()
+        mode_names = {"cli": "Cursor CLI", "agent": "Agent Loop", "cursor": "Background Agent"}
+        
+        await update.message.reply_text(
+            "🔄 <b>已切換到自動選擇模式</b>\n\n"
+            f"目前最佳模式: <b>{mode_names.get(best, best)}</b>\n\n"
+            "優先順序:\n"
+            "1️⃣ Cursor CLI (如已安裝)\n"
+            "2️⃣ Agent Loop (內建 AI)\n"
+            "3️⃣ Background Agent (需 API Key)\n\n"
+            "系統會自動選擇最佳可用模式。",
+            parse_mode="HTML"
+        )
     
     elif args[0].lower() == "agent":
         set_user_chat_mode(user_id, "agent")
@@ -3006,6 +3059,37 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             parse_mode="HTML"
         )
     
+    elif args[0].lower() == "cli":
+        if not is_cli_available():
+            await update.message.reply_text(
+                "⚠️ <b>Cursor CLI 未安裝</b>\n\n"
+                "安裝指令:\n"
+                "<code>curl https://cursor.com/install -fsS | bash</code>\n\n"
+                "安裝後重新執行 <code>/mode cli</code>",
+                parse_mode="HTML"
+            )
+            return
+        
+        set_user_chat_mode(user_id, "cli")
+        
+        # Get CLI info
+        cli = get_cli_agent()
+        info = await cli.check_installation()
+        
+        await update.message.reply_text(
+            "⌨️ <b>已切換到 Cursor CLI 模式</b>\n\n"
+            f"路徑: <code>{info.get('path', 'agent')}</code>\n"
+            f"版本: <code>{info.get('version', 'unknown')}</code>\n\n"
+            "現在直接發送訊息將由 Cursor CLI 處理。\n"
+            "CLI 可以:\n"
+            "• 程式碼生成和編輯\n"
+            "• 檔案操作\n"
+            "• 專案分析\n"
+            "• 執行終端指令\n\n"
+            "使用 <code>/repo</code> 設定工作目錄",
+            parse_mode="HTML"
+        )
+    
     elif args[0].lower() == "cursor":
         if not is_background_agent_enabled():
             await update.message.reply_text(
@@ -3013,7 +3097,7 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 "請設定以下環境變數:\n"
                 "<code>CURSOR_API_KEY=your-key</code>\n"
                 "<code>BACKGROUND_AGENT_ENABLED=true</code>\n\n"
-                "目前模式保持不變。",
+                "或使用 <code>/mode cli</code> 改用 Cursor CLI",
                 parse_mode="HTML"
             )
             return
@@ -3035,8 +3119,10 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text(
             "⚡ <b>Mode 指令</b>\n\n"
             "<code>/mode</code> - 查看目前模式\n"
+            "<code>/mode auto</code> - 自動選擇 ⭐\n"
+            "<code>/mode cli</code> - Cursor CLI 模式\n"
             "<code>/mode agent</code> - Agent Loop 模式\n"
-            "<code>/mode cursor</code> - Cursor Agent 模式",
+            "<code>/mode cursor</code> - Background Agent 模式",
             parse_mode="HTML"
         )
 

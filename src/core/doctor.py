@@ -58,6 +58,21 @@ class DiagnosticReport:
     summary: dict = field(default_factory=dict)
     
     @property
+    def passed(self) -> int:
+        """Count of passed (OK/INFO) checks."""
+        return sum(1 for r in self.results if r.level in (DiagnosticLevel.OK, DiagnosticLevel.INFO))
+    
+    @property
+    def failed(self) -> int:
+        """Count of failed (ERROR/CRITICAL) checks."""
+        return sum(1 for r in self.results if r.level in (DiagnosticLevel.ERROR, DiagnosticLevel.CRITICAL))
+    
+    @property
+    def warnings(self) -> int:
+        """Count of warning checks."""
+        return sum(1 for r in self.results if r.level == DiagnosticLevel.WARNING)
+    
+    @property
     def overall_status(self) -> DiagnosticLevel:
         """Determine overall status from all results."""
         if any(r.level == DiagnosticLevel.CRITICAL for r in self.results):

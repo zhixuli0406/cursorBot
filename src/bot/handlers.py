@@ -29,12 +29,12 @@ from ..utils.logger import logger
 workspace_agent: CursorAgent = None
 background_agent: Optional[CursorBackgroundAgent] = None
 
-# User chat mode settings (agent vs cursor)
-# Key: user_id, Value: "agent" or "cursor"
+# User chat mode settings (cli vs agent vs cursor)
+# Key: user_id, Value: "cli", "agent", or "cursor"
 _user_chat_modes: dict[int, str] = {}
 
-# Default chat mode
-DEFAULT_CHAT_MODE = "cursor"  # "agent" or "cursor"
+# Default chat mode (auto = use priority: cli -> agent -> cursor)
+DEFAULT_CHAT_MODE = "auto"  # "auto", "cli", "agent", or "cursor"
 
 
 def get_user_chat_mode(user_id: int) -> str:
@@ -44,8 +44,23 @@ def get_user_chat_mode(user_id: int) -> str:
 
 def set_user_chat_mode(user_id: int, mode: str) -> None:
     """Set user's chat mode preference."""
-    if mode in ("agent", "cursor"):
+    if mode in ("auto", "cli", "agent", "cursor"):
         _user_chat_modes[user_id] = mode
+
+
+def get_best_available_mode() -> str:
+    """
+    Get the best available mode based on priority.
+    Priority: CLI -> Agent -> Background Agent
+    """
+    from ..cursor.cli_agent import is_cli_available
+    
+    # 1. Cursor CLI (highest priority)
+    if is_cli_available():
+        return "cli"
+    
+    # 2. Agent Loop (always available)
+    return "agent"
 
 
 def get_cursor_agent() -> CursorAgent:
@@ -301,7 +316,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /line - Line Bot 狀態
 /menubar - macOS Menu Bar 說明
 /control - 系統控制面板
-/mode - 切換對話模式 (Agent/Cursor)
+/mode - 切換對話模式 (Agent/CLI/Cursor)
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>🛠️ v0.3 功能特色</b>
@@ -1257,16 +1272,93 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     # Get user's chat mode preference
     chat_mode = get_user_chat_mode(user_id)
     
-    if chat_mode == "agent":
-        # Use Agent Loop mode
-        await _handle_agent_mode(update, message_text, user_id, username, chat_id)
-    else:
-        # Use Cursor Background Agent mode (default)
+    # Handle auto mode - use priority: CLI -> Agent -> Background Agent
+    if chat_mode == "auto":
+        chat_mode = get_best_available_mode()
+    
+    if chat_mode == "cli":
+        # Use Cursor CLI mode
+        from ..cursor.cli_agent import is_cli_available
+        if is_cli_available():
+            await _handle_cli_mode(update, message_text, user_id, username, chat_id)
+        else:
+            # Fallback to Agent
+            await _handle_agent_mode(update, message_text, user_id, username, chat_id)
+    elif chat_mode == "cursor":
+        # Use Cursor Background Agent mode
         if is_background_agent_enabled():
             await _handle_background_agent_ask(update, message_text, user_id, username, chat_id)
         else:
-            # Fallback to Agent mode if Cursor not configured
+            # Fallback to CLI or Agent
             await _handle_agent_mode(update, message_text, user_id, username, chat_id)
+    else:
+        # Use Agent Loop mode
+        await _handle_agent_mode(update, message_text, user_id, username, chat_id)
+
+
+async def _handle_cli_mode(
+    update: Update,
+    message_text: str,
+    user_id: int,
+    username: str,
+    chat_id: int,
+) -> None:
+    """Handle message using Cursor CLI mode."""
+    from ..cursor.cli_agent import get_cli_agent
+    
+    try:
+        cli = get_cli_agent()
+        
+        if not cli.is_available:
+            await update.message.reply_text(
+                "⚠️ <b>Cursor CLI 未安裝</b>\n\n"
+                "安裝指令:\n"
+                "<code>curl https://cursor.com/install -fsS | bash</code>\n\n"
+                "使用 <code>/mode agent</code> 切換到 Agent 模式",
+                parse_mode="HTML"
+            )
+            return
+        
+        # Send processing message
+        status_msg = await update.message.reply_text(
+            "💻 <b>Cursor CLI 處理中...</b>\n\n"
+            f"<code>{message_text[:100]}{'...' if len(message_text) > 100 else ''}</code>",
+            parse_mode="HTML"
+        )
+        
+        # Run CLI
+        result = await cli.run(prompt=message_text)
+        
+        if result.success:
+            response = result.output or "任務完成"
+            
+            # Add file modification info if any
+            if result.files_modified:
+                files_info = "\n".join(f"• {f}" for f in result.files_modified[:5])
+                response += f"\n\n📁 <b>修改的檔案:</b>\n{files_info}"
+            
+            # Add duration
+            response += f"\n\n⏱️ 耗時: {result.duration:.1f}s"
+        else:
+            response = f"❌ <b>CLI 錯誤</b>\n\n<code>{result.error[:500]}</code>"
+        
+        # Delete status message
+        await status_msg.delete()
+        
+        # Send response (handle long messages)
+        if len(response) > 4000:
+            chunks = [response[i:i+4000] for i in range(0, len(response), 4000)]
+            for chunk in chunks:
+                await update.message.reply_text(chunk, parse_mode="HTML")
+        else:
+            await update.message.reply_text(response, parse_mode="HTML")
+            
+    except Exception as e:
+        logger.error(f"CLI mode error: {e}")
+        await update.message.reply_text(
+            f"❌ <b>Cursor CLI 錯誤</b>\n\n<code>{str(e)[:500]}</code>",
+            parse_mode="HTML"
+        )
 
 
 async def _handle_agent_mode(

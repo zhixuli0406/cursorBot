@@ -493,8 +493,10 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/control providers` | AI 提供者列表 |
 | `/control url` | Web 介面網址 |
 | `/mode` | 查看/切換對話模式 |
+| `/mode auto` | 自動選擇最佳模式 ⭐ (預設) |
+| `/mode cli` | 切換到 Cursor CLI 模式 |
 | `/mode agent` | 切換到 Agent Loop 模式 |
-| `/mode cursor` | 切換到 Cursor Agent 模式 |
+| `/mode cursor` | 切換到 Background Agent 模式 |
 | `/tui` | 終端介面說明 |
 | `/whatsapp` | WhatsApp 整合狀態 |
 | `/whatsapp qr` | 顯示 WhatsApp 登入 QR Code |
