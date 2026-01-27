@@ -1155,17 +1155,17 @@ class CopilotProvider(LLMProvider):
     """
     GitHub Copilot / GitHub Models provider.
     
-    Uses GitHub Models API (Azure-backed) which provides access to:
-    - GPT-4o, GPT-4o-mini (OpenAI)
-    - Claude 3.5 Sonnet (Anthropic)
-    - Llama 3.x (Meta)
-    - Mistral models
+    Uses GitHub Models API which provides access to:
+    - GPT-5, GPT-4.1, GPT-4o (OpenAI)
+    - DeepSeek V3
+    - Llama 4 (Meta)
     - And more
     
-    Requires a GitHub Personal Access Token with appropriate permissions.
+    Requires a GitHub Personal Access Token with 'models' permission.
+    API Documentation: https://docs.github.com/en/rest/models
     """
     
-    API_BASE = "https://models.inference.ai.azure.com"
+    API_BASE = "https://models.github.ai/inference"
     
     @property
     def provider_type(self) -> ProviderType:
@@ -1181,7 +1181,7 @@ class CopilotProvider(LLMProvider):
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.get(
-                    "https://api.github.com/marketplace_listing/models",
+                    "https://models.github.ai/catalog/models",
                     headers={
                         "Authorization": f"Bearer {self.config.api_key}",
                         "Accept": "application/vnd.github+json",
@@ -1193,36 +1193,39 @@ class CopilotProvider(LLMProvider):
                     data = response.json()
                     models = []
                     for model in data:
-                        if isinstance(model, dict) and "name" in model:
-                            models.append(model["name"])
+                        if isinstance(model, dict) and "id" in model:
+                            models.append(model["id"])
                     return models
                 
         except Exception as e:
             logger.debug(f"Failed to fetch Copilot models: {e}")
         
         # Return default models if API fails
+        # GitHub Models API requires publisher/model format
         return [
-            "gpt-5-main",
-            "gpt-5-thinking",
-            "gpt-4o",
-            "gpt-4o-mini",
-            "o3",
-            "claude-sonnet-4.5",
-            "claude-sonnet-4",
-            "llama-3.3-70b-instruct",
-            "mistral-large-2411",
-            "deepseek-r1",
-            "phi-4",
+            "openai/gpt-5",
+            "openai/gpt-5-mini",
+            "openai/gpt-5-nano",
+            "openai/gpt-5-chat",
+            "openai/gpt-4.1",
+            "openai/gpt-4.1-mini",
+            "openai/gpt-4.1-nano",
+            "openai/gpt-4o",
+            "openai/gpt-4o-mini",
+            "deepseek/deepseek-v3-0324",
+            "meta/llama-4-scout-17b-16e-instruct",
         ]
     
     async def generate(self, messages: list[dict], **kwargs) -> str:
         """Generate response using GitHub Models API."""
         import httpx
         
-        model = kwargs.get("model") or self.config.model or "gpt-4o"
+        model = kwargs.get("model") or self.config.model or "openai/gpt-4o"
         
-        # Determine the correct endpoint based on model
-        # GitHub Models uses Azure OpenAI-compatible API
+        # Log the model being used for debugging
+        logger.debug(f"GitHub Models: using model '{model}', config model: '{self.config.model}'")
+        
+        # GitHub Models API endpoint
         api_base = self.config.api_base or self.API_BASE
         
         payload = {
@@ -1275,7 +1278,7 @@ class CopilotProvider(LLMProvider):
         """Generate streaming response using GitHub Models API."""
         import httpx
         
-        model = kwargs.get("model") or self.config.model or "gpt-4o"
+        model = kwargs.get("model") or self.config.model or "openai/gpt-4o"
         api_base = self.config.api_base or self.API_BASE
         
         payload = {
@@ -1465,7 +1468,7 @@ class LLMProviderManager:
         ProviderType.BEDROCK: "anthropic.claude-sonnet-4-5-20250929-v1:0",
         ProviderType.MOONSHOT: "moonshot-v1-128k",
         ProviderType.GLM: "glm-4.7-flash",
-        ProviderType.COPILOT: "gpt-5-main",
+        ProviderType.COPILOT: "openai/gpt-5",
     }
     
     def __init__(self):
@@ -1581,7 +1584,7 @@ class LLMProviderManager:
         copilot_token = getattr(settings, 'github_token', None) or os.getenv("GITHUB_TOKEN")
         copilot_enabled = getattr(settings, 'copilot_enabled', False) or os.getenv("COPILOT_ENABLED", "").lower() in ("true", "1", "yes")
         if copilot_token and copilot_enabled:
-            copilot_model = getattr(settings, 'copilot_model', None) or os.getenv("COPILOT_MODEL", "gpt-4o")
+            copilot_model = getattr(settings, 'copilot_model', None) or os.getenv("COPILOT_MODEL", "openai/gpt-4o")
             config = ProviderConfig(
                 provider_type=ProviderType.COPILOT,
                 api_key=copilot_token,
@@ -1683,10 +1686,10 @@ class LLMProviderManager:
                 "mistral-large-3", "gemma3", "phi-4",
             ],
             ProviderType.COPILOT: [
-                "gpt-5-main", "gpt-5-thinking", "gpt-4o", "o3",
-                "claude-sonnet-4.5", "claude-sonnet-4",
-                "llama-3.3-70b-instruct", "mistral-large-2411",
-                "deepseek-r1", "phi-4",
+                "openai/gpt-5", "openai/gpt-5-mini", "openai/gpt-5-nano",
+                "openai/gpt-5-chat", "openai/gpt-4.1", "openai/gpt-4.1-mini",
+                "openai/gpt-4o", "openai/gpt-4o-mini",
+                "deepseek/deepseek-v3-0324", "meta/llama-4-scout-17b-16e-instruct",
             ],
             ProviderType.CUSTOM: ["default"],
         }
