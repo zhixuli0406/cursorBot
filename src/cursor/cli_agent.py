@@ -71,12 +71,16 @@ class CursorCLIAgent:
     - Non-interactive mode for automation
     - File operation tracking
     - Timeout handling
+    - Chat session context (resume conversations)
     """
     
     def __init__(self, config: CLIConfig = None):
         self.config = config or CLIConfig()
         self._cli_path = self._find_cli()
         self._status = CLIStatus.AVAILABLE if self._cli_path else CLIStatus.NOT_INSTALLED
+        # Track chat sessions per user for context memory
+        # Key: user_id (str), Value: chat_id (str)
+        self._user_chat_sessions: dict[str, str] = {}
     
     def _find_cli(self) -> str:
         """Find the Cursor CLI binary."""
@@ -146,6 +150,123 @@ class CursorCLIAgent:
                 "message": f"CLI found but version check failed: {e}",
             }
     
+    # ============================================
+    # Chat Session Management (Context Memory)
+    # ============================================
+    
+    async def create_chat(self) -> Optional[str]:
+        """
+        Create a new chat session and return its ID.
+        
+        Returns:
+            Chat ID string, or None if creation failed
+        """
+        if not self.is_available:
+            return None
+        
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                self._cli_path, "create-chat",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+            
+            if proc.returncode == 0:
+                chat_id = stdout.decode().strip()
+                logger.info(f"Created new chat session: {chat_id}")
+                return chat_id
+            else:
+                logger.error(f"Failed to create chat: {stderr.decode()}")
+                return None
+        except Exception as e:
+            logger.error(f"Error creating chat: {e}")
+            return None
+    
+    def get_user_chat_id(self, user_id: str) -> Optional[str]:
+        """
+        Get the current CLI chat session ID for a user.
+        
+        Checks both local cache and session manager for cross-platform consistency.
+        """
+        # Check local cache first
+        if user_id in self._user_chat_sessions:
+            return self._user_chat_sessions[user_id]
+        
+        # Try session manager for cross-platform sessions
+        try:
+            from ..core.session import get_session_manager, ChatType
+            session_mgr = get_session_manager()
+            # Try to find session for this user
+            sessions = session_mgr.list_user_sessions(user_id)
+            for session in sessions:
+                if session.cli_chat_id:
+                    # Cache it locally
+                    self._user_chat_sessions[user_id] = session.cli_chat_id
+                    return session.cli_chat_id
+        except Exception as e:
+            logger.debug(f"Session manager lookup failed: {e}")
+        
+        return None
+    
+    def set_user_chat_id(self, user_id: str, chat_id: str) -> None:
+        """
+        Set the chat session ID for a user.
+        
+        Also syncs with session manager for cross-platform consistency.
+        """
+        self._user_chat_sessions[user_id] = chat_id
+        logger.info(f"Set chat session for user {user_id}: {chat_id}")
+        
+        # Sync with session manager
+        try:
+            from ..core.session import get_session_manager, ChatType
+            session_mgr = get_session_manager()
+            # Get or create session for this user
+            session = session_mgr.get_session(
+                user_id=user_id,
+                chat_id=user_id,  # For CLI, chat_id is same as user_id
+                chat_type=ChatType.DM,
+                channel="cli",
+            )
+            session_mgr.set_cli_chat_id(session.session_key, chat_id)
+        except Exception as e:
+            logger.debug(f"Session manager sync failed: {e}")
+    
+    def clear_user_chat(self, user_id: str) -> bool:
+        """
+        Clear the chat session for a user (start fresh conversation).
+        
+        Also clears from session manager.
+        
+        Returns:
+            True if a session was cleared, False if no session existed
+        """
+        cleared = False
+        
+        if user_id in self._user_chat_sessions:
+            old_chat = self._user_chat_sessions.pop(user_id)
+            logger.info(f"Cleared chat session for user {user_id}: {old_chat}")
+            cleared = True
+        
+        # Also clear from session manager
+        try:
+            from ..core.session import get_session_manager, ChatType
+            session_mgr = get_session_manager()
+            sessions = session_mgr.list_user_sessions(user_id)
+            for session in sessions:
+                if session.cli_chat_id:
+                    session_mgr.set_cli_chat_id(session.session_key, "")
+                    cleared = True
+        except Exception as e:
+            logger.debug(f"Session manager clear failed: {e}")
+        
+        return cleared
+    
+    def get_all_user_sessions(self) -> dict[str, str]:
+        """Get all active user chat sessions."""
+        return self._user_chat_sessions.copy()
+    
     async def run(
         self,
         prompt: str,
@@ -153,9 +274,10 @@ class CursorCLIAgent:
         model: str = None,
         timeout: int = None,
         on_output: Callable[[str], None] = None,
+        user_id: str = None,
     ) -> CLIResult:
         """
-        Run a prompt through Cursor CLI.
+        Run a prompt through Cursor CLI with optional context memory.
         
         Args:
             prompt: The task or question for the AI
@@ -163,6 +285,7 @@ class CursorCLIAgent:
             model: Model to use (default: config or CLI default)
             timeout: Timeout in seconds (default: config)
             on_output: Callback for streaming output
+            user_id: User ID for context memory (enables --resume)
         
         Returns:
             CLIResult with output and status
@@ -187,6 +310,27 @@ class CursorCLIAgent:
         # Use text output format
         cmd.extend(["--output-format", "text"])
         
+        # Check for existing chat session (context memory)
+        chat_id = None
+        new_chat_created = False
+        if user_id:
+            chat_id = self.get_user_chat_id(user_id)
+            if not chat_id:
+                # Create a new chat session for context memory
+                chat_id = await self.create_chat()
+                if chat_id:
+                    self.set_user_chat_id(user_id, chat_id)
+                    new_chat_created = True
+            
+            if chat_id:
+                # Resume existing conversation (or newly created one)
+                cmd.extend(["--resume", chat_id])
+                logger.info(f"{'Starting new' if new_chat_created else 'Resuming'} chat {chat_id} for user {user_id}")
+        
+        # Add model if specified
+        if model or self.config.model:
+            cmd.extend(["--model", model or self.config.model])
+        
         # Add the prompt
         cmd.append(prompt)
         
@@ -197,7 +341,7 @@ class CursorCLIAgent:
         if api_key:
             process_env["CURSOR_API_KEY"] = api_key
         
-        logger.info(f"Running Cursor CLI in {cwd}")
+        logger.info(f"Running Cursor CLI in {cwd}" + (f" (chat: {chat_id})" if chat_id else " (new chat)"))
         
         try:
             proc = await asyncio.create_subprocess_exec(

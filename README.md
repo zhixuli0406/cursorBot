@@ -34,6 +34,12 @@
 - **代理工具** - 檔案操作、命令執行、網頁抓取
 
 ### v0.3 新增功能
+- **Session 管理** - ClawdBot 風格的 Session 管理系統
+  - 持久化 Session 存儲
+  - 重置策略（每日/閒置/手動）
+  - DM 範圍控制（main/per-peer/per-channel-peer）
+  - 身份連結（跨平台用戶映射）
+  - Token 追蹤與統計
 - **Compaction** - 對話壓縮，自動摘要歷史對話以減少 Token 使用
 - **Thinking Mode** - 支援 Claude Extended Thinking 深度思考模式
 - **Subagents** - 子代理系統，可分解複雜任務給專門代理執行
@@ -497,6 +503,8 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/mode cli` | 切換到 Cursor CLI 模式 |
 | `/mode agent` | 切換到 Agent Loop 模式 |
 | `/mode cursor` | 切換到 Background Agent 模式 |
+| `/chatinfo` | 查看 CLI 對話上下文資訊 |
+| `/newchat` | 清除 CLI 對話記憶，開始新對話 |
 | `/tui` | 終端介面說明 |
 | `/whatsapp` | WhatsApp 整合狀態 |
 | `/whatsapp qr` | 顯示 WhatsApp 登入 QR Code |
@@ -520,6 +528,18 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 /model set anthropic                # 使用 Anthropic (預設模型)
 /model set ollama llama3.2          # 使用本地 Ollama
 /model reset                        # 恢復預設
+```
+
+**CLI 對話記憶功能：**
+
+Cursor CLI 模式支援對話記憶，可以延續之前的對話上下文：
+
+```
+/mode cli                           # 切換到 CLI 模式
+(直接發送訊息)                       # 開始對話，自動建立上下文
+(繼續發送)                           # 延續上一個對話
+/chatinfo                           # 查看目前對話資訊
+/newchat                            # 清除記憶，開始新對話
 ```
 
 **`/ask` vs `/agent` 的差別：**
@@ -848,6 +868,77 @@ if ctx.needs_compaction():
 
 # 取得包含摘要的上下文
 messages = ctx.get_context_with_summary()
+```
+
+#### Session 管理（ClawdBot-style）
+
+參考 [ClawdBot Session Management](https://docs.clawd.bot/concepts/session) 實現的 Session 管理系統：
+
+```python
+from src.core.session import get_session_manager, ChatType, DMScope
+
+# 取得 session manager
+session_mgr = get_session_manager()
+
+# 取得或建立 session
+session = session_mgr.get_session(
+    user_id="123456",
+    chat_id="123456",
+    chat_type=ChatType.DM,
+    channel="telegram",
+)
+
+# 查看 session 狀態
+status = session_mgr.get_session_status(session.session_key)
+print(f"Token 使用: {status['total_tokens']}")
+print(f"訊息數: {status['message_count']}")
+
+# 重置 session（開始新對話）
+new_session = session_mgr.reset_session(
+    user_id="123456",
+    chat_id="123456",
+    chat_type=ChatType.DM,
+    channel="telegram",
+)
+
+# 統計資訊
+stats = session_mgr.get_stats()
+print(f"總 Sessions: {stats['total_sessions']}")
+```
+
+**Session 指令：**
+
+| 指令 | 說明 |
+|------|------|
+| `/session` | 查看目前 session 資訊 |
+| `/session list` | 列出所有 sessions |
+| `/session stats` | 統計資訊 |
+| `/session reset` | 重置當前 session |
+| `/session config` | 查看設定 |
+| `/new` | 開始新對話（重置所有上下文） |
+| `/status` | 狀態總覽 |
+| `/compact` | 壓縮對話歷史 |
+
+**環境變數設定：**
+
+```env
+# DM 範圍模式
+# main = 所有 DM 共用 (預設)
+# per-peer = 每人獨立
+# per-channel-peer = 每頻道每人獨立
+SESSION_DM_SCOPE=main
+
+# 重置模式
+# daily = 每日重置 (預設)
+# idle = 閒置重置
+# manual = 手動重置
+SESSION_RESET_MODE=daily
+
+# 每日重置時間 (0-23)
+SESSION_RESET_HOUR=4
+
+# 閒置分鐘數
+SESSION_IDLE_MINUTES=120
 ```
 
 #### 任務佇列

@@ -14,6 +14,12 @@ from ..core import (
     get_approval_manager,
     ApprovalType,
 )
+from ..core.session import (
+    get_session_manager,
+    ChatType,
+    DMScope,
+    ResetMode,
+)
 from ..utils.auth import authorized_only
 from ..utils.logger import logger
 
@@ -111,6 +117,560 @@ async def memory_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             "❌ 無效的記憶指令。使用 /memory 查看用法。"
         )
+
+
+# ============================================
+# Session Commands (Inspired by ClawdBot)
+# Reference: https://docs.clawd.bot/concepts/session
+# ============================================
+
+
+@authorized_only
+async def session_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /session command.
+    View and manage chat sessions with context memory.
+    
+    Usage:
+        /session - Show current session info
+        /session list - List all your sessions
+        /session stats - Show session statistics
+        /session reset - Reset current session
+        /session config - Show session configuration
+    """
+    from html import escape
+    
+    user_id = str(update.effective_user.id)
+    chat_id = str(update.effective_chat.id)
+    chat_type_raw = update.effective_chat.type
+    
+    # Map telegram chat type to our ChatType
+    if chat_type_raw == "private":
+        chat_type = ChatType.DM
+    elif chat_type_raw in ("group", "supergroup"):
+        chat_type = ChatType.GROUP
+    else:
+        chat_type = ChatType.CHANNEL
+    
+    session_mgr = get_session_manager()
+    args = context.args or []
+    
+    if not args:
+        # Show current session info
+        session = session_mgr.get_session(
+            user_id=user_id,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            channel="telegram",
+        )
+        
+        status = session_mgr.get_session_status(session.session_key)
+        
+        # Format duration
+        from datetime import datetime
+        age_seconds = (datetime.now() - session.created_at).total_seconds()
+        if age_seconds < 60:
+            age_str = f"{int(age_seconds)}秒"
+        elif age_seconds < 3600:
+            age_str = f"{int(age_seconds / 60)}分鐘"
+        elif age_seconds < 86400:
+            age_str = f"{int(age_seconds / 3600)}小時"
+        else:
+            age_str = f"{int(age_seconds / 86400)}天"
+        
+        # Check CLI chat context
+        cli_info = ""
+        if session.cli_chat_id:
+            cli_info = f"\n🔗 CLI 對話: <code>{session.cli_chat_id[:12]}...</code>"
+        
+        text = f"""💬 <b>目前對話 Session</b>
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>基本資訊</b>
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 Session ID: <code>{session.session_id[:12]}...</code>
+🔑 Session Key: <code>{escape(session.session_key[:30])}...</code>
+📅 建立時間: {session.created_at.strftime('%Y-%m-%d %H:%M')}
+⏱️ Session 年齡: {age_str}
+📨 訊息數量: {session.message_count}
+🔄 壓縮次數: {session.compaction_count}{cli_info}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>Token 使用量</b>
+━━━━━━━━━━━━━━━━━━━━━━
+📥 輸入: {status['input_tokens']:,}
+📤 輸出: {status['output_tokens']:,}
+📊 總計: {status['total_tokens']:,}
+🧠 上下文: {status['context_tokens']:,}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>重置策略</b>
+━━━━━━━━━━━━━━━━━━━━━━
+模式: {status['reset_policy']['mode']}
+{'每日重置時間: ' + str(status['reset_policy']['at_hour']) + ':00' if status['reset_policy']['mode'] == 'daily' else ''}
+{'閒置分鐘: ' + str(status['reset_policy']['idle_minutes']) if status['reset_policy']['mode'] == 'idle' else ''}
+狀態: {'⚠️ 已過期' if status['is_stale'] else '✅ 活躍'}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>指令</b>
+━━━━━━━━━━━━━━━━━━━━━━
+<code>/session list</code> - 所有 sessions
+<code>/session stats</code> - 統計資訊
+<code>/session reset</code> - 重置此 session
+<code>/new</code> - 開始新對話
+<code>/compact</code> - 壓縮對話歷史
+"""
+        await update.message.reply_text(text, parse_mode="HTML")
+    
+    elif args[0] == "list":
+        # List user's sessions
+        sessions = session_mgr.list_user_sessions(user_id)
+        
+        if not sessions:
+            await update.message.reply_text("📭 目前沒有任何 session")
+            return
+        
+        text = f"📋 <b>我的 Sessions</b> ({len(sessions)} 個)\n\n"
+        
+        for i, s in enumerate(sessions[:10], 1):
+            age_seconds = (datetime.now() - s.updated_at).total_seconds()
+            if age_seconds < 60:
+                age_str = f"{int(age_seconds)}秒前"
+            elif age_seconds < 3600:
+                age_str = f"{int(age_seconds / 60)}分前"
+            elif age_seconds < 86400:
+                age_str = f"{int(age_seconds / 3600)}時前"
+            else:
+                age_str = f"{int(age_seconds / 86400)}天前"
+            
+            channel_icon = {
+                "telegram": "📱",
+                "line": "💚",
+                "webchat": "🌐",
+                "discord": "🎮",
+            }.get(s.channel, "💬")
+            
+            type_label = {
+                ChatType.DM: "私訊",
+                ChatType.GROUP: "群組",
+                ChatType.THREAD: "討論串",
+                ChatType.CHANNEL: "頻道",
+            }.get(s.chat_type, "其他")
+            
+            display = s.display_name or s.subject or s.session_key[:20]
+            
+            text += f"{i}. {channel_icon} <b>{escape(display)}</b>\n"
+            text += f"   {type_label} | {age_str} | {s.message_count} 訊息\n"
+        
+        if len(sessions) > 10:
+            text += f"\n...還有 {len(sessions) - 10} 個 sessions"
+        
+        await update.message.reply_text(text, parse_mode="HTML")
+    
+    elif args[0] == "stats":
+        # Show statistics
+        stats = session_mgr.get_stats()
+        
+        channel_text = "\n".join(
+            f"   • {ch}: {count}" 
+            for ch, count in stats['by_channel'].items()
+        ) or "   （無）"
+        
+        type_text = "\n".join(
+            f"   • {t}: {count}" 
+            for t, count in stats['by_type'].items()
+        ) or "   （無）"
+        
+        text = f"""📊 <b>Session 統計</b>
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>總覽</b>
+━━━━━━━━━━━━━━━━━━━━━━
+📦 Sessions 數量: {stats['total_sessions']}
+📨 總訊息數: {stats['total_messages']:,}
+🎫 總 Token 數: {stats['total_tokens']:,}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>依頻道</b>
+━━━━━━━━━━━━━━━━━━━━━━
+{channel_text}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>依類型</b>
+━━━━━━━━━━━━━━━━━━━━━━
+{type_text}
+
+📁 存儲路徑: <code>{stats['store_path']}</code>
+"""
+        await update.message.reply_text(text, parse_mode="HTML")
+    
+    elif args[0] == "reset":
+        # Reset current session
+        session = session_mgr.reset_session(
+            user_id=user_id,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            channel="telegram",
+        )
+        
+        await update.message.reply_text(
+            f"🔄 <b>Session 已重置</b>\n\n"
+            f"新 Session ID: <code>{session.session_id[:12]}...</code>\n\n"
+            f"對話上下文已清除，開始新對話。",
+            parse_mode="HTML"
+        )
+    
+    elif args[0] == "config":
+        # Show session configuration
+        config = session_mgr.config
+        
+        dm_scope_names = {
+            DMScope.MAIN: "main (所有 DM 共用)",
+            DMScope.PER_PEER: "per-peer (每人獨立)",
+            DMScope.PER_CHANNEL_PEER: "per-channel-peer (每頻道每人獨立)",
+        }
+        
+        reset_mode_names = {
+            ResetMode.DAILY: "daily (每日重置)",
+            ResetMode.IDLE: "idle (閒置重置)",
+            ResetMode.MANUAL: "manual (手動重置)",
+            ResetMode.NEVER: "never (永不重置)",
+        }
+        
+        identity_text = ""
+        if config.identity_links:
+            identity_text = "\n<b>身份連結:</b>\n"
+            for canonical, links in list(config.identity_links.items())[:3]:
+                identity_text += f"   • {canonical}: {len(links)} 個連結\n"
+        
+        text = f"""⚙️ <b>Session 設定</b>
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>DM 範圍</b>
+━━━━━━━━━━━━━━━━━━━━━━
+{dm_scope_names.get(config.dm_scope, str(config.dm_scope))}
+Main Key: {config.main_key}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>預設重置策略</b>
+━━━━━━━━━━━━━━━━━━━━━━
+模式: {reset_mode_names.get(config.default_reset.mode, str(config.default_reset.mode))}
+每日時間: {config.default_reset.at_hour}:00
+閒置分鐘: {config.default_reset.idle_minutes}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>重置觸發器</b>
+━━━━━━━━━━━━━━━━━━━━━━
+{', '.join(config.reset_triggers)}
+{identity_text}
+━━━━━━━━━━━━━━━━━━━━━━
+<b>環境變數設定</b>
+━━━━━━━━━━━━━━━━━━━━━━
+<code>SESSION_DM_SCOPE</code> - DM 範圍模式
+<code>SESSION_RESET_MODE</code> - 重置模式
+<code>SESSION_RESET_HOUR</code> - 每日重置時間
+<code>SESSION_IDLE_MINUTES</code> - 閒置分鐘數
+"""
+        await update.message.reply_text(text, parse_mode="HTML")
+    
+    elif args[0] == "cleanup":
+        # Cleanup stale sessions (admin only)
+        count = session_mgr.cleanup_stale_sessions()
+        await update.message.reply_text(f"🧹 已清理 {count} 個過期 sessions")
+    
+    else:
+        await update.message.reply_text(
+            "❌ 無效的 session 指令。使用 /session 查看用法。"
+        )
+
+
+@authorized_only
+async def new_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /new command.
+    Start a fresh session (reset trigger).
+    
+    Usage:
+        /new - Start new session
+        /new <model> - Start new session with specific model
+    """
+    user_id = str(update.effective_user.id)
+    chat_id = str(update.effective_chat.id)
+    chat_type_raw = update.effective_chat.type
+    
+    # Map chat type
+    if chat_type_raw == "private":
+        chat_type = ChatType.DM
+    elif chat_type_raw in ("group", "supergroup"):
+        chat_type = ChatType.GROUP
+    else:
+        chat_type = ChatType.CHANNEL
+    
+    session_mgr = get_session_manager()
+    args = context.args or []
+    
+    # Reset session
+    session = session_mgr.reset_session(
+        user_id=user_id,
+        chat_id=chat_id,
+        chat_type=chat_type,
+        channel="telegram",
+    )
+    
+    # Also clear CLI chat context
+    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    if is_cli_available():
+        cli = get_cli_agent()
+        cli.clear_user_chat(user_id)
+    
+    # Also clear conversation context
+    context_mgr = get_context_manager()
+    ctx = context_mgr.get_context(
+        user_id=int(user_id),
+        chat_id=int(chat_id),
+        chat_type=chat_type_raw,
+    )
+    ctx.clear()
+    
+    # Handle model switch if specified
+    model_msg = ""
+    if args:
+        model_name = args[0]
+        from .handlers import set_user_chat_mode
+        from ..core.llm_providers import get_llm_manager
+        
+        # Try to set model
+        try:
+            llm_mgr = get_llm_manager()
+            available = llm_mgr.list_available_providers()
+            
+            # Check if it's a provider name
+            provider_match = next(
+                (p for p in available if p['name'].lower() == model_name.lower()),
+                None
+            )
+            if provider_match:
+                llm_mgr.set_user_model(user_id, provider_match['name'])
+                model_msg = f"\n🤖 模型已切換為: {provider_match['name']}"
+        except Exception as e:
+            logger.warning(f"Failed to set model: {e}")
+    
+    await update.message.reply_text(
+        f"🆕 <b>新對話已開始</b>\n\n"
+        f"Session ID: <code>{session.session_id[:12]}...</code>\n"
+        f"所有對話上下文已清除。{model_msg}\n\n"
+        f"💡 現在可以開始全新的對話了！",
+        parse_mode="HTML"
+    )
+
+
+@authorized_only
+async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /status command.
+    Show current session status and system info.
+    
+    Similar to ClawdBot's /status command.
+    """
+    from datetime import datetime
+    from html import escape
+    
+    user_id = str(update.effective_user.id)
+    chat_id = str(update.effective_chat.id)
+    chat_type_raw = update.effective_chat.type
+    
+    # Map chat type
+    if chat_type_raw == "private":
+        chat_type = ChatType.DM
+    elif chat_type_raw in ("group", "supergroup"):
+        chat_type = ChatType.GROUP
+    else:
+        chat_type = ChatType.CHANNEL
+    
+    session_mgr = get_session_manager()
+    
+    # Get current session
+    session = session_mgr.get_session(
+        user_id=user_id,
+        chat_id=chat_id,
+        chat_type=chat_type,
+        channel="telegram",
+    )
+    
+    # Get current mode and model
+    from .handlers import get_user_chat_mode
+    from ..core.llm_providers import get_llm_manager
+    
+    current_mode = get_user_chat_mode(int(user_id))
+    
+    mode_names = {
+        "auto": "🔄 自動選擇",
+        "cli": "⌨️ Cursor CLI",
+        "agent": "🤖 Agent Loop",
+        "cursor": "💻 Background Agent",
+    }
+    
+    # Get model info
+    llm_mgr = get_llm_manager()
+    model_info = llm_mgr.get_user_model(user_id)
+    
+    # Get context info
+    context_mgr = get_context_manager()
+    ctx = context_mgr.get_context(
+        user_id=int(user_id),
+        chat_id=int(chat_id),
+        chat_type=chat_type_raw,
+    )
+    
+    # Calculate context usage
+    context_tokens = ctx.estimate_tokens()
+    max_tokens = 8000  # Approximate max context
+    context_pct = min(100, int(context_tokens / max_tokens * 100))
+    context_bar = "█" * (context_pct // 10) + "░" * (10 - context_pct // 10)
+    
+    # Check CLI status
+    cli_status = "❌ 未安裝"
+    from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    if is_cli_available():
+        cli = get_cli_agent()
+        cli_chat = cli.get_user_chat_id(user_id)
+        if cli_chat:
+            cli_status = f"✅ 連線中 ({cli_chat[:8]}...)"
+        else:
+            cli_status = "✅ 可用"
+    
+    text = f"""📊 <b>狀態總覽</b>
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>對話模式</b>
+━━━━━━━━━━━━━━━━━━━━━━
+{mode_names.get(current_mode, current_mode)}
+🤖 模型: {model_info or '預設'}
+⌨️ CLI: {cli_status}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>Session 狀態</b>
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 {session.session_id[:12]}...
+📨 訊息: {session.message_count}
+🎫 Token: {session.total_tokens:,}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>上下文使用量</b>
+━━━━━━━━━━━━━━━━━━━━━━
+[{context_bar}] {context_pct}%
+約 {context_tokens:,} / {max_tokens:,} tokens
+{f'⚠️ 建議使用 /compact 壓縮' if context_pct > 70 else ''}
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>快捷指令</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/new - 開始新對話
+/compact - 壓縮上下文
+/mode - 切換模式
+/model - 切換模型
+"""
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+@authorized_only
+async def compact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /compact command.
+    Compress conversation context to free up space.
+    
+    Usage:
+        /compact - Auto compress
+        /compact <instructions> - Compress with specific focus
+    """
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    chat_type = update.effective_chat.type
+    args = context.args or []
+    
+    # Get context
+    context_mgr = get_context_manager()
+    ctx = context_mgr.get_context(
+        user_id=user_id,
+        chat_id=chat_id,
+        chat_type=chat_type,
+    )
+    
+    # Check if compaction is needed
+    before_tokens = ctx.estimate_tokens()
+    before_messages = len(ctx.messages)
+    
+    if before_messages < 5:
+        await update.message.reply_text(
+            "ℹ️ 對話歷史太短，不需要壓縮。\n"
+            f"目前只有 {before_messages} 條訊息。"
+        )
+        return
+    
+    # Send processing message
+    status_msg = await update.message.reply_text("🔄 正在壓縮對話歷史...")
+    
+    try:
+        # Perform compaction
+        instructions = " ".join(args) if args else None
+        
+        # Use custom summarizer if instructions provided
+        if instructions:
+            async def custom_summarizer(messages):
+                from ..core.llm_providers import get_llm_manager
+                manager = get_llm_manager()
+                
+                conversation_text = "\n".join([
+                    f"{m['role'].upper()}: {m['content'][:500]}"
+                    for m in messages
+                ])
+                
+                prompt = [
+                    {
+                        "role": "system",
+                        "content": (
+                            f"Summarize this conversation focusing on: {instructions}\n"
+                            "Keep key decisions, code snippets, and important context."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": conversation_text
+                    }
+                ]
+                
+                return await manager.generate(prompt, max_tokens=500)
+            
+            compacted = await ctx.compact(summarizer=custom_summarizer, force=True)
+        else:
+            compacted = await ctx.compact(force=True)
+        
+        after_tokens = ctx.estimate_tokens()
+        after_messages = len(ctx.messages)
+        
+        # Update session stats
+        session_mgr = get_session_manager()
+        session_key = f"agent:default:telegram:dm:{user_id}" if chat_type == "private" else f"agent:default:telegram:group:{chat_id}"
+        session = session_mgr.get_session_by_key(session_key)
+        if session:
+            session.compaction_count += 1
+            session.context_tokens = after_tokens
+        
+        saved_tokens = before_tokens - after_tokens
+        saved_messages = before_messages - after_messages
+        
+        await status_msg.edit_text(
+            f"✅ <b>對話已壓縮</b>\n\n"
+            f"📉 訊息: {before_messages} → {after_messages} (-{saved_messages})\n"
+            f"🎫 Token: {before_tokens:,} → {after_tokens:,} (-{saved_tokens:,})\n"
+            f"📊 節省: {int(saved_tokens / max(before_tokens, 1) * 100)}%\n\n"
+            f"壓縮摘要已保存在上下文中。",
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Compaction error: {e}")
+        await status_msg.edit_text(f"❌ 壓縮失敗: {str(e)[:100]}")
 
 
 # ============================================
@@ -2994,6 +3554,7 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
    使用官方 Cursor CLI (agent 指令)
    直接與 Cursor AI 互動
    支援檔案編輯、程式碼生成
+   <b>✨ 對話記憶功能</b> - 保持上下文
    {f'✅ 可用 ({cli_info})' if cli_available else '⚠️ 未安裝'}
 
 🤖 <b>Agent Loop</b> (<code>/mode agent</code>)
@@ -3015,7 +3576,14 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 <code>/mode agent</code> - Agent Loop 模式
 <code>/mode cursor</code> - Background Agent 模式
 
+━━━━━━━━━━━━━━━━━━━━━━
+<b>對話記憶 (CLI)</b>
+━━━━━━━━━━━━━━━━━━━━━━
+<code>/chatinfo</code> - 查看目前對話資訊
+<code>/newchat</code> - 清除記憶，開始新對話
+
 設定後，直接發送訊息即可使用選定模式。
+CLI 模式支援對話記憶，可延續之前的上下文。
 """
         await update.message.reply_text(text, parse_mode="HTML")
     
@@ -3127,6 +3695,107 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
 
 
+# ============================================
+# New Chat - Clear CLI Context
+# ============================================
+
+
+@authorized_only
+async def newchat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /newchat command.
+    Start a fresh CLI conversation without previous context.
+    
+    Usage:
+        /newchat - Clear current chat context and start fresh
+    """
+    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from .handlers import get_user_chat_mode
+    
+    user_id = update.effective_user.id
+    
+    if not is_cli_available():
+        await update.message.reply_text(
+            "⚠️ <b>Cursor CLI 未安裝</b>\n\n"
+            "此指令僅適用於 CLI 模式。\n"
+            "安裝: <code>curl https://cursor.com/install -fsS | bash</code>",
+            parse_mode="HTML"
+        )
+        return
+    
+    cli = get_cli_agent()
+    
+    # Check if user has an active chat
+    old_chat_id = cli.get_user_chat_id(str(user_id))
+    
+    if old_chat_id:
+        # Clear the chat session
+        cli.clear_user_chat(str(user_id))
+        
+        await update.message.reply_text(
+            "🔄 <b>對話已重置</b>\n\n"
+            f"已清除對話: <code>{old_chat_id[:8]}...</code>\n\n"
+            "下次對話將開始全新的上下文。\n"
+            "之前的對話記憶已清除。",
+            parse_mode="HTML"
+        )
+    else:
+        await update.message.reply_text(
+            "ℹ️ <b>無活躍對話</b>\n\n"
+            "您目前沒有活躍的對話上下文。\n"
+            "直接發送訊息即可開始新對話。",
+            parse_mode="HTML"
+        )
+
+
+@authorized_only
+async def chatinfo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /chatinfo command.
+    Show current CLI chat session info.
+    
+    Usage:
+        /chatinfo - Show current chat context info
+    """
+    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from .handlers import get_user_chat_mode
+    
+    user_id = update.effective_user.id
+    current_mode = get_user_chat_mode(user_id)
+    
+    if not is_cli_available():
+        await update.message.reply_text(
+            "⚠️ <b>Cursor CLI 未安裝</b>\n\n"
+            "此指令僅適用於 CLI 模式。",
+            parse_mode="HTML"
+        )
+        return
+    
+    cli = get_cli_agent()
+    chat_id = cli.get_user_chat_id(str(user_id))
+    
+    if chat_id:
+        mode_text = "CLI 模式" if current_mode == "cli" else f"{current_mode} 模式 (CLI 有對話記錄)"
+        await update.message.reply_text(
+            f"💬 <b>對話上下文資訊</b>\n\n"
+            f"🆔 對話 ID: <code>{chat_id}</code>\n"
+            f"⚡ 目前模式: {mode_text}\n\n"
+            f"<b>說明:</b>\n"
+            f"• 對話具有記憶功能，可延續上下文\n"
+            f"• 使用 <code>/newchat</code> 清除記憶\n"
+            f"• 對話記錄儲存在 Cursor 伺服器",
+            parse_mode="HTML"
+        )
+    else:
+        await update.message.reply_text(
+            "💬 <b>對話上下文資訊</b>\n\n"
+            "🔹 目前沒有活躍的對話\n\n"
+            "發送訊息後將自動建立新對話，\n"
+            "並開始記錄上下文。",
+            parse_mode="HTML"
+        )
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -3136,6 +3805,10 @@ def setup_core_handlers(app) -> None:
     """
     # Mode switching command
     app.add_handler(CommandHandler("mode", mode_handler))
+    
+    # Chat context management (CLI)
+    app.add_handler(CommandHandler("newchat", newchat_handler))
+    app.add_handler(CommandHandler("chatinfo", chatinfo_handler))
     
     # Agent command
     app.add_handler(CommandHandler("agent", agent_handler))
@@ -3151,6 +3824,12 @@ def setup_core_handlers(app) -> None:
     
     # Memory commands
     app.add_handler(CommandHandler("memory", memory_handler))
+    
+    # Session management commands (ClawdBot-style)
+    app.add_handler(CommandHandler("session", session_handler))
+    app.add_handler(CommandHandler("new", new_handler))
+    app.add_handler(CommandHandler("status", status_handler))
+    app.add_handler(CommandHandler("compact", compact_handler))
 
     # Skills commands
     app.add_handler(CommandHandler("skills", skills_handler))

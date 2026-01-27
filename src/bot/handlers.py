@@ -315,6 +315,20 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /menubar - macOS Menu Bar 說明
 /control - 系統控制面板
 /mode - 切換對話模式 (Agent/CLI/Cursor)
+/newchat - 清除 CLI 對話上下文
+/chatinfo - 查看 CLI 對話資訊
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>📋 Session 管理</b> (ClawdBot-style)
+━━━━━━━━━━━━━━━━━━━━━━
+/session - 查看目前 session 資訊
+/session list - 列出所有 sessions
+/session stats - 統計資訊
+/session reset - 重置當前 session
+/session config - 查看設定
+/new - 開始新對話 (重置所有上下文)
+/status - 狀態總覽
+/compact - 壓縮對話歷史
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>🛠️ v0.3 功能特色</b>
@@ -325,13 +339,15 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • <b>iMessage</b> - macOS 訊息整合
 • <b>Chrome Extension</b> - 瀏覽器擴展
 • <b>Moonshot AI</b> - 中國月之暗面
+• <b>Session 管理</b> - ClawdBot 風格
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>💡 使用提示</b>
 ━━━━━━━━━━━━━━━━━━━━━━
 • /model set glm 使用智譜 AI
-• /line setup 查看 Line 設定
-• /menubar 查看 Menu Bar 說明
+• /new 開始全新對話
+• /status 查看目前狀態
+• /compact 壓縮過長的對話
 • Chrome Extension 安裝見文件
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
@@ -1386,8 +1402,13 @@ async def _handle_cli_mode(
             parse_mode="HTML"
         )
         
-        # Run CLI with current workspace directory
-        result = await cli.run(prompt=message_text, working_directory=current_workspace)
+        # Run CLI with current workspace directory and user context
+        # Pass user_id to enable conversation memory (--resume)
+        result = await cli.run(
+            prompt=message_text,
+            working_directory=current_workspace,
+            user_id=str(user_id),
+        )
         
         if result.success:
             # Escape HTML in output to prevent parsing errors
