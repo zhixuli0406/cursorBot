@@ -144,11 +144,15 @@ async def handle_help(ctx: MessageContext, interaction=None) -> None:
 ━━━━━━━━━━━━━━━━━━━━━━
 **🤖 AI 模型管理**
 ━━━━━━━━━━━━━━━━━━━━━━
-• `/model` - 查看目前 AI 模型
+• `/model` - 查看目前 Agent 模型
 • `/model list` - 列出所有可用模型
-• `/model set <provider> [model]` - 切換模型
+• `/model set <provider> [model]` - 切換 Agent 模型
+• `/climodel` - CLI 模型設定
+• `/climodel list` - 列出 CLI 可用模型
+• `/climodel set <model>` - 切換 CLI 模型
 
-**支援:** OpenAI, Claude, Gemini, GLM, Ollama
+**Agent 支援:** OpenAI, Claude, Gemini, GLM, Ollama
+**CLI 支援:** GPT-5.2, Claude 4.5, Gemini 3, Grok
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **💬 Session 管理** (ClawdBot-style)

@@ -72,6 +72,7 @@ class CursorCLIAgent:
     - File operation tracking
     - Timeout handling
     - Chat session context (resume conversations)
+    - Model selection support
     """
     
     def __init__(self, config: CLIConfig = None):
@@ -81,6 +82,12 @@ class CursorCLIAgent:
         # Track chat sessions per user for context memory
         # Key: user_id (str), Value: chat_id (str)
         self._user_chat_sessions: dict[str, str] = {}
+        # Track model selection per user
+        # Key: user_id (str), Value: model_id (str)
+        self._user_models: dict[str, str] = {}
+        # Cache available models
+        self._available_models: list[dict] = []
+        self._models_fetched: bool = False
     
     def _find_cli(self) -> str:
         """Find the Cursor CLI binary."""
@@ -267,6 +274,102 @@ class CursorCLIAgent:
         """Get all active user chat sessions."""
         return self._user_chat_sessions.copy()
     
+    # ============================================
+    # Model Management
+    # ============================================
+    
+    async def list_models(self, force_refresh: bool = False) -> list[dict]:
+        """
+        List available models from Cursor CLI.
+        
+        Returns:
+            List of model dictionaries with 'id', 'name', 'current', 'default' keys
+        """
+        if not self.is_available:
+            return []
+        
+        # Return cached if available
+        if self._models_fetched and not force_refresh:
+            return self._available_models
+        
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                self._cli_path, "agent", "--list-models",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+            
+            if proc.returncode == 0:
+                output = stdout.decode()
+                models = self._parse_models_output(output)
+                self._available_models = models
+                self._models_fetched = True
+                logger.info(f"Fetched {len(models)} CLI models")
+                return models
+            else:
+                logger.error(f"Failed to list models: {stderr.decode()}")
+                return []
+        except Exception as e:
+            logger.error(f"Error listing models: {e}")
+            return []
+    
+    def _parse_models_output(self, output: str) -> list[dict]:
+        """Parse the output of --list-models command."""
+        models = []
+        lines = output.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            # Skip header and empty lines
+            if not line or line.startswith('Available') or line.startswith('Tip:'):
+                continue
+            
+            # Parse format: "model-id - Model Name (current, default)"
+            if ' - ' in line:
+                parts = line.split(' - ', 1)
+                model_id = parts[0].strip()
+                rest = parts[1].strip() if len(parts) > 1 else ""
+                
+                # Check for flags
+                is_current = "(current" in rest.lower()
+                is_default = "default)" in rest.lower()
+                
+                # Clean the name
+                name = rest
+                for flag in ['(current, default)', '(current)', '(default)']:
+                    name = name.replace(flag, '').strip()
+                
+                models.append({
+                    "id": model_id,
+                    "name": name or model_id,
+                    "current": is_current,
+                    "default": is_default,
+                })
+        
+        return models
+    
+    def get_user_model(self, user_id: str) -> Optional[str]:
+        """Get the selected model for a user."""
+        return self._user_models.get(user_id)
+    
+    def set_user_model(self, user_id: str, model_id: str) -> None:
+        """Set the model for a user."""
+        self._user_models[user_id] = model_id
+        logger.info(f"Set CLI model for user {user_id}: {model_id}")
+    
+    def clear_user_model(self, user_id: str) -> bool:
+        """Clear the model selection for a user (use default)."""
+        if user_id in self._user_models:
+            del self._user_models[user_id]
+            logger.info(f"Cleared CLI model for user {user_id}")
+            return True
+        return False
+    
+    def get_all_user_models(self) -> dict[str, str]:
+        """Get all user model selections."""
+        return self._user_models.copy()
+    
     async def run(
         self,
         prompt: str,
@@ -332,9 +435,16 @@ class CursorCLIAgent:
         elif user_id and not use_resume:
             logger.info(f"CLI resume disabled, running without context memory for user {user_id}")
         
-        # Add model if specified
-        if model or self.config.model:
-            cmd.extend(["--model", model or self.config.model])
+        # Add model if specified (priority: explicit param > user setting > config)
+        effective_model = model
+        if not effective_model and user_id:
+            effective_model = self.get_user_model(user_id)
+        if not effective_model:
+            effective_model = self.config.model
+        
+        if effective_model:
+            cmd.extend(["--model", effective_model])
+            logger.info(f"Using CLI model: {effective_model}")
         
         # Add the prompt
         cmd.append(prompt)

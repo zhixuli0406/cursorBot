@@ -505,6 +505,10 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/mode cursor` | 切換到 Background Agent 模式 |
 | `/chatinfo` | 查看 CLI 對話上下文資訊 |
 | `/newchat` | 清除 CLI 對話記憶，開始新對話 |
+| `/climodel` | 查看 CLI 模型設定 |
+| `/climodel list` | 列出所有 CLI 可用模型 |
+| `/climodel set <model>` | 切換 CLI 模型 |
+| `/climodel reset` | 恢復 CLI 預設模型 |
 | `/tui` | 終端介面說明 |
 | `/whatsapp` | WhatsApp 整合狀態 |
 | `/whatsapp qr` | 顯示 WhatsApp 登入 QR Code |
@@ -541,6 +545,34 @@ Cursor CLI 模式支援對話記憶，可以延續之前的對話上下文：
 /chatinfo                           # 查看目前對話資訊
 /newchat                            # 清除記憶，開始新對話
 ```
+
+**CLI 模型選擇功能：**
+
+Cursor CLI 支援多種 AI 模型，可以根據需求切換：
+
+```
+/climodel                           # 查看目前 CLI 模型設定
+/climodel list                      # 列出所有可用模型
+/climodel set sonnet-4.5            # 使用 Claude 4.5 Sonnet
+/climodel set gpt-5.2               # 使用 GPT-5.2
+/climodel set gemini-3-pro          # 使用 Gemini 3 Pro
+/climodel set opus-4.5-thinking     # 使用 Claude 4.5 Opus (Thinking)
+/climodel reset                     # 恢復預設模型
+```
+
+**可用 CLI 模型（部分列表）：**
+| 模型 ID | 說明 |
+|---------|------|
+| `auto` | 自動選擇（預設） |
+| `gpt-5.2` | GPT-5.2 |
+| `gpt-5.2-codex` | GPT-5.2 Codex（程式碼專用） |
+| `opus-4.5` | Claude 4.5 Opus |
+| `opus-4.5-thinking` | Claude 4.5 Opus (Thinking) |
+| `sonnet-4.5` | Claude 4.5 Sonnet |
+| `sonnet-4.5-thinking` | Claude 4.5 Sonnet (Thinking) |
+| `gemini-3-pro` | Gemini 3 Pro |
+| `gemini-3-flash` | Gemini 3 Flash |
+| `grok` | Grok |
 
 **`/ask` vs `/agent` 的差別：**
 

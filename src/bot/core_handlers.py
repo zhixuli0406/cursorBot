@@ -1562,6 +1562,302 @@ async def model_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
 
 
 # ============================================
+# CLI Model Management
+# ============================================
+
+
+@authorized_only
+async def climodel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /climodel command.
+    Manage Cursor CLI model selection.
+    
+    Usage:
+        /climodel - Show current CLI model and available options
+        /climodel list - List all available CLI models
+        /climodel set <model_id> - Set CLI model for this user
+        /climodel reset - Reset to CLI default model
+    """
+    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    
+    if not is_cli_available():
+        await update.message.reply_text(
+            "❌ <b>Cursor CLI 未安裝</b>\n\n"
+            "請先安裝 Cursor CLI：\n"
+            "<code>curl https://cursor.com/install -fsS | bash</code>",
+            parse_mode="HTML",
+        )
+        return
+    
+    user_id = str(update.effective_user.id)
+    args = context.args or []
+    cli = get_cli_agent()
+    
+    if not args or args[0] == "status":
+        # Show current status
+        current_model = cli.get_user_model(user_id) or "auto (預設)"
+        
+        # Fetch models if not cached
+        if not cli._models_fetched:
+            loading_msg = await update.message.reply_text("🔄 正在獲取 CLI 模型列表...")
+            models = await cli.list_models()
+            await loading_msg.delete()
+        else:
+            models = cli._available_models
+        
+        text = "🖥️ <b>Cursor CLI 模型設定</b>\n\n"
+        text += f"<b>目前使用：</b> <code>{current_model}</code>\n\n"
+        
+        if models:
+            # Find current/default model
+            current_default = [m for m in models if m.get("current") or m.get("default")]
+            if current_default:
+                text += f"<b>CLI 預設：</b> <code>{current_default[0]['id']}</code>\n\n"
+            
+            text += f"<b>可用模型：</b> {len(models)} 個\n"
+            
+            # Show top models
+            top_models = models[:8]
+            for m in top_models:
+                flags = []
+                if m.get("current"):
+                    flags.append("當前")
+                if m.get("default"):
+                    flags.append("預設")
+                flag_str = f" ({', '.join(flags)})" if flags else ""
+                text += f"• <code>{m['id']}</code> - {m['name']}{flag_str}\n"
+            
+            if len(models) > 8:
+                text += f"... 還有 {len(models) - 8} 個模型\n"
+        
+        text += "\n<b>指令：</b>\n"
+        text += "• <code>/climodel list</code> - 顯示所有模型\n"
+        text += "• <code>/climodel set &lt;model_id&gt;</code> - 切換模型\n"
+        text += "• <code>/climodel reset</code> - 恢復預設\n"
+        
+        # Build keyboard
+        keyboard = []
+        if models:
+            # Add quick model buttons (top 6)
+            row = []
+            for m in models[:6]:
+                row.append(InlineKeyboardButton(
+                    f"{'✓ ' if m['id'] == cli.get_user_model(user_id) else ''}{m['id'][:12]}",
+                    callback_data=f"climodel_set:{m['id']}"
+                ))
+                if len(row) >= 2:
+                    keyboard.append(row)
+                    row = []
+            if row:
+                keyboard.append(row)
+        
+        keyboard.append([
+            InlineKeyboardButton("📋 所有模型", callback_data="climodel_list:0"),
+            InlineKeyboardButton("🔄 重置", callback_data="climodel_reset"),
+        ])
+        
+        await update.message.reply_text(
+            text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+        return
+    
+    elif args[0] == "list":
+        # List all models
+        loading_msg = await update.message.reply_text("🔄 正在獲取 CLI 模型列表...")
+        models = await cli.list_models(force_refresh=True)
+        await loading_msg.delete()
+        
+        if not models:
+            await update.message.reply_text("❌ 無法獲取 CLI 模型列表")
+            return
+        
+        # Store in context for pagination
+        context.user_data["climodel_list"] = models
+        
+        text, keyboard = _create_climodel_list_view(models, 0, cli.get_user_model(user_id))
+        await update.message.reply_text(text, parse_mode="HTML", reply_markup=keyboard)
+        return
+    
+    elif args[0] == "set":
+        if len(args) < 2:
+            await update.message.reply_text(
+                "❌ 請指定模型 ID\n\n"
+                "用法: <code>/climodel set &lt;model_id&gt;</code>\n"
+                "例如: <code>/climodel set sonnet-4.5</code>",
+                parse_mode="HTML",
+            )
+            return
+        
+        model_id = args[1].lower()
+        
+        # Verify model exists
+        models = await cli.list_models()
+        valid_ids = [m['id'].lower() for m in models]
+        
+        # Try exact match first, then prefix match
+        matched_model = None
+        for m in models:
+            if m['id'].lower() == model_id:
+                matched_model = m['id']
+                break
+        
+        if not matched_model:
+            # Try prefix match
+            for m in models:
+                if m['id'].lower().startswith(model_id):
+                    matched_model = m['id']
+                    break
+        
+        if not matched_model:
+            await update.message.reply_text(
+                f"❌ 找不到模型: <code>{model_id}</code>\n\n"
+                f"使用 <code>/climodel list</code> 查看可用模型",
+                parse_mode="HTML",
+            )
+            return
+        
+        cli.set_user_model(user_id, matched_model)
+        
+        await update.message.reply_text(
+            f"✅ <b>CLI 模型已切換</b>\n\n"
+            f"<code>{matched_model}</code>\n\n"
+            f"下次 CLI 對話將使用此模型。",
+            parse_mode="HTML",
+        )
+        return
+    
+    elif args[0] == "reset":
+        if cli.clear_user_model(user_id):
+            await update.message.reply_text(
+                "✅ <b>已恢復 CLI 預設模型</b>\n\n"
+                "將使用 Cursor CLI 的預設模型設定。",
+                parse_mode="HTML",
+            )
+        else:
+            await update.message.reply_text("ℹ️ 目前已經是使用預設模型")
+        return
+    
+    else:
+        await update.message.reply_text(
+            "❌ 未知指令\n\n"
+            "使用 <code>/climodel</code> 查看說明",
+            parse_mode="HTML",
+        )
+
+
+def _create_climodel_list_view(
+    models: list[dict],
+    page: int,
+    current_model: str = None,
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Create CLI model list view with pagination."""
+    page_size = 10
+    total_pages = max(1, (len(models) + page_size - 1) // page_size)
+    page = max(0, min(page, total_pages - 1))
+    
+    start = page * page_size
+    end = min(start + page_size, len(models))
+    page_models = models[start:end]
+    
+    text = f"🖥️ <b>Cursor CLI 可用模型</b> ({page + 1}/{total_pages})\n\n"
+    
+    for m in page_models:
+        flags = []
+        if m.get("current"):
+            flags.append("🔵當前")
+        if m.get("default"):
+            flags.append("⭐預設")
+        if current_model and m['id'] == current_model:
+            flags.append("✓選中")
+        
+        flag_str = f" ({', '.join(flags)})" if flags else ""
+        text += f"• <code>{m['id']}</code> - {m['name']}{flag_str}\n"
+    
+    # Build keyboard with model selection buttons
+    keyboard = []
+    row = []
+    for i, m in enumerate(page_models):
+        prefix = "✓ " if current_model and m['id'] == current_model else ""
+        row.append(InlineKeyboardButton(
+            f"{prefix}{m['id'][:12]}",
+            callback_data=f"climodel_set:{m['id']}"
+        ))
+        if len(row) >= 2:
+            keyboard.append(row)
+            row = []
+    if row:
+        keyboard.append(row)
+    
+    # Navigation buttons
+    nav_row = []
+    if page > 0:
+        nav_row.append(InlineKeyboardButton("⬅️ 上一頁", callback_data=f"climodel_list:{page - 1}"))
+    if page < total_pages - 1:
+        nav_row.append(InlineKeyboardButton("➡️ 下一頁", callback_data=f"climodel_list:{page + 1}"))
+    if nav_row:
+        keyboard.append(nav_row)
+    
+    keyboard.append([
+        InlineKeyboardButton("🔄 重置", callback_data="climodel_reset"),
+        InlineKeyboardButton("❌ 關閉", callback_data="climodel_close"),
+    ])
+    
+    return text, InlineKeyboardMarkup(keyboard)
+
+
+@authorized_only
+async def climodel_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle CLI model callback queries."""
+    from ..cursor.cli_agent import get_cli_agent
+    
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    user_id = str(update.effective_user.id)
+    cli = get_cli_agent()
+    
+    if data.startswith("climodel_set:"):
+        model_id = data.split(":", 1)[1]
+        cli.set_user_model(user_id, model_id)
+        
+        # Refresh view
+        models = cli._available_models or await cli.list_models()
+        page = context.user_data.get("climodel_page", 0)
+        text, keyboard = _create_climodel_list_view(models, page, model_id)
+        
+        success_text = f"✅ 已切換至 <code>{model_id}</code>\n\n" + text
+        await query.message.edit_text(success_text, parse_mode="HTML", reply_markup=keyboard)
+    
+    elif data.startswith("climodel_list:"):
+        page = int(data.split(":")[1])
+        context.user_data["climodel_page"] = page
+        
+        models = context.user_data.get("climodel_list") or cli._available_models
+        if not models:
+            models = await cli.list_models()
+            context.user_data["climodel_list"] = models
+        
+        text, keyboard = _create_climodel_list_view(models, page, cli.get_user_model(user_id))
+        await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
+    
+    elif data == "climodel_reset":
+        cli.clear_user_model(user_id)
+        
+        models = cli._available_models or await cli.list_models()
+        page = context.user_data.get("climodel_page", 0)
+        text, keyboard = _create_climodel_list_view(models, page, None)
+        
+        success_text = "✅ 已恢復預設模型\n\n" + text
+        await query.message.edit_text(success_text, parse_mode="HTML", reply_markup=keyboard)
+    
+    elif data == "climodel_close":
+        await query.message.delete()
+
+
+# ============================================
 # Doctor - System Diagnostics
 # ============================================
 
@@ -3820,6 +4116,15 @@ def setup_core_handlers(app) -> None:
     app.add_handler(CallbackQueryHandler(
         model_callback_handler,
         pattern=r"^model_"
+    ))
+    
+    # CLI Model selection command
+    app.add_handler(CommandHandler("climodel", climodel_handler))
+    
+    # CLI Model selection callback handler
+    app.add_handler(CallbackQueryHandler(
+        climodel_callback_handler,
+        pattern=r"^climodel_"
     ))
     
     # Memory commands

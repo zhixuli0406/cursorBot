@@ -317,6 +317,9 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /mode - 切換對話模式 (Agent/CLI/Cursor)
 /newchat - 清除 CLI 對話上下文
 /chatinfo - 查看 CLI 對話資訊
+/climodel - CLI 模型設定 (GPT/Claude/Gemini)
+/climodel list - 列出所有 CLI 可用模型
+/climodel set &lt;model&gt; - 切換 CLI 模型
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>📋 Session 管理</b> (ClawdBot-style)
@@ -333,22 +336,22 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>🛠️ v0.3 功能特色</b>
 ━━━━━━━━━━━━━━━━━━━━━━
+• <b>CLI 模型選擇</b> - GPT-5/Claude/Gemini
 • <b>Line</b> - 亞洲市場訊息平台
 • <b>GLM (智譜)</b> - 中國 AI ChatGLM
 • <b>Menu Bar</b> - macOS 選單列應用
 • <b>iMessage</b> - macOS 訊息整合
 • <b>Chrome Extension</b> - 瀏覽器擴展
-• <b>Moonshot AI</b> - 中國月之暗面
 • <b>Session 管理</b> - ClawdBot 風格
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>💡 使用提示</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-• /model set glm 使用智譜 AI
+• /climodel set sonnet-4.5 切換 CLI 模型
+• /model set glm 切換 Agent 模型
 • /new 開始全新對話
 • /status 查看目前狀態
 • /compact 壓縮過長的對話
-• Chrome Extension 安裝見文件
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 
