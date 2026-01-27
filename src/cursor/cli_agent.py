@@ -180,6 +180,11 @@ class CursorCLIAgent:
         # Build command
         cmd = [self._cli_path]
         
+        # Add API key if available
+        api_key = os.getenv("CURSOR_API_KEY", "")
+        if api_key:
+            cmd.extend(["--api-key", api_key])
+        
         # Use --print for non-interactive output
         cmd.append("--print")
         
@@ -328,7 +333,14 @@ class CursorCLIAgent:
         timeout = timeout or self.config.timeout
         
         # Build command with --mode ask
-        cmd = [self._cli_path, "--print", "--mode", "ask", prompt]
+        cmd = [self._cli_path]
+        
+        # Add API key if available
+        api_key = os.getenv("CURSOR_API_KEY", "")
+        if api_key:
+            cmd.extend(["--api-key", api_key])
+        
+        cmd.extend(["--print", "--mode", "ask", prompt])
         
         logger.info(f"Running Cursor CLI (ask mode) in {cwd}")
         

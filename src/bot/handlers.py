@@ -4,6 +4,7 @@ Defines all user interaction endpoints
 """
 
 import asyncio
+import os
 from typing import Optional
 
 from telegram import Update
@@ -1318,6 +1319,25 @@ async def _handle_cli_mode(
                 parse_mode="HTML"
             )
             return
+        
+        # Check if authenticated
+        api_key = os.getenv("CURSOR_API_KEY", "")
+        if not api_key:
+            # Check if logged in by trying a simple command
+            check_result = await cli.check_installation()
+            if "login" in str(check_result).lower():
+                await update.message.reply_text(
+                    "⚠️ <b>Cursor CLI 需要認證</b>\n\n"
+                    "請執行以下其中一種方式:\n\n"
+                    "<b>方法 1: 互動式登入</b>\n"
+                    "<code>agent login</code>\n\n"
+                    "<b>方法 2: 設定 API Key</b>\n"
+                    "在 .env 中設定:\n"
+                    "<code>CURSOR_API_KEY=your-key</code>\n\n"
+                    "或使用 <code>/mode agent</code> 切換模式",
+                    parse_mode="HTML"
+                )
+                return
         
         # Send processing message
         status_msg = await update.message.reply_text(
