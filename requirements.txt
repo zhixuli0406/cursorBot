@@ -32,3 +32,7 @@ playwright>=1.40.0
 pytest==8.2.2
 pytest-asyncio==0.23.7
 psutil>=5.9.0
+
+# RAG (Retrieval-Augmented Generation)
+chromadb>=0.4.0
+pypdf>=3.0.0

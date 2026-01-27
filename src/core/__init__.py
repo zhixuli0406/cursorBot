@@ -122,6 +122,15 @@ from .tailscale import (
     TailscaleManager, TailscaleConfig, TailscaleDevice, TailscaleNetwork,
     TailscaleStatus, get_tailscale_manager,
 )
+from .rag import (
+    RAGManager, RAGConfig, RAGResponse,
+    Document, SearchResult,
+    ChunkingStrategy, EmbeddingProvider,
+    TextChunker, DocumentLoader,
+    VectorStore, InMemoryVectorStore, ChromaVectorStore,
+    OpenAIEmbedding, GoogleEmbedding, OllamaEmbedding,
+    get_rag_manager, reset_rag_manager,
+)
 
 __all__ = [
     # Memory
@@ -345,4 +354,22 @@ __all__ = [
     "TailscaleNetwork",
     "TailscaleStatus",
     "get_tailscale_manager",
+    # RAG
+    "RAGManager",
+    "RAGConfig",
+    "RAGResponse",
+    "Document",
+    "SearchResult",
+    "ChunkingStrategy",
+    "EmbeddingProvider",
+    "TextChunker",
+    "DocumentLoader",
+    "VectorStore",
+    "InMemoryVectorStore",
+    "ChromaVectorStore",
+    "OpenAIEmbedding",
+    "GoogleEmbedding",
+    "OllamaEmbedding",
+    "get_rag_manager",
+    "reset_rag_manager",
 ]

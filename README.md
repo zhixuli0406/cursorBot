@@ -74,6 +74,12 @@
 - **Web Dashboard** - 網頁管理儀表板
 - **WebChat** - 瀏覽器即時聊天介面
 - **Control UI** - 網頁控制台配置管理
+- **RAG** - 檢索增強生成（Retrieval-Augmented Generation）
+  - 支援多種文件格式（PDF、Markdown、程式碼、JSON）
+  - 智慧文字分塊（固定大小、句子、段落、程式碼感知）
+  - 多種嵌入提供者（OpenAI、Google、Ollama）
+  - 向量儲存（ChromaDB 持久化 + 記憶體模式）
+  - 相似度搜尋與上下文增強生成
 
 ## 運作原理
 
@@ -711,6 +717,58 @@ Cursor CLI 支援多種 AI 模型，可以根據需求切換：
 /agent 幫我分析這個系統的架構
 /agent 寫一份專案規劃書
 /agent 解釋什麼是 RAG
+```
+
+### RAG（檢索增強生成）
+
+RAG 系統讓你可以索引文件並基於內容進行問答。
+
+| 指令 | 說明 |
+|------|------|
+| `/rag <問題>` | 基於索引內容回答問題 |
+| `/index <檔案>` | 索引單一檔案 |
+| `/index_dir <目錄>` | 索引整個目錄 |
+| `/index_url <網址>` | 索引網頁內容 |
+| `/index_text <文字>` | 索引手動輸入的文字 |
+| `/search <關鍵字>` | 搜尋索引內容（不生成回答） |
+| `/ragstats` | 查看 RAG 統計資訊 |
+| `/ragconfig` | 配置 RAG 設定 |
+| `/ragclear confirm` | 清除所有索引 |
+
+**支援的檔案格式：**
+- 文字：`.txt`, `.log`
+- Markdown：`.md`, `.markdown`, `.mdx`
+- 程式碼：`.py`, `.js`, `.ts`, `.java`, `.go`, `.rs`, `.cpp` 等
+- PDF：`.pdf`（需安裝 pypdf）
+- JSON：`.json`, `.jsonl`
+
+**使用範例：**
+
+```
+# 索引專案文件
+/index README.md
+/index_dir docs/
+
+# 基於索引內容提問
+/rag 這個專案的主要功能是什麼？
+/rag 如何設定環境變數？
+
+# 搜尋特定內容
+/search authentication
+/search API key
+```
+
+**環境變數設定：**
+
+```env
+# RAG 嵌入設定（使用已配置的 AI 提供者）
+RAG_EMBEDDING_MODEL=text-embedding-3-small
+RAG_CHUNK_SIZE=500
+RAG_CHUNK_OVERLAP=50
+RAG_TOP_K=5
+RAG_SIMILARITY_THRESHOLD=0.7
+RAG_PERSIST_DIR=data/rag
+RAG_COLLECTION=default
 ```
 
 ### 檔案操作
