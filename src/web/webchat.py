@@ -197,12 +197,13 @@ WEBCHAT_HTML = """
                 handleMessage(data) {
                     if (data.type === 'response') {
                         this.isTyping = false;
-                        this.addMessage('assistant', data.content);
+                        const content = data.content || '(無回應)';
+                        this.addMessage('assistant', content);
                     } else if (data.type === 'typing') {
                         this.isTyping = true;
                     } else if (data.type === 'error') {
                         this.isTyping = false;
-                        this.addMessage('assistant', `❌ 錯誤: ${data.content}`);
+                        this.addMessage('assistant', `❌ 錯誤: ${data.content || '未知錯誤'}`);
                     }
                 },
                 
@@ -349,6 +350,10 @@ class WebChatManager:
                 system_prompt="You are CursorBot, a helpful AI assistant. Respond in the user's language.",
             )
             
+            # Ensure response is not None or empty
+            if not response:
+                response = "抱歉，我無法生成回應。請確認 AI 提供者已正確設定。"
+            
             # Store response
             ctx.add_message("assistant", response)
             self._sessions[session_id].append({
@@ -361,7 +366,12 @@ class WebChatManager:
             
         except Exception as e:
             logger.error(f"Process error: {e}")
-            return f"抱歉，處理訊息時發生錯誤: {e}"
+            error_msg = str(e)
+            if "No LLM provider" in error_msg:
+                return "❌ 尚未設定 AI 提供者。請在 .env 中設定 OPENAI_API_KEY、ANTHROPIC_API_KEY 或其他 AI API 金鑰。"
+            elif "All LLM providers failed" in error_msg:
+                return f"❌ 所有 AI 提供者都失敗了。請檢查 API 金鑰是否正確。\n\n詳細: {error_msg[:200]}"
+            return f"❌ 處理訊息時發生錯誤: {error_msg}"
     
     def get_history(self, session_id: str) -> list[dict]:
         """Get session history."""

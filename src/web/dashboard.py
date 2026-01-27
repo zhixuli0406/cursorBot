@@ -749,7 +749,18 @@ def create_dashboard_router():
             from ..core.llm_providers import get_llm_manager
             manager = get_llm_manager()
             
-            return manager.list_providers()
+            # Get provider status
+            available = manager.list_available_providers()
+            status = manager.get_current_status()
+            
+            result = {}
+            for provider in ["openai", "anthropic", "google", "openrouter", "ollama", "bedrock", "moonshot", "glm"]:
+                result[provider] = {
+                    "available": provider in available,
+                    "current": provider == status.get("current_provider"),
+                }
+            
+            return result
         except Exception as e:
             logger.error(f"Providers error: {e}")
             return {}
