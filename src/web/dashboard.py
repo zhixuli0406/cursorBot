@@ -413,7 +413,7 @@ def create_dashboard_router():
                 "active_sessions": stats.get("total_sessions", 0),
                 "total_messages": sum(s.get("messages", 0) for s in stats.get("sessions", [])),
                 "llm_calls": usage.get("total_calls", 0),
-                "current_model": llm_manager.get_model_status().get("current_model") or "default",
+                "current_model": llm_manager.get_current_status().get("current_model") or "default",
                 "system_status": "Healthy",
             }
         except Exception as e:
