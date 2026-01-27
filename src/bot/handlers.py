@@ -229,10 +229,11 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /model reset - 恢復預設模型
 
 <b>支援的提供者:</b>
-• OpenAI (GPT-4o, GPT-4o-mini)
-• Anthropic (Claude 3.5 + Thinking Mode)
-• Google (Gemini 2.0 Flash)
-• OpenRouter (多種模型)
+• OpenAI (GPT-5, o3)
+• Anthropic (Claude 4.5 + Thinking)
+• Google (Gemini 3)
+• GitHub Copilot (多種模型)
+• OpenRouter (免費/付費模型)
 • Ollama (本地模型)
 
 ━━━━━━━━━━━━━━━━━━━━━━

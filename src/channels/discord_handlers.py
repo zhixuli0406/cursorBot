@@ -157,8 +157,8 @@ async def handle_help(ctx: MessageContext, interaction=None) -> None:
 • `/climodel list` - 列出 CLI 可用模型
 • `/climodel set <model>` - 切換 CLI 模型
 
-**Agent 支援:** OpenAI, Claude, Gemini, GLM, Ollama
-**CLI 支援:** GPT-5.2, Claude 4.5, Gemini 3, Grok
+**Agent 支援:** OpenAI, Claude, Gemini, Copilot, OpenRouter, Ollama
+**CLI 支援:** GPT-5.2, Claude 4.5, Gemini 3
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **💬 Session 管理** (ClawdBot-style)
@@ -930,10 +930,11 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
                 await send_response(
                     "**🤖 AI 模型選擇**\n\n"
                     "**支援的提供者:**\n"
-                    "• **OpenAI** - GPT-4o, GPT-4o-mini\n"
-                    "• **Claude** - claude-3-5-sonnet\n"
-                    "• **Gemini** - gemini-2.0-flash\n"
-                    "• **GLM** - glm-4-flash\n"
+                    "• **OpenAI** - GPT-5, o3\n"
+                    "• **Claude** - Claude 4.5 Sonnet/Opus\n"
+                    "• **Gemini** - Gemini 3 Pro/Flash\n"
+                    "• **Copilot** - GitHub Models\n"
+                    "• **OpenRouter** - 免費/付費模型\n"
                     "• **Ollama** - 本地模型\n\n"
                     "使用 `/model list` 查看所有模型\n"
                     "使用 `/model set <provider>` 切換"
