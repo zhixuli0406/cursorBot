@@ -33,6 +33,7 @@ class ProviderType(Enum):
     BEDROCK = "bedrock"
     MOONSHOT = "moonshot"
     GLM = "glm"
+    COPILOT = "copilot"
 
 
 @dataclass
@@ -1147,6 +1148,172 @@ class GLMProvider(LLMProvider):
 
 
 # ============================================
+# GitHub Copilot / GitHub Models Provider
+# ============================================
+
+class CopilotProvider(LLMProvider):
+    """
+    GitHub Copilot / GitHub Models provider.
+    
+    Uses GitHub Models API (Azure-backed) which provides access to:
+    - GPT-4o, GPT-4o-mini (OpenAI)
+    - Claude 3.5 Sonnet (Anthropic)
+    - Llama 3.x (Meta)
+    - Mistral models
+    - And more
+    
+    Requires a GitHub Personal Access Token with appropriate permissions.
+    """
+    
+    API_BASE = "https://models.inference.ai.azure.com"
+    
+    @property
+    def provider_type(self) -> ProviderType:
+        return ProviderType.COPILOT
+    
+    def is_available(self) -> bool:
+        return bool(self.config.api_key) and self.config.enabled
+    
+    async def fetch_models(self) -> list[str]:
+        """Fetch available models from GitHub Models."""
+        import httpx
+        
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(
+                    "https://api.github.com/marketplace_listing/models",
+                    headers={
+                        "Authorization": f"Bearer {self.config.api_key}",
+                        "Accept": "application/vnd.github+json",
+                        "X-GitHub-Api-Version": "2022-11-28",
+                    },
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    models = []
+                    for model in data:
+                        if isinstance(model, dict) and "name" in model:
+                            models.append(model["name"])
+                    return models
+                
+        except Exception as e:
+            logger.debug(f"Failed to fetch Copilot models: {e}")
+        
+        # Return default models if API fails
+        return [
+            "gpt-5-main",
+            "gpt-5-thinking",
+            "gpt-4o",
+            "gpt-4o-mini",
+            "o3",
+            "claude-sonnet-4.5",
+            "claude-sonnet-4",
+            "llama-3.3-70b-instruct",
+            "mistral-large-2411",
+            "deepseek-r1",
+            "phi-4",
+        ]
+    
+    async def generate(self, messages: list[dict], **kwargs) -> str:
+        """Generate response using GitHub Models API."""
+        import httpx
+        
+        model = kwargs.get("model") or self.config.model or "gpt-4o"
+        
+        # Determine the correct endpoint based on model
+        # GitHub Models uses Azure OpenAI-compatible API
+        api_base = self.config.api_base or self.API_BASE
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": kwargs.get("temperature", self.config.temperature),
+            "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+        }
+        
+        # Add optional parameters
+        if kwargs.get("top_p"):
+            payload["top_p"] = kwargs["top_p"]
+        if kwargs.get("stream"):
+            payload["stream"] = True
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                response = await client.post(
+                    f"{api_base}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.config.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    raise ValueError(f"GitHub Models API error: {response.status_code} - {error_text}")
+                
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
+                
+        except httpx.HTTPError as e:
+            raise ValueError(f"GitHub Models HTTP error: {e}")
+        except Exception as e:
+            raise ValueError(f"GitHub Models error: {e}")
+    
+    async def generate_stream(self, messages: list[dict], **kwargs):
+        """Generate streaming response using GitHub Models API."""
+        import httpx
+        
+        model = kwargs.get("model") or self.config.model or "gpt-4o"
+        api_base = self.config.api_base or self.API_BASE
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": kwargs.get("temperature", self.config.temperature),
+            "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+            "stream": True,
+        }
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                async with client.stream(
+                    "POST",
+                    f"{api_base}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.config.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                ) as response:
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        raise ValueError(f"GitHub Models API error: {response.status_code} - {error_text.decode()}")
+                    
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str.strip() == "[DONE]":
+                                break
+                            
+                            try:
+                                import json
+                                data = json.loads(data_str)
+                                delta = data.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                            except json.JSONDecodeError:
+                                continue
+                                
+        except httpx.HTTPError as e:
+            raise ValueError(f"GitHub Models HTTP error: {e}")
+        except Exception as e:
+            raise ValueError(f"GitHub Models error: {e}")
+
+
+# ============================================
 # Custom OpenAI-Compatible Provider
 # ============================================
 
@@ -1279,15 +1446,16 @@ class LLMProviderManager:
     
     # Default models for each provider
     DEFAULT_MODELS = {
-        ProviderType.OPENAI: "gpt-4o-mini",
-        ProviderType.GOOGLE: "gemini-2.0-flash",
-        ProviderType.ANTHROPIC: "claude-3-5-sonnet-20241022",
-        ProviderType.OPENROUTER: "google/gemini-2.0-flash-exp:free",
-        ProviderType.OLLAMA: "llama3.2",
+        ProviderType.OPENAI: "gpt-5-main-mini",
+        ProviderType.GOOGLE: "gemini-3-flash-preview",
+        ProviderType.ANTHROPIC: "claude-sonnet-4-5-20250929",
+        ProviderType.OPENROUTER: "google/gemini-3-flash-preview:free",
+        ProviderType.OLLAMA: "llama3.3",
         ProviderType.CUSTOM: "default",
-        ProviderType.BEDROCK: "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        ProviderType.MOONSHOT: "moonshot-v1-8k",
-        ProviderType.GLM: "glm-4-flash",
+        ProviderType.BEDROCK: "anthropic.claude-sonnet-4-5-20250929-v1:0",
+        ProviderType.MOONSHOT: "moonshot-v1-128k",
+        ProviderType.GLM: "glm-4.7-flash",
+        ProviderType.COPILOT: "gpt-5-main",
     }
     
     def __init__(self):
@@ -1399,6 +1567,20 @@ class LLMProviderManager:
             self._providers[ProviderType.GLM] = GLMProvider(config)
             logger.info(f"Loaded GLM provider with model: {glm_model}")
         
+        # GitHub Copilot / GitHub Models
+        copilot_token = getattr(settings, 'github_token', None) or os.getenv("GITHUB_TOKEN")
+        copilot_enabled = getattr(settings, 'copilot_enabled', False) or os.getenv("COPILOT_ENABLED", "").lower() in ("true", "1", "yes")
+        if copilot_token and copilot_enabled:
+            copilot_model = getattr(settings, 'copilot_model', None) or os.getenv("COPILOT_MODEL", "gpt-4o")
+            config = ProviderConfig(
+                provider_type=ProviderType.COPILOT,
+                api_key=copilot_token,
+                model=copilot_model,
+                enabled=True,
+            )
+            self._providers[ProviderType.COPILOT] = CopilotProvider(config)
+            logger.info(f"Loaded GitHub Copilot provider with model: {copilot_model}")
+        
         # Set default provider based on priority
         self._set_default_provider(settings)
     
@@ -1417,9 +1599,10 @@ class LLMProviderManager:
             except ValueError:
                 logger.warning(f"Invalid default provider: {default_provider_str}")
         
-        # Auto-select based on priority: OpenRouter > OpenAI > Anthropic > Google > Ollama > Custom
+        # Auto-select based on priority: OpenRouter > Copilot > OpenAI > Anthropic > Google > Ollama > Custom
         priority = [
             ProviderType.OPENROUTER,
+            ProviderType.COPILOT,
             ProviderType.OPENAI,
             ProviderType.ANTHROPIC,
             ProviderType.GOOGLE,
@@ -1464,24 +1647,36 @@ class LLMProviderManager:
         # Predefined popular models as fallback
         model_lists = {
             ProviderType.OPENAI: [
-                "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
-                "o1-preview", "o1-mini",
+                "gpt-5.2", "gpt-5-main", "gpt-5-main-mini",
+                "gpt-5-thinking", "gpt-5-thinking-mini", "gpt-5-thinking-nano",
+                "o3", "gpt-4o", "gpt-4o-mini", "o1-preview", "o1-mini",
             ],
             ProviderType.GOOGLE: [
-                "gemini-2.0-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro",
-                "gemini-1.5-flash", "gemini-pro",
+                "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-3-pro-image-preview",
+                "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
+                "gemini-2.0-flash", "gemini-1.5-pro",
             ],
             ProviderType.ANTHROPIC: [
-                "claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022",
-                "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307",
+                "claude-opus-4-5-20251101", "claude-sonnet-4-5-20250929",
+                "claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022",
+                "claude-3-5-haiku-20241022", "claude-3-opus-20240229",
             ],
             ProviderType.OPENROUTER: [
-                "google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.2-3b-instruct:free",
-                "anthropic/claude-3.5-sonnet", "openai/gpt-4o", "google/gemini-pro-1.5",
+                "google/gemini-3-flash-preview:free", "mistral/devstral-2-2512:free",
+                "deepseek/deepseek-r1-0528:free", "meta-llama/llama-3.3-70b-instruct:free",
+                "anthropic/claude-sonnet-4.5", "openai/gpt-5-main",
             ],
             ProviderType.OLLAMA: [
-                "llama3.2", "llama3.1", "mistral", "codellama", "phi3",
-                "qwen2.5", "deepseek-coder-v2",
+                "llama3.3", "llama3.2", "llama3.1",
+                "qwen3", "qwen3-coder", "qwen2.5",
+                "deepseek-r1", "deepseek-v3.2",
+                "mistral-large-3", "gemma3", "phi-4",
+            ],
+            ProviderType.COPILOT: [
+                "gpt-5-main", "gpt-5-thinking", "gpt-4o", "o3",
+                "claude-sonnet-4.5", "claude-sonnet-4",
+                "llama-3.3-70b-instruct", "mistral-large-2411",
+                "deepseek-r1", "phi-4",
             ],
             ProviderType.CUSTOM: ["default"],
         }

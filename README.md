@@ -34,6 +34,12 @@
 - **代理工具** - 檔案操作、命令執行、網頁抓取
 
 ### v0.3 新增功能
+- **CLI 模型選擇** - Cursor CLI 支援多種 AI 模型切換
+  - GPT-5.2 系列（含 Codex 程式碼專用版）
+  - Claude 4.5 Opus / Sonnet（含 Thinking 深度思考版）
+  - Gemini 3 Pro / Flash
+  - Grok
+  - 使用 `/climodel` 指令管理
 - **Session 管理** - ClawdBot 風格的 Session 管理系統
   - 持久化 Session 存儲
   - 重置策略（每日/閒置/手動）
@@ -195,6 +201,10 @@ CURSOR_API_KEY=your_api_key_here
 # === 可選設定 ===
 CURSOR_GITHUB_REPO=https://github.com/your-username/your-repo
 CURSOR_WORKSPACE_PATH=/path/to/your/projects
+
+# === CLI 模式設定（可選）===
+CURSOR_CLI_MODEL=auto
+CURSOR_CLI_TIMEOUT=300
 ```
 
 #### 4. 取得 Cursor API Key
@@ -219,6 +229,7 @@ CURSOR_WORKSPACE_PATH=/path/to/your/projects
 | Google Gemini | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini 2.0, 1.5 Pro 等 |
 | Anthropic | `ANTHROPIC_API_KEY` | Claude 3.5 Sonnet, Opus 等 |
 | OpenRouter | `OPENROUTER_API_KEY` | 代理多種模型（推薦） |
+| GitHub Copilot | `GITHUB_TOKEN` + `COPILOT_ENABLED=true` | GitHub Models (GPT/Claude/Llama) |
 | Ollama | `OLLAMA_ENABLED=true` | 本地模型（Llama, Mistral 等） |
 | 自訂端點 | `CUSTOM_API_BASE` | 相容 OpenAI API 的端點 |
 
@@ -228,8 +239,14 @@ CURSOR_WORKSPACE_PATH=/path/to/your/projects
 
 ```env
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxx
-OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
+OPENROUTER_MODEL=google/gemini-3-flash-preview:free
 ```
+
+免費模型（2026）：
+- `google/gemini-3-flash-preview:free` - Google Gemini 3 Flash（推薦）
+- `mistral/devstral-2-2512:free` - 123B 程式碼專用模型
+- `deepseek/deepseek-r1-0528:free` - 強大推理能力
+- `meta-llama/llama-3.3-70b-instruct:free` - Meta Llama 3.3
 
 取得 API Key：[openrouter.ai/keys](https://openrouter.ai/keys)
 
@@ -237,10 +254,20 @@ OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
 
 ```env
 OPENAI_API_KEY=sk-xxxxxxxxxxxx
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5-main-mini
 ```
 
-可用模型：`gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1-preview`, `o1-mini`
+最新模型（2026）：
+| 模型 | 說明 |
+|------|------|
+| `gpt-5.2` | 最新 GPT-5.2 系列 |
+| `gpt-5-main` | GPT-5 主模型（高通量） |
+| `gpt-5-main-mini` | GPT-5 輕量版（推薦） |
+| `gpt-5-thinking` | 深度推理模型 |
+| `gpt-5-thinking-mini` | 輕量推理模型 |
+| `gpt-5-thinking-nano` | 超輕量推理（開發者） |
+| `o3` | OpenAI o3（傳統） |
+| `gpt-4o` | GPT-4o（穩定版） |
 
 取得 API Key：[platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
@@ -248,10 +275,16 @@ OPENAI_MODEL=gpt-4o-mini
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxx
-ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 ```
 
-可用模型：`claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`, `claude-3-haiku-20240307`
+最新模型（2026）：
+| 模型 | 說明 |
+|------|------|
+| `claude-opus-4-5-20251101` | Claude 4.5 Opus（最強大） |
+| `claude-sonnet-4-5-20250929` | Claude 4.5 Sonnet（推薦） |
+| `claude-sonnet-4-20250514` | Claude 4 Sonnet |
+| `claude-3-5-sonnet-20241022` | Claude 3.5 Sonnet（穩定） |
 
 取得 API Key：[console.anthropic.com](https://console.anthropic.com/)
 
@@ -259,10 +292,18 @@ ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 
 ```env
 GOOGLE_GENERATIVE_AI_API_KEY=AIzaSyxxxxxxxxxx
-GOOGLE_MODEL=gemini-2.0-flash
+GOOGLE_MODEL=gemini-3-flash-preview
 ```
 
-可用模型：`gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-pro`
+最新模型（2026）：
+| 模型 | 說明 |
+|------|------|
+| `gemini-3-pro-preview` | Gemini 3 Pro（最強多模態） |
+| `gemini-3-flash-preview` | Gemini 3 Flash（推薦） |
+| `gemini-3-pro-image-preview` | 圖像生成與編輯 |
+| `gemini-2.5-pro` | Gemini 2.5 Pro（穩定） |
+| `gemini-2.5-flash` | Gemini 2.5 Flash |
+| `gemini-2.5-flash-lite` | 輕量高效模型 |
 
 取得 API Key：[aistudio.google.com/apikey](https://aistudio.google.com/apikey)
 
@@ -273,20 +314,57 @@ GOOGLE_MODEL=gemini-2.0-flash
 ```env
 OLLAMA_ENABLED=true
 OLLAMA_API_BASE=http://localhost:11434
-OLLAMA_MODEL=llama3.2
+OLLAMA_MODEL=llama3.3
 ```
 
 安裝 Ollama：[ollama.ai](https://ollama.ai/)
 
 ```bash
 # 安裝後執行
-ollama pull llama3.2
+ollama pull llama3.3
 ollama serve
 ```
 
-可用模型：`llama3.2`, `llama3.1`, `mistral`, `codellama`, `phi3`, `qwen2.5`
+最新模型（2026）：
+| 模型 | 說明 |
+|------|------|
+| `llama3.3` | Meta Llama 3.3（推薦） |
+| `qwen3` | 阿里 Qwen 3 系列 |
+| `qwen3-coder` | Qwen 3 程式碼專用 |
+| `deepseek-r1` | DeepSeek 推理模型 |
+| `deepseek-v3.2` | DeepSeek V3.2 |
+| `mistral-large-3` | Mistral 企業級模型 |
+| `gemma3` | Google Gemma 3 |
+| `phi-4` | Microsoft Phi-4 |
 
-**方案六：ElevenLabs TTS（可選）**
+**方案六：GitHub Copilot / GitHub Models**
+
+使用 GitHub Personal Access Token 存取 GitHub Models API，一個 token 即可使用多種頂級模型。
+
+```env
+GITHUB_TOKEN=ghp_xxxxxxxxxxxx
+COPILOT_ENABLED=true
+COPILOT_MODEL=gpt-5-main
+```
+
+取得 Token：[github.com/settings/tokens](https://github.com/settings/tokens)
+啟用 GitHub Models：[github.com/marketplace/models](https://github.com/marketplace/models)
+
+可用模型（2026）：
+| 模型 | 說明 |
+|------|------|
+| `gpt-5-main` | OpenAI GPT-5 主模型（推薦） |
+| `gpt-5-thinking` | GPT-5 深度推理 |
+| `gpt-4o` | OpenAI GPT-4o（穩定） |
+| `o3` | OpenAI o3 推理模型 |
+| `claude-sonnet-4.5` | Anthropic Claude 4.5 Sonnet |
+| `claude-sonnet-4` | Claude 4 Sonnet |
+| `llama-3.3-70b-instruct` | Meta Llama 3.3 70B |
+| `mistral-large-2411` | Mistral Large |
+| `deepseek-r1` | DeepSeek 推理模型 |
+| `phi-4` | Microsoft Phi-4 |
+
+**方案七：ElevenLabs TTS（可選）**
 
 高品質語音合成服務。
 
@@ -296,7 +374,7 @@ ELEVENLABS_API_KEY=your_api_key
 
 取得 API Key：[elevenlabs.io](https://elevenlabs.io/)
 
-**方案七：自訂端點**
+**方案八：自訂端點**
 
 支援任何相容 OpenAI API 的端點（如 LM Studio, vLLM, LocalAI）。
 
@@ -316,11 +394,41 @@ DEFAULT_LLM_MODEL=gpt-4o
 
 **自動選擇優先順序：**
 1. OpenRouter（如果設定了 `OPENROUTER_API_KEY`）
-2. OpenAI（如果設定了 `OPENAI_API_KEY`）
-3. Anthropic（如果設定了 `ANTHROPIC_API_KEY`）
-4. Google Gemini（如果設定了 `GOOGLE_GENERATIVE_AI_API_KEY`）
-5. Ollama（如果設定了 `OLLAMA_ENABLED=true`）
-6. 自訂端點（如果設定了 `CUSTOM_API_BASE`）
+2. GitHub Copilot（如果設定了 `COPILOT_ENABLED=true`）
+3. OpenAI（如果設定了 `OPENAI_API_KEY`）
+4. Anthropic（如果設定了 `ANTHROPIC_API_KEY`）
+5. Google Gemini（如果設定了 `GOOGLE_GENERATIVE_AI_API_KEY`）
+6. Ollama（如果設定了 `OLLAMA_ENABLED=true`）
+7. 自訂端點（如果設定了 `CUSTOM_API_BASE`）
+
+**方案八：Cursor CLI 模型設定（可選）**
+
+Cursor CLI 模式 (`/mode cli`) 可以使用不同的模型，這些模型由 Cursor 直接提供。
+
+```env
+# CLI 預設模型（可選，不設定則使用 CLI 預設值）
+CURSOR_CLI_MODEL=sonnet-4.5
+
+# CLI 超時時間（秒，預設 300）
+CURSOR_CLI_TIMEOUT=300
+
+# 禁用 CLI 對話記憶（如果 --resume 功能有問題）
+# 設為 1, true 或 yes 來禁用
+CLI_DISABLE_RESUME=
+```
+
+可用的 CLI 模型包括：
+| 模型 ID | 說明 |
+|---------|------|
+| `auto` | 自動選擇（預設） |
+| `gpt-5.2` | GPT-5.2 |
+| `gpt-5.2-codex` | GPT-5.2 Codex（程式碼專用） |
+| `opus-4.5-thinking` | Claude 4.5 Opus (Thinking) |
+| `sonnet-4.5` | Claude 4.5 Sonnet |
+| `gemini-3-pro` | Gemini 3 Pro |
+| `grok` | Grok |
+
+使用 `/climodel list` 查看完整列表，使用 `/climodel set <model>` 切換。
 
 #### 6. 啟動服務
 

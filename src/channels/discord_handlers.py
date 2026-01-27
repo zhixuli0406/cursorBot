@@ -52,18 +52,21 @@ def _create_task_buttons(task_id: str, status: str = "running") -> list[ButtonRo
 
 async def handle_start(ctx: MessageContext, interaction=None) -> None:
     """Handle /start command."""
-    from ..cursor.cli_agent import is_cli_available
+    from ..cursor.cli_agent import is_cli_available, get_cli_agent
     
     user = ctx.user
+    user_id = str(ctx.user.id)
     
     # Check various status
     status_items = []
     
-    # CLI status
+    # CLI status with model
     if is_cli_available():
-        status_items.append("🟢 Cursor CLI")
+        cli = get_cli_agent()
+        cli_model = cli.get_user_model(user_id) or "auto"
+        status_items.append(f"🟢 CLI ({cli_model})")
     else:
-        status_items.append("⚪ Cursor CLI")
+        status_items.append("⚪ CLI")
     
     # Background Agent status
     if settings.background_agent_enabled and settings.cursor_api_key:
@@ -84,23 +87,26 @@ CursorBot 是一個多平台 AI 編程助手，支援 **Telegram**、**Discord**
 **📡 狀態:** {status}
 
 **🚀 快速開始:**
-1️⃣ 使用 `/model` 選擇 AI 模型
-2️⃣ 使用 `/mode` 選擇對話模式 (CLI/Agent)
+1️⃣ 使用 `/mode` 選擇對話模式 (CLI/Agent)
+2️⃣ 使用 `/climodel` 或 `/model` 切換 AI 模型
 3️⃣ 直接發送問題開始對話
+
+**✨ v0.3 新功能:**
+• **CLI 模型選擇** - GPT-5.2/Claude 4.5/Gemini 3
+• **Session 管理** - 對話記憶與壓縮
+• **多平台** - Line/iMessage/WhatsApp
 
 **✨ 核心功能:**
 • **Cursor CLI** - 使用官方 CLI 直接對話
 • **Agent Loop** - 自主代理執行複雜任務
-• **多模型支援** - OpenAI/Claude/Gemini/GLM
-• **Session 管理** - 對話上下文與記憶
+• **多模型支援** - OpenAI/Claude/Gemini/Copilot
 • **記憶系統** - `/memory` 儲存常用資訊
-• **技能系統** - `/skills` 查看可用技能
 
 **📋 常用指令:**
 `/help` - 完整指令說明
-`/model` - 切換 AI 模型
 `/mode` - 切換對話模式
-`/session` - Session 管理
+`/climodel` - CLI 模型設定
+`/model` - Agent 模型設定
 `/new` - 開始新對話
 `/status` - 狀態總覽
 """
@@ -725,7 +731,7 @@ async def handle_mode(ctx: MessageContext, interaction=None) -> None:
 
 🤖 **Agent Loop** (`/mode agent`)
    使用內建 AI Agent 處理對話
-   支援多種 AI 模型 (OpenAI/Claude/Gemini/GLM)
+   支援多種 AI 模型 (OpenAI/Claude/Gemini/Copilot)
    ✅ 可用
 
 💻 **Background Agent** (`/mode cursor`)

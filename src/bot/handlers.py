@@ -94,10 +94,23 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     # Check status
     status_items = []
+    
+    # Check Cursor CLI status
+    try:
+        from ..cursor.cli_agent import is_cli_available, get_cli_agent
+        if is_cli_available():
+            cli = get_cli_agent()
+            cli_model = cli.get_user_model(str(user.id)) or "auto"
+            status_items.append(f"🟢 CLI ({cli_model})")
+        else:
+            status_items.append("⚪ CLI (未安裝)")
+    except Exception:
+        status_items.append("⚪ CLI")
+    
     if is_background_agent_enabled():
         status_items.append("🟢 Background Agent")
     else:
-        status_items.append("⚪ Background Agent (未設定)")
+        status_items.append("⚪ Background Agent")
 
     # Check AI model status
     try:
@@ -106,10 +119,10 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         available = manager.list_available_providers()
         if available:
             current = manager.get_user_model(str(user.id))
-            model_name = f"{current[0]}/{current[1]}" if current else "未設定"
+            model_name = f"{current[0]}/{current[1]}" if current else "預設"
             status_items.append(f"🤖 {model_name}")
         else:
-            status_items.append("⚪ AI 模型 (未設定)")
+            status_items.append("⚪ AI 模型")
     except Exception:
         status_items.append("⚪ AI 模型")
 
@@ -124,39 +137,37 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 您好, {user.first_name}!
 
-CursorBot 是一個多平台 AI 編程助手，支援 <b>Telegram</b> 和 <b>Discord</b>，讓你遠端控制 Cursor AI Agent，完全無需開啟 IDE。
+CursorBot 是一個多平台 AI 編程助手，支援 <b>Telegram</b>、<b>Discord</b>、<b>Line</b> 等平台，讓你遠端控制 Cursor AI，完全無需開啟 IDE。
 
 <b>📡 狀態:</b>
 {status_text}
 
 <b>🚀 快速開始:</b>
-1️⃣ 使用 /model 選擇 AI 模型
-2️⃣ 使用 /repo 選擇 GitHub 倉庫
-3️⃣ 直接發送問題或使用 /agent 指令
+1️⃣ 使用 /mode 選擇對話模式 (CLI/Agent)
+2️⃣ 使用 /climodel 或 /model 切換 AI 模型
+3️⃣ 直接發送問題開始對話
 
 <b>✨ v0.3 新功能:</b>
+• 🤖 <b>CLI 模型選擇</b> - GPT-5.2/Claude 4.5/Gemini 3
+• 💬 <b>Session 管理</b> - 對話記憶與壓縮
 • 📱 Line - 亞洲市場訊息平台
 • 🧠 GLM 智譜 - 中國 ChatGLM AI
 • 🖥️ Menu Bar - macOS 選單列應用
-• 💬 iMessage - macOS 訊息整合
-• 🌐 Chrome Extension - 瀏覽器整合
-• 🌙 Moonshot AI - 中國月之暗面
 
 <b>✨ 核心功能:</b>
-• <b>多模型 AI</b> - OpenAI/Claude/Gemini/GLM
+• <b>Cursor CLI</b> - 直接使用官方 CLI 對話
+• <b>多模型 AI</b> - OpenAI/Claude/Gemini/Copilot
 • <b>Agent Loop</b> - 自主任務執行與 Skills
-• <b>AI 編程</b> - Cursor Background Agent
-• <b>多媒體支援</b> - 語音轉錄、圖片附件
+• <b>Background Agent</b> - Cursor Pro 雲端編程
 • <b>多平台</b> - TG/DC/WhatsApp/Teams/Line
-• <b>記憶系統</b> - 儲存常用資訊和偏好
 
 <b>📋 常用指令:</b>
 /help - 完整指令說明
-/model - 切換 AI 模型
-/agent - AI Agent 對話
-/skills - 可用技能
-/repo - 設定 GitHub 倉庫
-/ask - Cursor Background Agent
+/mode - 切換對話模式 (CLI/Agent)
+/climodel - CLI 模型設定
+/model - Agent 模型設定
+/new - 開始新對話
+/status - 狀態總覽
 
 點擊下方按鈕或直接發送訊息開始！
 """
@@ -336,7 +347,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>🛠️ v0.3 功能特色</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-• <b>CLI 模型選擇</b> - GPT-5/Claude/Gemini
+• <b>CLI 模型選擇</b> - GPT-5.2/Claude 4.5/Gemini 3
 • <b>Line</b> - 亞洲市場訊息平台
 • <b>GLM (智譜)</b> - 中國 AI ChatGLM
 • <b>Menu Bar</b> - macOS 選單列應用

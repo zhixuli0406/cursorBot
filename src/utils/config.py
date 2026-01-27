@@ -241,6 +241,20 @@ class Settings(BaseSettings):
         description="Custom endpoint model name",
     )
     
+    # GitHub Copilot / GitHub Models Settings
+    github_token: str = Field(
+        default="",
+        description="GitHub Personal Access Token for Copilot/GitHub Models",
+    )
+    copilot_enabled: bool = Field(
+        default=False,
+        description="Enable GitHub Copilot / GitHub Models provider",
+    )
+    copilot_model: str = Field(
+        default="gpt-4o",
+        description="Default model for GitHub Copilot (gpt-4o, claude-3.5-sonnet, etc.)",
+    )
+    
     # AI General Settings
     custom_prompt: str = Field(
         default="",
