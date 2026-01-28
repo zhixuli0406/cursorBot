@@ -2,8 +2,28 @@
 
 對標 [Moltbot/Clawdbot](https://github.com/moltbot/moltbot) 的功能實作進度追蹤。
 
-**最後更新**: 2026-01-27  
-**總體完成度**: 85% (153/180)
+**最後更新**: 2026-01-28  
+**總體完成度**: 85% (153/180)  
+**目前版本**: v0.3.0  
+**下一版本**: v0.4.0 (Release Candidate) → v1.0.0
+
+---
+
+## 版本策略
+
+```
+v0.3.0 (目前) ──▶ v0.4.0 (Final) ──▶ v1.0.0 (正式版)
+    │                │                    │
+    │                │                    └── 正式發布
+    │                └── 進階功能 + 原生應用 + 品質保證
+    └── 核心功能完成
+```
+
+**v0.4 目標**: 
+- 進階功能：Live Canvas、macOS/iOS/Android 原生應用、Multiple Gateways、DM Pairing
+- 品質保證：測試覆蓋、文件、安全審計
+
+**v1.0 條件**: v0.4 完成 + 無 Critical Bug + 文件完整
 
 ---
 
@@ -599,64 +619,154 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 - [x] Talk Mode 持續對話
 - [x] Agent to Agent 跨 session 協作
 
-### v0.4.0 (規劃中)
-- [ ] Gmail Pub/Sub 郵件觸發器
-- [ ] 郵件自動分類 Skill
-- [ ] DM Pairing 設備配對
-- [ ] Live Canvas (A2UI)
-- [ ] Minimax AI
-- [ ] Apple Calendar 整合
-- [ ] /verbose 指令
-- [ ] /elevated 權限提升
+### v0.4.0 (Release Candidate) - 進入 v1.0 的最終版本
 
-### v0.5.0 (規劃中)
-- [ ] macOS App 完整版 (SwiftUI)
-- [ ] Live Canvas (A2UI)
-- [ ] Agent to Agent 跨 session 協作
-- [ ] DM Pairing 設備配對
-- [ ] system.notify 系統通知
+**目標**: 完成 v0.4 後即可發布 v1.0 正式版
 
-### v1.0.0 (長期目標)
-- [ ] iOS Node
-- [ ] Android Node
-- [ ] 完整 Gateway 架構
-- [ ] 完整 CLI 工具 (`cursorbot` binary)
-- [ ] Multiple Gateways 高可用
-- [ ] Nix Mode 聲明式配置
-- [ ] 多雲部署支援
+#### 1. 穩定性與品質 (必須)
+| 狀態 | 項目 | 說明 |
+|:----:|------|------|
+| ⬜ | 單元測試覆蓋 | 核心模組測試覆蓋率 > 80% |
+| ⬜ | 整合測試 | 端對端測試各平台指令 |
+| ⬜ | 錯誤處理統一化 | 統一錯誤訊息格式和 i18n |
+| ⬜ | 效能優化 | 記憶體使用、回應延遲優化 |
+| ⬜ | 壓力測試 | 多用戶並發測試 |
+| ⬜ | Bug 修復 | 修復已知 issue |
+
+#### 2. 文件與易用性 (必須)
+| 狀態 | 項目 | 說明 |
+|:----:|------|------|
+| ⬜ | 完整 API 文件 | 所有端點和參數說明 |
+| ⬜ | 互動式安裝引導 | `cursorbot setup` 引導式設定 |
+| ⬜ | 平台設定教學 | 各平台 Webhook 設定圖文教學 |
+| ⬜ | 疑難排解指南 | 常見問題 FAQ |
+| ⬜ | CHANGELOG | 完整版本變更記錄 |
+| ⬜ | 貢獻指南 | CONTRIBUTING.md |
+
+#### 3. 核心功能補齊 (必須)
+| 狀態 | 項目 | 說明 |
+|:----:|------|------|
+| ⬜ | /verbose 指令 | 詳細輸出模式 on/off |
+| ⬜ | /elevated 權限提升 | 敏感操作確認機制 |
+| ⬜ | /think 指令完善 | 思考等級 off/low/medium/high/xhigh |
+| ⬜ | 系統通知 | 桌面/行動推播通知 |
+| ⬜ | 指令別名系統 | 用戶自訂指令別名 |
+
+#### 4. 安全性 (必須)
+| 狀態 | 項目 | 說明 |
+|:----:|------|------|
+| ⬜ | 安全審計 | 程式碼安全掃描 |
+| ⬜ | 敏感資料處理 | 環境變數加密、日誌脫敏 |
+| ⬜ | Rate Limiting | API 請求限制 |
+| ⬜ | 輸入驗證 | 防注入、XSS 防護 |
+| ⬜ | 權限最小化 | 各平台最小權限原則 |
+
+#### 5. 部署與運維 (必須)
+| 狀態 | 項目 | 說明 |
+|:----:|------|------|
+| ⬜ | Docker 映像優化 | 縮小映像體積、多階段建構 |
+| ⬜ | 一鍵部署腳本優化 | Railway/Render/Fly.io 模板 |
+| ⬜ | 環境變數驗證 | 啟動時檢查必要設定 |
+| ⬜ | 健康檢查端點 | /health, /ready 端點 |
+| ⬜ | Graceful Shutdown | 優雅關閉處理 |
+
+#### 6. 進階功能 (Apps & Architecture)
+| 狀態 | 項目 | 說明 | 技術 |
+|:----:|------|------|------|
+| ⬜ | Live Canvas (A2UI) | Agent 驅動的視覺化工作區 | React/Canvas |
+| ⬜ | macOS App 完整版 | Talk Mode、Debug Tools、Remote Gateway | SwiftUI |
+| ⬜ | iOS Node | Canvas、Voice Wake、Talk Mode、Camera | SwiftUI |
+| ⬜ | Android Node | Canvas、Talk Mode、Camera、Screen Recording | Kotlin |
+| ⬜ | Multiple Gateways | 多閘道高可用架構 | Load Balancer |
+| ⬜ | DM Pairing | 設備配對碼機制 | mDNS/QR Code |
+
+#### 7. 可選功能 (Nice to Have)
+| 狀態 | 項目 | 說明 | 優先級 |
+|:----:|------|------|:------:|
+| ⬜ | 郵件自動分類 Skill | Gmail 智慧過濾 | 🟡 中 |
+| ⬜ | Apple Calendar 整合 | macOS 日曆 | 🟢 低 |
+| ⬜ | Minimax AI | 中國 AI 市場 | 🟢 低 |
+| ⬜ | 多語系支援 | 英文/簡中介面 | 🟡 中 |
+
+### v1.0.0 (正式版)
+
+**v0.4 完成後，經過最終測試即可發布 v1.0**
+
+包含功能：
+- ✅ 7+ 通訊平台支援（Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat）
+- ✅ 8+ AI 模型提供者（OpenAI、Claude、Gemini、OpenRouter、Ollama 等）
+- ✅ 完整 Cursor CLI 整合
+- ✅ Agent Loop 自主代理
+- ✅ SkillsMP 技能市集
+- ✅ RAG 知識庫
+- ✅ TUI 終端介面
+- ✅ Web Dashboard
+- ✅ Docker 部署
+- ✅ 完整文件
+- ✅ Live Canvas (A2UI)
+- ✅ macOS/iOS/Android 原生應用
+- ✅ Multiple Gateways 高可用
+- ✅ DM Pairing 設備配對
+
+### 未來版本 (v1.x Post-Release)
+
+以下功能移至 v1.0 後的迭代版本：
+
+| 版本 | 功能 | 說明 |
+|------|------|------|
+| v1.x | Matrix 協議 | 開源通訊協議 |
+| v1.x | Nix Mode | 聲明式配置 |
+| v1.x | SSH Tunnels | 內網穿透 |
+| v1.x | Bonjour Discovery | mDNS 區網發現 |
 
 ---
 
 ## Moltbot 功能差距總結
 
-根據 [Moltbot GitHub](https://github.com/moltbot/moltbot) 分析，主要差距：
+根據 [Moltbot GitHub](https://github.com/moltbot/moltbot) 分析：
 
-### 高優先級 (🔴) ✅ 已完成
-| 功能 | 說明 | 狀態 |
+### ✅ 已完成的核心功能
+| 功能 | 說明 | 版本 |
 |------|------|:----:|
-| Gmail 整合 | 郵件讀取/發送/搜尋 | ✅ v0.3 |
-| Google Calendar | 日曆讀取/管理/新增 | ✅ v0.3 |
-| Skills Registry | 自動搜尋安裝技能 | ✅ v0.3 |
+| 多平台通訊 | Telegram/Discord/LINE/Slack/WhatsApp/Teams/Google Chat | v0.3 |
+| 多 AI 提供者 | OpenAI/Claude/Gemini/OpenRouter/Ollama | v0.3 |
+| Gmail 整合 | 郵件讀取/發送/搜尋 | v0.3 |
+| Google Calendar | 日曆讀取/管理/新增 | v0.3 |
+| Skills Registry | SkillsMP 技能市集整合 | v0.3 |
+| RAG 知識庫 | 文件索引/向量搜尋 | v0.3 |
+| Agent Loop | 自主代理執行 | v0.3 |
+| Voice Wake | 語音喚醒 | v0.3 |
+| Talk Mode | 持續對話模式 | v0.3 |
+| Agent to Agent | 跨 session 協作 | v0.3 |
 
-### 中優先級 (🟡)
+### 🎯 v0.4 需完成（進入 v1.0 的條件）
+
+#### 基礎建設
+| 功能 | 說明 | 類型 |
+|------|------|:----:|
+| 測試覆蓋 | 單元測試 + 整合測試 | 品質 |
+| 完整文件 | API 文件 + 教學 + FAQ | 文件 |
+| 安全審計 | 程式碼掃描 + 敏感資料處理 | 安全 |
+| /verbose | 詳細輸出模式 | 功能 |
+| /elevated | 權限提升機制 | 功能 |
+| 系統通知 | 桌面推播 | 功能 |
+
+#### 進階功能
 | 功能 | 說明 | 難度 |
 |------|------|:----:|
-| Signal | 隱私優先通訊 | 中 |
-| Google Chat | Google 生態 | 低 |
-| Voice Wake | 語音喚醒 | 高 |
-| Talk Mode | 持續對話模式 | 高 |
-| Live Canvas | A2UI 視覺工作區 | 高 |
-| Agent to Agent | 跨 session 協作 | 中 |
-| iOS/Android Node | 原生設備節點 | 高 |
+| Live Canvas (A2UI) | Agent 驅動的視覺工作區 | 高 |
+| macOS App 完整版 | SwiftUI 原生應用 | 高 |
+| iOS Node | iOS 設備節點 | 高 |
+| Android Node | Android 設備節點 | 高 |
+| Multiple Gateways | 高可用架構 | 中 |
+| DM Pairing | 設備配對機制 | 中 |
 
-### 低優先級 (🟢)
+### 📦 v1.x 後續迭代
 | 功能 | 說明 | 難度 |
 |------|------|:----:|
 | Matrix | 開源協議 | 中 |
-| Zalo | 越南市場 | 中 |
 | Nix Mode | 聲明式配置 | 低 |
 | SSH Tunnels | 內網穿透 | 低 |
-| Bonjour Pairing | mDNS 設備發現 | 中 |
 
 ---
 
