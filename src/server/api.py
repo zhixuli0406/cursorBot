@@ -26,10 +26,8 @@ class HealthResponse(BaseModel):
     uptime_seconds: float
     telegram_bot: bool
     discord_bot: bool
-    background_agent: bool
     llm_providers: List[str]
     memory_usage_mb: float
-    active_tasks: int
 
 
 class DetailedHealthResponse(BaseModel):
@@ -45,9 +43,6 @@ class DetailedHealthResponse(BaseModel):
     
     # LLM Providers
     llm: dict
-    
-    # Background Agent
-    background_agent: dict
     
     # System
     system: dict
@@ -151,6 +146,14 @@ def create_app() -> FastAPI:
     except ImportError as e:
         logger.warning(f"Web interfaces not available: {e}")
 
+    # Register social platform webhooks
+    try:
+        from .social_webhooks import router as social_router
+        application.include_router(social_router)
+        logger.info("Social webhooks registered: /webhook/line, /webhook/slack, /webhook/teams, /webhook/whatsapp, /webhook/google-chat")
+    except ImportError as e:
+        logger.warning(f"Social webhooks not available: {e}")
+
     return application
 
 
@@ -192,15 +195,6 @@ def register_routes(app: FastAPI) -> None:
         except Exception:
             pass
         
-        # Check Background Agent
-        try:
-            from ..cursor.background_agent import get_task_tracker
-            tracker = get_task_tracker()
-            active_tasks = len(tracker.get_pending_tasks())
-            bg_agent_status = bool(settings.cursor_api_key)
-        except Exception:
-            pass
-        
         # Check LLM providers
         try:
             from ..core.llm_providers import get_llm_manager
@@ -231,10 +225,8 @@ def register_routes(app: FastAPI) -> None:
             uptime_seconds=round(uptime, 2),
             telegram_bot=tg_bot_status,
             discord_bot=discord_bot_status,
-            background_agent=bg_agent_status,
             llm_providers=llm_providers,
             memory_usage_mb=round(memory_mb, 2),
-            active_tasks=active_tasks,
         )
     
     @app.get("/health/detailed", response_model=DetailedHealthResponse)
@@ -259,17 +251,6 @@ def register_routes(app: FastAPI) -> None:
         except Exception as e:
             llm_info["error"] = str(e)
         
-        # Background agent details
-        bg_info = {"enabled": False, "active_tasks": 0, "completed_tasks": 0}
-        try:
-            from ..cursor.background_agent import get_task_tracker
-            tracker = get_task_tracker()
-            bg_info["enabled"] = bool(settings.cursor_api_key)
-            bg_info["active_tasks"] = len(tracker.get_pending_tasks())
-            bg_info["completed_tasks"] = len(tracker.tasks) - bg_info["active_tasks"]
-        except Exception as e:
-            bg_info["error"] = str(e)
-        
         # System info
         process = psutil.Process()
         system_info = {
@@ -292,7 +273,6 @@ def register_routes(app: FastAPI) -> None:
                 "api_server": True,
             },
             llm=llm_info,
-            background_agent=bg_info,
             system=system_info,
         )
     

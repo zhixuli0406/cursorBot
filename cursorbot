@@ -6,6 +6,8 @@ Usage:
     cursorbot status          - Show system status
     cursorbot doctor          - Run diagnostics
     cursorbot start           - Start the bot
+    cursorbot tui             - Launch Terminal User Interface
+    cursorbot chat            - Interactive chat in terminal
     cursorbot config          - Show configuration
     cursorbot logs            - Show recent logs
     cursorbot sessions        - List active sessions
@@ -179,6 +181,99 @@ def cmd_version(args):
     """Show version."""
     print("CursorBot v0.3.0")
     print("https://github.com/your-repo/cursorBot")
+
+
+def cmd_tui(args):
+    """Launch Terminal User Interface."""
+    print("Starting CursorBot TUI...")
+    print("=" * 40)
+    
+    try:
+        from src.cli.tui import run_tui
+        asyncio.run(run_tui())
+    except ImportError as e:
+        print(f"Error: Could not import TUI module: {e}")
+        print("\nTry installing rich for better experience:")
+        print("  pip install rich")
+    except KeyboardInterrupt:
+        print("\nTUI closed.")
+    except Exception as e:
+        print(f"Error running TUI: {e}")
+
+
+def cmd_chat(args):
+    """Interactive chat in terminal."""
+    model = args.model if hasattr(args, 'model') and args.model else None
+    
+    print("CursorBot Interactive Chat")
+    print("=" * 40)
+    print("Type your message and press Enter. Commands: /help, /quit")
+    print()
+    
+    async def chat_loop():
+        try:
+            from src.core.llm_providers import get_llm_manager
+            from src.cursor.cli_agent import get_cli_agent, is_cli_available
+            
+            manager = get_llm_manager()
+            cli = get_cli_agent() if is_cli_available() else None
+            
+            if model and cli:
+                cli.set_user_model("cli_user", model)
+                print(f"Using model: {model}")
+            
+            while True:
+                try:
+                    user_input = input("\n\033[32mYou:\033[0m ")
+                except EOFError:
+                    break
+                
+                if not user_input.strip():
+                    continue
+                
+                if user_input.strip().lower() in ["/quit", "/exit", "/q"]:
+                    print("Goodbye!")
+                    break
+                
+                if user_input.strip().lower() == "/help":
+                    print("\nCommands:")
+                    print("  /help  - Show this help")
+                    print("  /quit  - Exit chat")
+                    print("  /model - Show current model")
+                    continue
+                
+                if user_input.strip().lower() == "/model":
+                    if cli:
+                        current = cli.get_user_model("cli_user") or "auto"
+                        print(f"Current model: {current}")
+                    continue
+                
+                # Get response
+                print("\n\033[36mCursorBot:\033[0m ", end="", flush=True)
+                
+                try:
+                    if cli:
+                        result = await cli.run(
+                            prompt=user_input,
+                            user_id="cli_user",
+                        )
+                        print(result.output if result.success else f"Error: {result.error}")
+                    else:
+                        response = await manager.chat(
+                            message=user_input,
+                            user_id="cli_user",
+                        )
+                        print(response)
+                except Exception as e:
+                    print(f"Error: {e}")
+                    
+        except ImportError as e:
+            print(f"Error: Could not import required modules: {e}")
+    
+    try:
+        asyncio.run(chat_loop())
+    except KeyboardInterrupt:
+        print("\nChat closed.")
 
 
 def cmd_message(args):
@@ -557,6 +652,13 @@ def main():
     dashboard_parser = subparsers.add_parser("dashboard", help="Show CLI dashboard")
     dashboard_parser.add_argument("--once", action="store_true", help="Show once and exit")
     
+    # tui
+    subparsers.add_parser("tui", help="Launch Terminal User Interface")
+    
+    # chat
+    chat_parser = subparsers.add_parser("chat", help="Interactive chat in terminal")
+    chat_parser.add_argument("--model", help="AI model to use")
+    
     # version
     subparsers.add_parser("version", help="Show version")
     
@@ -584,6 +686,8 @@ def main():
         "usage": cmd_usage,
         "onboard": cmd_onboard,
         "dashboard": cmd_dashboard,
+        "tui": cmd_tui,
+        "chat": cmd_chat,
         "version": cmd_version,
     }
     

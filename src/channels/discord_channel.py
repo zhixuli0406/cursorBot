@@ -382,22 +382,86 @@ class DiscordChannel(Channel):
                 )
                 return
 
-            await interaction.response.defer()
+            try:
+                await interaction.response.defer()
 
-            user = self._convert_user(interaction.user)
-            # Create a pseudo-message for context
-            msg = Message(
-                id=str(interaction.id),
-                content=f"/{name}",
-                author=user,
-                channel_id=str(interaction.channel_id),
-                platform=ChannelType.DISCORD,
-                raw_data=interaction,
-            )
-            ctx = MessageContext(message=msg, channel=self, user=user)
-            ctx.command = name
+                user = self._convert_user(interaction.user)
+                # Create a pseudo-message for context
+                msg = Message(
+                    id=str(interaction.id),
+                    content=f"/{name}",
+                    author=user,
+                    channel_id=str(interaction.channel_id),
+                    platform=ChannelType.DISCORD,
+                    raw_data=interaction,
+                )
+                ctx = MessageContext(message=msg, channel=self, user=user)
+                ctx.command = name
 
-            await callback(ctx, interaction)
+                await callback(ctx, interaction)
+            except Exception as e:
+                logger.error(f"Slash command /{name} error: {e}")
+                try:
+                    await interaction.followup.send(
+                        f"❌ 指令執行錯誤: {str(e)[:200]}",
+                        ephemeral=True
+                    )
+                except Exception:
+                    pass
+    
+    def add_slash_command_with_arg(
+        self,
+        name: str,
+        description: str,
+        callback: Callable,
+        arg_name: str,
+        arg_description: str,
+        arg_required: bool = False,
+    ) -> None:
+        """
+        Add a slash command with a string argument.
+        
+        Note: Due to how discord.py decorators work, we create the command
+        with an optional argument. The callback receives (ctx, arg_value, interaction).
+        """
+        channel_ref = self  # Capture reference for inner function
+        
+        @self.bot.tree.command(name=name, description=description)
+        @discord.app_commands.describe(text=arg_description)
+        async def command(interaction: discord.Interaction, text: str = ""):
+            if not channel_ref._is_authorized(interaction.user.id, interaction.guild):
+                await interaction.response.send_message(
+                    "You are not authorized.",
+                    ephemeral=True
+                )
+                return
+
+            try:
+                await interaction.response.defer()
+
+                user = channel_ref._convert_user(interaction.user)
+                
+                msg = Message(
+                    id=str(interaction.id),
+                    content=f"/{name} {text}".strip(),
+                    author=user,
+                    channel_id=str(interaction.channel_id),
+                    platform=ChannelType.DISCORD,
+                    raw_data=interaction,
+                )
+                ctx = MessageContext(message=msg, channel=channel_ref, user=user)
+                ctx.command = name
+
+                await callback(ctx, text, interaction)
+            except Exception as e:
+                logger.error(f"Slash command /{name} error: {e}")
+                try:
+                    await interaction.followup.send(
+                        f"❌ 指令執行錯誤: {str(e)[:200]}",
+                        ephemeral=True
+                    )
+                except Exception:
+                    pass
 
 
 # Factory function

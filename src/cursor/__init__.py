@@ -1,10 +1,9 @@
 """
 Cursor module for CursorBot
-Provides workspace management, CLI Agent, and Background Agent integration
+Provides workspace management and CLI Agent integration
 """
 
 from .agent import WorkspaceAgent, CursorAgent
-from .background_agent import CursorBackgroundAgent, TaskTracker
 from .cli_agent import (
     CursorCLIAgent,
     CLIConfig,
@@ -19,8 +18,6 @@ from .terminal import TerminalManager, CommandResult, CommandStatus
 __all__ = [
     "WorkspaceAgent",
     "CursorAgent",
-    "CursorBackgroundAgent",
-    "TaskTracker",
     "CursorCLIAgent",
     "CLIConfig",
     "CLIResult",

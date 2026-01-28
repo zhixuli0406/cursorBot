@@ -287,6 +287,100 @@ class Settings(BaseSettings):
         description="Enable Discord bot",
     )
 
+    # LINE Settings
+    line_channel_access_token: str = Field(
+        default="",
+        description="LINE channel access token",
+    )
+    line_channel_secret: str = Field(
+        default="",
+        description="LINE channel secret",
+    )
+    line_enabled: bool = Field(
+        default=False,
+        description="Enable LINE bot",
+    )
+    line_allowed_users: str = Field(
+        default="",
+        description="Comma-separated list of allowed LINE user IDs",
+    )
+
+    # Slack Settings
+    slack_bot_token: str = Field(
+        default="",
+        description="Slack bot OAuth token (xoxb-...)",
+    )
+    slack_signing_secret: str = Field(
+        default="",
+        description="Slack app signing secret",
+    )
+    slack_app_token: str = Field(
+        default="",
+        description="Slack app-level token for Socket Mode (xapp-...)",
+    )
+    slack_enabled: bool = Field(
+        default=False,
+        description="Enable Slack bot",
+    )
+    slack_allowed_users: str = Field(
+        default="",
+        description="Comma-separated list of allowed Slack user IDs",
+    )
+
+    # WhatsApp Cloud API Settings
+    whatsapp_access_token: str = Field(
+        default="",
+        description="WhatsApp Cloud API access token",
+    )
+    whatsapp_verify_token: str = Field(
+        default="",
+        description="WhatsApp webhook verification token",
+    )
+    whatsapp_phone_number_id: str = Field(
+        default="",
+        description="WhatsApp phone number ID",
+    )
+    whatsapp_enabled: bool = Field(
+        default=False,
+        description="Enable WhatsApp bot",
+    )
+    whatsapp_allowed_numbers: str = Field(
+        default="",
+        description="Comma-separated list of allowed phone numbers",
+    )
+
+    # Microsoft Teams Settings
+    teams_app_id: str = Field(
+        default="",
+        description="Azure AD App Registration ID",
+    )
+    teams_app_password: str = Field(
+        default="",
+        description="Azure AD App Password",
+    )
+    teams_enabled: bool = Field(
+        default=False,
+        description="Enable Teams bot",
+    )
+    teams_allowed_users: str = Field(
+        default="",
+        description="Comma-separated list of allowed Teams user IDs",
+    )
+
+    # Google Chat Settings
+    google_chat_credentials: str = Field(
+        default="",
+        description="Path to Google Chat service account credentials JSON",
+    )
+    google_chat_enabled: bool = Field(
+        default=False,
+        description="Enable Google Chat bot",
+    )
+    google_chat_allowed_users: str = Field(
+        default="",
+        description="Comma-separated list of allowed Google Chat user IDs",
+    )
+
     @property
     def allowed_user_ids(self) -> List[int]:
         """Parse comma-separated user IDs into a list of integers."""

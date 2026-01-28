@@ -7,14 +7,10 @@ from telegram import Update
 from telegram.error import BadRequest
 from telegram.ext import ContextTypes, CallbackQueryHandler
 
-from ..cursor.background_agent import get_background_agent, get_task_tracker
 from ..utils.auth import authorized_only
 from ..utils.config import settings
 from ..utils.logger import logger
 from .keyboards import (
-    get_task_keyboard,
-    get_task_list_keyboard,
-    get_repo_keyboard,
     get_status_keyboard,
     get_help_keyboard,
 )
@@ -67,37 +63,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         if action == "close":
             await query.message.delete()
 
-        elif action == "task_refresh":
-            await handle_task_refresh(query, param)
-
-        elif action == "task_cancel":
-            await handle_task_cancel(query, param, user_id)
-
-        elif action == "task_view":
-            await handle_task_view(query, param, user_id)
-
-        elif action == "task_followup":
-            await handle_task_followup(query, param, user_id)
-
-        elif action == "task_copy":
-            await handle_task_copy(query, param, user_id)
-
-        elif action == "tasks_list" or action == "tasks_refresh":
-            await handle_tasks_list(query, user_id)
-
-        elif action == "repo_select":
-            await handle_repo_select(query, param, user_id, context)
-
-        elif action == "repos_list" or action == "repos_refresh":
-            await handle_repos_list(query, user_id, context)
-        
-        elif action == "repos_page":
-            await handle_repos_page(query, int(param), user_id, context)
-        
-        elif action == "repos_noop":
-            # Do nothing (page indicator button)
-            pass
-
         elif action == "status" or action == "status_refresh":
             await handle_status(query, user_id)
 
@@ -109,17 +74,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
         elif action == "help_commands":
             await handle_help_commands(query)
-
-        elif action == "ask_new":
-            await query.message.reply_text(
-                "💬 <b>發送任務</b>\n\n"
-                "直接輸入你的問題或指令，我會發送到 Cursor Agent。\n\n"
-                "範例:\n"
-                "• <code>幫我實作一個快速排序函數</code>\n"
-                "• <code>修正這個 bug: ...</code>\n"
-                "• <code>新增 dark mode 支援</code>",
-                parse_mode="HTML",
-            )
 
         elif action == "memory_list":
             await handle_memory_list(query, user_id)
@@ -180,305 +134,30 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await query.answer(f"發生錯誤: {str(e)[:50]}", show_alert=True)
 
 
-async def handle_task_refresh(query, task_id_prefix: str) -> None:
-    """Refresh task status."""
-    tracker = get_task_tracker()
-    user_id = query.from_user.id
-
-    # Find task
-    user_tasks = tracker.get_user_tasks(user_id)
-    matching_task = None
-    for t in user_tasks:
-        if t['composer_id'].startswith(task_id_prefix):
-            matching_task = t
-            break
-
-    if not matching_task:
-        await query.message.edit_text(f"❌ 找不到任務: {task_id_prefix}")
-        return
-
-    # Get fresh status from API
-    try:
-        bg_agent = get_background_agent(settings.cursor_api_key)
-        result = await bg_agent.get_task_details(matching_task['composer_id'])
-
-        if result.get("success"):
-            status = result.get("status", matching_task.get("status", "unknown"))
-            output = result.get("output", "")
-
-            # Update tracker
-            tracker.update_task(matching_task['composer_id'], status, output)
-            matching_task["status"] = status
-            matching_task["output"] = output
-
-    except Exception as e:
-        logger.error(f"Error refreshing task: {e}")
-
-    # Format response
-    status = matching_task.get("status", "unknown")
-    status_emoji = {
-        "running": "🔄",
-        "pending": "⏳",
-        "created": "🆕",
-        "completed": "✅",
-        "failed": "❌",
-    }.get(status, "❓")
-
-    output = matching_task.get("output", "（尚無輸出）")
-    if len(output) > 2000:
-        output = output[:2000] + "\n\n... (內容過長已截斷)"
-
-    prompt = matching_task.get("prompt", "")[:150]
-    if len(matching_task.get("prompt", "")) > 150:
-        prompt += "..."
-
-    await query.message.edit_text(
-        f"<b>📋 任務狀態</b>\n\n"
-        f"🆔 ID: <code>{matching_task['composer_id'][:8]}</code>\n"
-        f"{status_emoji} 狀態: {_escape_html(status)}\n\n"
-        f"<b>❓ 問題:</b>\n{_escape_html(prompt)}\n\n"
-        f"<b>📝 結果:</b>\n{_escape_html(output)}",
-        parse_mode="HTML",
-        reply_markup=get_task_keyboard(matching_task['composer_id'], status),
-    )
-
-
-async def handle_task_cancel(query, task_id_prefix: str, user_id: int) -> None:
-    """Cancel a task."""
-    tracker = get_task_tracker()
-
-    # Find task
-    user_tasks = tracker.get_user_tasks(user_id)
-    matching_task = None
-    for t in user_tasks:
-        if t['composer_id'].startswith(task_id_prefix):
-            matching_task = t
-            break
-
-    if not matching_task:
-        await query.message.edit_text(f"❌ 找不到任務: {task_id_prefix}")
-        return
-
-    try:
-        bg_agent = get_background_agent(settings.cursor_api_key)
-        result = await bg_agent.cancel_task(matching_task['composer_id'])
-
-        if result.get("success"):
-            tracker.update_task(matching_task['composer_id'], "cancelled")
-            await query.message.edit_text(
-                f"🚫 <b>任務已取消</b>\n\n"
-                f"🆔 ID: <code>{matching_task['composer_id'][:8]}</code>",
-                parse_mode="HTML",
-            )
-        else:
-            await query.message.edit_text(
-                f"❌ 取消失敗: {result.get('message', 'Unknown')}"
-            )
-
-    except Exception as e:
-        await query.message.edit_text(f"❌ 錯誤: {str(e)[:100]}")
-
-
-async def handle_task_view(query, task_id_prefix: str, user_id: int) -> None:
-    """View task details."""
-    await handle_task_refresh(query, task_id_prefix)
-
-
-async def handle_task_followup(query, task_id_prefix: str, user_id: int) -> None:
-    """Send follow-up to a task."""
-    await query.message.reply_text(
-        f"💬 <b>追問任務</b>\n\n"
-        f"回覆這則訊息，輸入你的追問內容。\n\n"
-        f"任務 ID: <code>{task_id_prefix}</code>",
-        parse_mode="HTML",
-    )
-    # Store context for follow-up handling
-    # This would require conversation state management
-
-
-async def handle_task_copy(query, task_id_prefix: str, user_id: int) -> None:
-    """Copy task result."""
-    tracker = get_task_tracker()
-
-    user_tasks = tracker.get_user_tasks(user_id)
-    matching_task = None
-    for t in user_tasks:
-        if t['composer_id'].startswith(task_id_prefix):
-            matching_task = t
-            break
-
-    if not matching_task:
-        await query.answer("找不到任務", show_alert=True)
-        return
-
-    output = matching_task.get("output", "")
-    if output:
-        # Send as a separate message for easy copying
-        await query.message.reply_text(
-            f"<pre>{_escape_html(output[:4000])}</pre>",
-            parse_mode="HTML",
-        )
-    else:
-        await query.answer("任務尚無輸出", show_alert=True)
-
-
-async def handle_tasks_list(query, user_id: int) -> None:
-    """Show task list."""
-    tracker = get_task_tracker()
-    all_tasks = tracker.get_user_tasks(user_id)
-
-    if not all_tasks:
-        await query.message.edit_text(
-            "📋 <b>沒有任務記錄</b>\n\n"
-            "直接發送訊息來建立新任務！",
-            parse_mode="HTML",
-        )
-        return
-
-    # Get recent tasks
-    recent_tasks = all_tasks[:8]
-
-    # Count by status
-    running = len([t for t in all_tasks if t.get("status") in ["running", "pending", "created"]])
-    completed = len([t for t in all_tasks if t.get("status") == "completed"])
-    failed = len([t for t in all_tasks if t.get("status") in ["failed", "error"]])
-
-    await query.message.edit_text(
-        f"<b>📋 我的任務</b>\n\n"
-        f"🔄 執行中: {running}\n"
-        f"✅ 已完成: {completed}\n"
-        f"❌ 失敗: {failed}\n\n"
-        f"點擊查看詳情:",
-        parse_mode="HTML",
-        reply_markup=get_task_list_keyboard(recent_tasks),
-    )
-
-
-async def handle_repo_select(query, full_name: str, user_id: int, context=None) -> None:
-    """Select a repository."""
-    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-    
-    repo_url = f"https://github.com/{full_name}"
-    set_user_repo(user_id, repo_url)
-
-    repo_name = full_name.split("/")[-1]
-    
-    # Create keyboard with back to list and close buttons
-    keyboard = [
-        [InlineKeyboardButton("🔗 在 GitHub 開啟", url=repo_url)],
-        [
-            InlineKeyboardButton("📂 返回列表", callback_data="repos_refresh"),
-            InlineKeyboardButton("❌ 關閉", callback_data="close"),
-        ],
-    ]
-
-    await query.message.edit_text(
-        f"✅ <b>已選擇倉庫</b>\n\n"
-        f"📁 <code>{full_name}</code>\n\n"
-        f"現在可以發送任務到此倉庫。\n"
-        f"直接輸入問題或使用 /ask 指令。",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
-
-
-async def handle_repos_list(query, user_id: int, context=None) -> None:
-    """Show repository list with pagination."""
-    if not settings.cursor_api_key:
-        await query.message.edit_text(
-            "⚠️ <b>未設定 API Key</b>\n\n"
-            "請設定 CURSOR_API_KEY 來使用此功能。",
-            parse_mode="HTML",
-        )
-        return
-
-    try:
-        bg_agent = get_background_agent(settings.cursor_api_key)
-        result = await bg_agent.list_repositories()
-
-        if result.get("success") and result.get("repositories"):
-            repos = result.get("repositories", [])
-            current_repo = get_user_repo(user_id)
-            
-            # Cache repos in context for pagination
-            if context:
-                context.user_data["repos_cache"] = repos
-            
-            total_pages = max(1, (len(repos) + 7) // 8)
-            
-            text = f"<b>📁 選擇倉庫</b>\n\n"
-            text += f"共 {len(repos)} 個倉庫（第 1/{total_pages} 頁）\n"
-            text += "點擊按鈕切換倉庫："
-            
-            if current_repo:
-                repo_name = current_repo.split("/")[-1]
-                text += f"\n\n目前使用: <code>{repo_name}</code>"
-
-            await query.message.edit_text(
-                text,
-                parse_mode="HTML",
-                reply_markup=get_repo_keyboard(repos, current_repo, page=0),
-            )
-        else:
-            await query.message.edit_text(
-                f"⚠️ 無法取得倉庫列表\n\n"
-                f"請使用 /repo 手動設定:\n"
-                f"<code>/repo owner/repo-name</code>",
-                parse_mode="HTML",
-            )
-
-    except Exception as e:
-        logger.error(f"Error listing repos: {e}")
-        await query.message.edit_text(f"❌ 錯誤: {str(e)[:100]}")
-
-
-async def handle_repos_page(query, page: int, user_id: int, context=None) -> None:
-    """Handle repository list pagination."""
-    # Get cached repos from context
-    repos = context.user_data.get("repos_cache", []) if context else []
-    
-    if not repos:
-        # If no cache, refresh the list
-        await handle_repos_list(query, user_id, context)
-        return
-    
-    current_repo = get_user_repo(user_id)
-    total_pages = max(1, (len(repos) + 7) // 8)
-    page = max(0, min(page, total_pages - 1))
-    
-    text = f"<b>📁 選擇倉庫</b>\n\n"
-    text += f"共 {len(repos)} 個倉庫（第 {page + 1}/{total_pages} 頁）\n"
-    text += "點擊按鈕切換倉庫："
-    
-    if current_repo:
-        repo_name = current_repo.split("/")[-1]
-        text += f"\n\n目前使用: <code>{repo_name}</code>"
-
-    await query.message.edit_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=get_repo_keyboard(repos, current_repo, page=page),
-    )
-
-
 async def handle_status(query, user_id: int) -> None:
     """Show status."""
-    current_repo = get_user_repo(user_id)
-    tracker = get_task_tracker()
-    running_tasks = len(tracker.get_pending_tasks())
-
-    if settings.cursor_api_key:
-        api_status = "🟢 已連線"
-    else:
-        api_status = "🔴 未設定"
-
-    repo_display = current_repo.split("/")[-1] if current_repo else "未設定"
+    from ..cursor.cli_agent import is_cli_available
+    from ..core.llm_providers import get_llm_manager
+    
+    # Check CLI status
+    cli_status = "⚪ CLI 未安裝"
+    if is_cli_available():
+        cli_status = "🟢 CLI 可用"
+    
+    # Check AI providers
+    ai_status = "⚪ AI 未設定"
+    try:
+        manager = get_llm_manager()
+        providers = manager.list_available_providers()
+        if providers:
+            ai_status = f"🟢 AI ({len(providers)} 提供者)"
+    except Exception:
+        pass
 
     await query.message.edit_text(
         f"<b>📊 系統狀態</b>\n\n"
-        f"<b>Background Agent:</b> {api_status}\n"
-        f"<b>目前倉庫:</b> {repo_display}\n"
-        f"<b>執行中任務:</b> {running_tasks}\n",
+        f"<b>Cursor CLI:</b> {cli_status}\n"
+        f"<b>AI 提供者:</b> {ai_status}\n",
         parse_mode="HTML",
         reply_markup=get_status_keyboard(),
     )
@@ -884,11 +563,13 @@ def setup_callback_handlers(app) -> None:
     Args:
         app: Telegram Application instance
     """
-    # Use pattern to exclude ws_ prefixed callbacks (handled by workspace_callback_handler)
-    # Also exclude model_ prefixed callbacks (handled by model_callback_handler)
+    # Use pattern to exclude callbacks handled by specific handlers:
+    # - ws_ : workspace_callback_handler
+    # - model_ : model_callback_handler (core_handlers.py)
+    # - climodel_ : climodel_callback_handler (core_handlers.py)
     app.add_handler(CallbackQueryHandler(
         callback_handler,
-        pattern=r"^(?!ws_|model_).*"  # Negative lookahead to exclude ws_ and model_ prefixes
+        pattern=r"^(?!ws_|model_|climodel_).*"  # Negative lookahead to exclude specific prefixes
     ))
     logger.info("Callback handlers configured")
 

@@ -15,39 +15,9 @@ except ImportError:
 
 from .base import MessageContext, ButtonRow, Button
 from .discord_channel import DiscordChannel
-from ..cursor.background_agent import get_background_agent, get_task_tracker
 from ..core import get_memory_manager, get_skill_manager, get_context_manager
 from ..utils.config import settings
 from ..utils.logger import logger
-
-
-# Store user repos (shared state)
-_discord_user_repos: dict[str, str] = {}
-
-
-def get_discord_user_repo(user_id: str) -> str:
-    """Get user's current repo."""
-    return _discord_user_repos.get(user_id, settings.cursor_github_repo)
-
-
-def set_discord_user_repo(user_id: str, repo_url: str) -> None:
-    """Set user's current repo."""
-    _discord_user_repos[user_id] = repo_url
-
-
-def _create_task_buttons(task_id: str, status: str = "running") -> list[ButtonRow]:
-    """Create task action buttons."""
-    row1 = ButtonRow()
-    row1.add("🔗 在 Cursor 開啟", url=f"https://cursor.com/agents/{task_id}")
-
-    row2 = ButtonRow()
-    if status in ["running", "pending", "created"]:
-        row2.add("🔄 重新整理", callback_data=f"task_refresh:{task_id[:8]}")
-        row2.add("❌ 取消", callback_data=f"task_cancel:{task_id[:8]}", style="danger")
-    else:
-        row2.add("🔄 重新整理", callback_data=f"task_refresh:{task_id[:8]}")
-
-    return [row1, row2]
 
 
 async def handle_start(ctx: MessageContext, interaction=None) -> None:
@@ -67,12 +37,6 @@ async def handle_start(ctx: MessageContext, interaction=None) -> None:
         status_items.append(f"🟢 CLI ({cli_model})")
     else:
         status_items.append("⚪ CLI")
-    
-    # Background Agent status
-    if settings.background_agent_enabled and settings.cursor_api_key:
-        status_items.append("🟢 Background Agent")
-    else:
-        status_items.append("⚪ Background Agent")
     
     status_items.append("🟢 Discord Bot")
     
@@ -184,6 +148,15 @@ async def handle_help(ctx: MessageContext, interaction=None) -> None:
 • `/memory del <key>` - 刪除
 
 ━━━━━━━━━━━━━━━━━━━━━━
+**📚 RAG 檢索增強**
+━━━━━━━━━━━━━━━━━━━━━━
+• `/rag <問題>` - 基於索引內容回答
+• `/index <檔案>` - 索引檔案
+• `/search_rag <關鍵字>` - 搜尋索引
+• `/ragstats` - RAG 統計資訊
+💡 Agent/Ask 對話會自動存入 RAG
+
+━━━━━━━━━━━━━━━━━━━━━━
 **🎯 技能系統**
 ━━━━━━━━━━━━━━━━━━━━━━
 • `/skills` - 查看技能
@@ -244,11 +217,6 @@ async def handle_status(ctx: MessageContext, interaction=None) -> None:
         else:
             cli_status = "✅ 可用"
 
-    # Check Background Agent
-    if settings.background_agent_enabled and settings.cursor_api_key:
-        bg_status = "✅ 已啟用"
-    else:
-        bg_status = "⚪ 未啟用"
 
     # Calculate context usage
     context_tokens = session.context_tokens if session else 0
@@ -262,7 +230,6 @@ async def handle_status(ctx: MessageContext, interaction=None) -> None:
 **對話模式**
 ━━━━━━━━━━━━━━━━━━━━━━
 ⌨️ CLI: {cli_status}
-💻 Background Agent: {bg_status}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **Session 狀態**
@@ -291,183 +258,6 @@ async def handle_status(ctx: MessageContext, interaction=None) -> None:
                    .add("📦 壓縮", callback_data="compact"),
         ButtonRow().add("⚡ 模式", callback_data="mode_menu")
                    .add("🤖 模型", callback_data="model_menu"),
-    ]
-
-    if interaction:
-        await interaction.followup.send(content, view=_create_view(buttons, ctx.channel))
-    else:
-        await ctx.reply(content, buttons=buttons)
-
-
-async def handle_ask(ctx: MessageContext, question: str, interaction=None) -> None:
-    """Handle /ask command."""
-    user_id = ctx.user.id
-
-    # Check if Background Agent is enabled
-    if not settings.background_agent_enabled or not settings.cursor_api_key:
-        content = "⚠️ **Background Agent 未啟用**\n\n請設定 `CURSOR_API_KEY`"
-        if interaction:
-            await interaction.followup.send(content)
-        else:
-            await ctx.reply(content)
-        return
-
-    # Get repo
-    repo_url = get_discord_user_repo(user_id)
-    if not repo_url:
-        content = """⚠️ **未設定 GitHub 倉庫**
-
-使用 `/repo owner/repo-name` 設定倉庫
-或點擊下方按鈕選擇倉庫
-"""
-        buttons = [ButtonRow().add("📁 選擇倉庫", callback_data="repos_list")]
-        if interaction:
-            await interaction.followup.send(content, view=_create_view(buttons, ctx.channel))
-        else:
-            await ctx.reply(content, buttons=buttons)
-        return
-
-    repo_name = repo_url.split("/")[-1]
-
-    # Send initial message
-    content = f"🚀 **正在啟動 Background Agent...**\n\n📁 倉庫: `{repo_name}`\n❓ 問題: {question[:80]}..."
-
-    if interaction:
-        status_msg = await interaction.followup.send(content)
-    else:
-        status_msg = await ctx.reply(content)
-
-    # Create task
-    try:
-        bg_agent = get_background_agent(settings.cursor_api_key)
-        result = await bg_agent.create_task(prompt=question, repo_url=repo_url)
-
-        if result.get("success"):
-            composer_id = result.get("composer_id", "")
-            
-            # Track task
-            tracker = get_task_tracker()
-            tracker.add_task(
-                composer_id=composer_id,
-                user_id=int(user_id),
-                prompt=question,
-                repo_url=repo_url,
-            )
-
-            buttons = _create_task_buttons(composer_id, "running")
-            content = f"""✅ **任務已建立**
-
-🆔 任務 ID: `{composer_id[:8]}`
-📁 倉庫: `{repo_name}`
-❓ 問題: {question[:60]}...
-
-⏳ 正在執行中...
-"""
-            # Edit message
-            if hasattr(status_msg, 'edit'):
-                await status_msg.edit(content=content, view=_create_view(buttons, ctx.channel))
-
-        else:
-            content = f"❌ 建立任務失敗: {result.get('message', 'Unknown error')}"
-            if hasattr(status_msg, 'edit'):
-                await status_msg.edit(content=content)
-
-    except Exception as e:
-        logger.error(f"Ask error: {e}")
-        content = f"❌ 錯誤: {str(e)[:200]}"
-        if hasattr(status_msg, 'edit'):
-            await status_msg.edit(content=content)
-
-
-async def handle_tasks(ctx: MessageContext, interaction=None) -> None:
-    """Handle /tasks command."""
-    user_id = ctx.user.id
-    tracker = get_task_tracker()
-    all_tasks = tracker.get_user_tasks(int(user_id))
-
-    if not all_tasks:
-        content = "📋 **沒有任務記錄**\n\n直接發送訊息來建立新任務！"
-        if interaction:
-            await interaction.followup.send(content)
-        else:
-            await ctx.reply(content)
-        return
-
-    # Count by status
-    running = len([t for t in all_tasks if t.get("status") in ["running", "pending", "created"]])
-    completed = len([t for t in all_tasks if t.get("status") == "completed"])
-    failed = len([t for t in all_tasks if t.get("status") in ["failed", "error"]])
-
-    content = f"""**📋 我的任務**
-
-🔄 執行中: {running}
-✅ 已完成: {completed}
-❌ 失敗: {failed}
-
-**最近任務:**
-"""
-
-    for task in all_tasks[:5]:
-        task_id = task.get("composer_id", "")[:8]
-        status = task.get("status", "unknown")
-        prompt = task.get("prompt", "")[:30] + "..."
-
-        emoji = {
-            "running": "🔄",
-            "pending": "⏳",
-            "completed": "✅",
-            "failed": "❌",
-        }.get(status, "❓")
-
-        content += f"\n{emoji} `{task_id}`: {prompt}"
-
-    if interaction:
-        await interaction.followup.send(content)
-    else:
-        await ctx.reply(content)
-
-
-async def handle_repo(ctx: MessageContext, repo: str = None, interaction=None) -> None:
-    """Handle /repo command."""
-    user_id = ctx.user.id
-
-    if not repo:
-        # Show current repo
-        current = get_discord_user_repo(user_id)
-        if current:
-            repo_name = current.split("/")[-1]
-            content = f"📁 **目前倉庫:** {repo_name}\n\n使用 `/repo owner/repo-name` 切換倉庫"
-        else:
-            content = "📁 **未設定倉庫**\n\n使用 `/repo owner/repo-name` 設定倉庫"
-
-        buttons = [ButtonRow().add("📁 選擇倉庫", callback_data="repos_list")]
-        if interaction:
-            await interaction.followup.send(content, view=_create_view(buttons, ctx.channel))
-        else:
-            await ctx.reply(content, buttons=buttons)
-        return
-
-    # Set repo
-    if "/" in repo and not repo.startswith("http"):
-        repo_url = f"https://github.com/{repo}"
-    elif repo.startswith("http"):
-        repo_url = repo
-    else:
-        content = "❌ 無效的倉庫格式\n\n使用: `/repo owner/repo-name`"
-        if interaction:
-            await interaction.followup.send(content)
-        else:
-            await ctx.reply(content)
-        return
-
-    set_discord_user_repo(user_id, repo_url)
-    repo_name = repo_url.split("/")[-1]
-
-    content = f"✅ **已切換倉庫**\n\n📁 {repo_name}\n\n現在可以發送任務到此倉庫。"
-
-    buttons = [
-        ButtonRow().add("🔗 在 GitHub 開啟", url=repo_url)
-                   .add("💬 發送任務", callback_data="ask_new"),
     ]
 
     if interaction:
@@ -528,44 +318,6 @@ async def handle_memory(ctx: MessageContext, action: str = None, key: str = None
     elif action == "del" and key:
         deleted = await memory.forget(user_id, key)
         content = f"✅ 已刪除: {key}" if deleted else f"❌ 找不到記憶: {key}"
-        if interaction:
-            await interaction.followup.send(content)
-        else:
-            await ctx.reply(content)
-
-
-async def handle_repos(ctx: MessageContext, interaction=None) -> None:
-    """Handle /repos command - list GitHub repositories."""
-    from ..cursor.background_agent import get_background_agent
-    
-    agent = get_background_agent()
-    
-    if not agent or not agent.is_authenticated():
-        content = "❌ Background Agent 未啟用或未認證"
-        if interaction:
-            await interaction.followup.send(content)
-        else:
-            await ctx.reply(content)
-        return
-    
-    try:
-        repos = await agent.list_repos()
-        if not repos:
-            content = "📁 **GitHub 倉庫**\n\n目前沒有找到任何倉庫。"
-        else:
-            content = "📁 **GitHub 倉庫**\n\n"
-            for repo in repos[:20]:
-                name = repo.get("full_name", repo.get("name", "Unknown"))
-                content += f"• `{name}`\n"
-            if len(repos) > 20:
-                content += f"\n... 共 {len(repos)} 個倉庫"
-        
-        if interaction:
-            await interaction.followup.send(content)
-        else:
-            await ctx.reply(content)
-    except Exception as e:
-        content = f"❌ 取得倉庫失敗: {str(e)[:100]}"
         if interaction:
             await interaction.followup.send(content)
         else:
@@ -748,7 +500,6 @@ async def handle_doctor(ctx: MessageContext, interaction=None) -> None:
     """Handle /doctor command - system diagnostics."""
     from ..utils.config import settings
     from ..cursor.cli_agent import is_cli_available
-    from ..cursor.background_agent import get_background_agent
     from ..core.llm_providers import get_llm_manager
     
     # Check components
@@ -759,13 +510,6 @@ async def handle_doctor(ctx: MessageContext, interaction=None) -> None:
         checks.append("✅ Cursor CLI")
     else:
         checks.append("❌ Cursor CLI (未安裝)")
-    
-    # Background Agent
-    agent = get_background_agent()
-    if agent and agent.is_authenticated():
-        checks.append("✅ Background Agent")
-    else:
-        checks.append("⚪ Background Agent (未啟用)")
     
     # LLM Providers
     manager = get_llm_manager()
@@ -787,6 +531,198 @@ async def handle_doctor(ctx: MessageContext, interaction=None) -> None:
         await interaction.followup.send(content)
     else:
         await ctx.reply(content)
+
+
+# ============================================
+# RAG Handlers
+# ============================================
+
+async def handle_rag(ctx: MessageContext, question: str = None, interaction=None) -> None:
+    """Handle /rag command - query with RAG."""
+    if not question:
+        content = """📚 **RAG 檢索增強**
+
+使用方式: `/rag <問題>`
+
+範例:
+`/rag 這個專案的主要功能是什麼？`
+`/rag 如何設定環境變數？`
+
+相關指令:
+• `/index <檔案>` - 索引檔案
+• `/search_rag <關鍵字>` - 搜尋索引
+• `/ragstats` - 查看統計
+"""
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+        return
+    
+    try:
+        from ..core.rag import get_rag_manager
+        
+        rag = get_rag_manager()
+        stats = rag.get_stats()
+        
+        if stats.get("indexed_documents", 0) == 0:
+            content = "📚 **RAG 尚未索引任何文件**\n\n使用 `/index <檔案>` 開始索引文件"
+            if interaction:
+                await interaction.followup.send(content)
+            else:
+                await ctx.reply(content)
+            return
+        
+        # Query RAG
+        response = await rag.query(question)
+        
+        answer = response.answer
+        if response.sources:
+            answer += "\n\n**來源:**\n"
+            for i, src in enumerate(response.sources[:3]):
+                name = src.document.metadata.get("filename", 
+                    src.document.metadata.get("source", "Unknown"))
+                answer += f"{i+1}. {name} (相關度: {src.score:.2f})\n"
+        
+        if len(answer) > 2000:
+            answer = answer[:2000] + "\n\n...(已截斷)"
+        
+        if interaction:
+            await interaction.followup.send(answer)
+        else:
+            await ctx.reply(answer)
+            
+    except Exception as e:
+        logger.error(f"RAG query error: {e}")
+        content = f"❌ RAG 查詢錯誤: {str(e)[:200]}"
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+
+
+async def handle_index(ctx: MessageContext, path: str = None, interaction=None) -> None:
+    """Handle /index command - index a file."""
+    if not path:
+        content = """📁 **索引檔案**
+
+使用方式: `/index <檔案路徑>`
+
+支援格式:
+• 文字: `.txt`, `.log`
+• Markdown: `.md`, `.markdown`
+• 程式碼: `.py`, `.js`, `.ts`, `.java` 等
+• PDF: `.pdf`
+• JSON: `.json`, `.jsonl`
+"""
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+        return
+    
+    try:
+        from ..core.rag import get_rag_manager
+        from pathlib import Path
+        
+        rag = get_rag_manager()
+        
+        file_path = Path(path)
+        if not file_path.exists():
+            content = f"❌ 檔案不存在: {path}"
+            if interaction:
+                await interaction.followup.send(content)
+            else:
+                await ctx.reply(content)
+            return
+        
+        chunks = await rag.index_file(str(file_path))
+        content = f"✅ 已索引 `{file_path.name}`\n\n📄 產生 {chunks} 個區塊"
+        
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+            
+    except Exception as e:
+        logger.error(f"Index error: {e}")
+        content = f"❌ 索引錯誤: {str(e)[:200]}"
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+
+
+async def handle_search_rag(ctx: MessageContext, query: str = None, interaction=None) -> None:
+    """Handle /search_rag command - search RAG index."""
+    if not query:
+        content = "🔍 **搜尋 RAG 索引**\n\n使用方式: `/search_rag <關鍵字>`"
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+        return
+    
+    try:
+        from ..core.rag import get_rag_manager
+        
+        rag = get_rag_manager()
+        results = await rag.search(query, top_k=5)
+        
+        if not results:
+            content = "🔍 未找到相關內容"
+        else:
+            content = f"🔍 **搜尋結果** (關鍵字: `{query}`)\n\n"
+            for i, r in enumerate(results):
+                name = r.document.metadata.get("filename", 
+                    r.document.metadata.get("source", "Unknown"))
+                preview = r.document.content[:100].replace("\n", " ")
+                content += f"{i+1}. **{name}** (相關度: {r.score:.2f})\n   {preview}...\n\n"
+        
+        if len(content) > 2000:
+            content = content[:2000] + "\n\n...(已截斷)"
+        
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+            
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        content = f"❌ 搜尋錯誤: {str(e)[:200]}"
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+
+
+async def handle_ragstats(ctx: MessageContext, interaction=None) -> None:
+    """Handle /ragstats command - RAG statistics."""
+    try:
+        from ..core.rag import get_rag_manager
+        
+        rag = get_rag_manager()
+        stats = rag.get_stats()
+        
+        content = f"""📊 **RAG 統計**
+
+📄 已索引文件: {stats.get('indexed_documents', 0)}
+📦 總區塊數: {stats.get('total_chunks', 0)}
+🔧 嵌入模型: {stats.get('embedding_model', 'N/A')}
+📁 儲存位置: {stats.get('persist_directory', 'N/A')}
+"""
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
+            
+    except Exception as e:
+        logger.error(f"RAG stats error: {e}")
+        content = f"❌ 取得統計錯誤: {str(e)[:200]}"
+        if interaction:
+            await interaction.followup.send(content)
+        else:
+            await ctx.reply(content)
 
 
 async def handle_skills(ctx: MessageContext, interaction=None) -> None:
@@ -963,7 +899,6 @@ async def handle_mode(ctx: MessageContext, interaction=None) -> None:
     from ..cursor.cli_agent import is_cli_available, get_cli_agent
     
     cli_available = is_cli_available()
-    bg_available = settings.background_agent_enabled and settings.cursor_api_key
     
     # Get CLI info
     cli_info = ""
@@ -975,7 +910,7 @@ async def handle_mode(ctx: MessageContext, interaction=None) -> None:
     content = f"""**⚡ 對話模式設定**
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**可用模式** (優先順序: CLI → Agent → Cursor)
+**可用模式** (優先順序: CLI → Agent)
 ━━━━━━━━━━━━━━━━━━━━━━
 
 ⌨️ **Cursor CLI** (`/mode cli`)
@@ -988,10 +923,6 @@ async def handle_mode(ctx: MessageContext, interaction=None) -> None:
    使用內建 AI Agent 處理對話
    支援多種 AI 模型 (OpenAI/Claude/Gemini/Copilot)
    ✅ 可用
-
-💻 **Background Agent** (`/mode cursor`)
-   使用 Cursor IDE 的 Background Agent API
-   {'✅ 可用' if bg_available else '⚠️ 未設定'}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **使用方式**
@@ -1087,12 +1018,10 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
         lambda ctx, i: handle_help(ctx, i))
     channel.add_slash_command("status", "狀態總覽", 
         lambda ctx, i: handle_status(ctx, i))
-    channel.add_slash_command("tasks", "查看我的任務", 
-        lambda ctx, i: handle_tasks(ctx, i))
     channel.add_slash_command("skills", "查看可用技能", 
         lambda ctx, i: handle_skills(ctx, i))
     
-    # New commands for session management
+    # Session management commands
     channel.add_slash_command("new", "開始新對話 (重置上下文)",
         lambda ctx, i: handle_new(ctx, i))
     channel.add_slash_command("session", "Session 管理",
@@ -1104,17 +1033,10 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
     channel.add_slash_command("model", "查看/切換 AI 模型",
         lambda ctx, i: handle_model(ctx, i))
     
-    # Background Agent commands
-    channel.add_slash_command("ask", "向 Cursor Agent 發送問題",
-        lambda ctx, i: handle_ask(ctx, i))
-    channel.add_slash_command("repo", "切換 GitHub 倉庫",
-        lambda ctx, i: handle_repo(ctx, i))
-    channel.add_slash_command("repos", "查看帳號中的倉庫",
-        lambda ctx, i: handle_repos(ctx, i))
-    
-    # Agent & AI commands
-    channel.add_slash_command("agent", "啟動 AI Agent 執行任務",
-        lambda ctx, i: handle_agent(ctx, i))
+    # Agent & AI commands (with arguments)
+    channel.add_slash_command_with_arg("agent", "啟動 AI Agent 執行任務",
+        lambda ctx, text, i: handle_agent(ctx, text, i),
+        "text", "你要執行的任務")
     channel.add_slash_command("climodel", "CLI 模型設定",
         lambda ctx, i: handle_climodel(ctx, i))
     
@@ -1137,6 +1059,19 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
     # Diagnostic commands
     channel.add_slash_command("doctor", "診斷系統狀態",
         lambda ctx, i: handle_doctor(ctx, i))
+    
+    # RAG commands
+    channel.add_slash_command_with_arg("rag", "基於索引內容回答問題",
+        lambda ctx, text, i: handle_rag(ctx, text, i),
+        "text", "你的問題")
+    channel.add_slash_command_with_arg("index", "索引檔案到 RAG",
+        lambda ctx, text, i: handle_index(ctx, text, i),
+        "text", "檔案路徑")
+    channel.add_slash_command_with_arg("search_rag", "搜尋 RAG 索引內容",
+        lambda ctx, text, i: handle_search_rag(ctx, text, i),
+        "text", "搜尋關鍵字")
+    channel.add_slash_command("ragstats", "查看 RAG 統計資訊",
+        lambda ctx, i: handle_ragstats(ctx, i))
 
     # Register message handler for non-command messages
     @channel.on_message
@@ -1145,9 +1080,8 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
         if ctx.message.is_command:
             return
 
-        # Handle as ask
-        if settings.background_agent_enabled and settings.cursor_api_key:
-            await handle_ask(ctx, ctx.message.content)
+        # Handle as agent task
+        await handle_agent(ctx, ctx.message.content)
 
     # Register button handler
     @channel.on_button
@@ -1163,13 +1097,7 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
                 await ctx.reply(content)
         
         try:
-            if callback_data == "repos_list":
-                await send_response("使用 `/repo owner/repo-name` 設定倉庫\n\n例如: `/repo microsoft/vscode`")
-            
-            elif callback_data == "tasks_list":
-                await _handle_button_tasks(ctx, interaction)
-            
-            elif callback_data == "status":
+            if callback_data == "status":
                 await _handle_button_status(ctx, interaction)
             
             elif callback_data == "help":
@@ -1202,7 +1130,6 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
             elif callback_data == "mode_menu":
                 from ..cursor.cli_agent import is_cli_available
                 cli_available = is_cli_available()
-                bg_available = settings.background_agent_enabled and settings.cursor_api_key
                 
                 await send_response(
                     "**⚡ 對話模式**\n\n"
@@ -1210,8 +1137,6 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
                     "   使用官方 CLI，支援對話記憶\n\n"
                     "🤖 **Agent Loop** - ✅ 可用\n"
                     "   使用內建 AI Agent\n\n"
-                    f"💻 **Background Agent** - {'✅ 可用' if bg_available else '⚠️ 未設定'}\n"
-                    "   使用 Cursor Background Agent API\n\n"
                     "使用 `/mode <mode>` 切換模式"
                 )
             
@@ -1360,50 +1285,27 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
     logger.info("Discord handlers configured")
 
 
-async def _handle_button_tasks(ctx: MessageContext, interaction) -> None:
-    """Handle tasks button click."""
-    user_id = ctx.user.id
-    tracker = get_task_tracker()
-    all_tasks = tracker.get_user_tasks(int(user_id))
-
-    if not all_tasks:
-        content = "📋 **沒有任務記錄**\n\n直接發送訊息來建立新任務！"
-    else:
-        running = len([t for t in all_tasks if t.get("status") in ["running", "pending", "created"]])
-        completed = len([t for t in all_tasks if t.get("status") == "completed"])
-        failed = len([t for t in all_tasks if t.get("status") in ["failed", "error"]])
-
-        content = f"**📋 我的任務**\n\n🔄 執行中: {running}\n✅ 已完成: {completed}\n❌ 失敗: {failed}\n\n**最近任務:**\n"
-
-        for task in all_tasks[:5]:
-            task_id = task.get("composer_id", "")[:8]
-            status = task.get("status", "unknown")
-            prompt = task.get("prompt", "")[:30] + "..."
-            emoji = {"running": "🔄", "pending": "⏳", "completed": "✅", "failed": "❌"}.get(status, "❓")
-            content += f"\n{emoji} `{task_id}`: {prompt}"
-
-    if interaction:
-        await interaction.followup.send(content)
-    else:
-        await ctx.reply(content)
-
-
 async def _handle_button_status(ctx: MessageContext, interaction) -> None:
     """Handle status button click."""
-    user_id = ctx.user.id
+    from ..cursor.cli_agent import is_cli_available
+    from ..core.llm_providers import get_llm_manager
     
-    if settings.background_agent_enabled and settings.cursor_api_key:
-        bg_status = "🟢 已啟用"
-        tracker = get_task_tracker()
-        running = len(tracker.get_pending_tasks())
-    else:
-        bg_status = "⚪ 未啟用"
-        running = 0
+    # Check CLI status
+    cli_status = "⚪ CLI 未安裝"
+    if is_cli_available():
+        cli_status = "🟢 CLI 可用"
+    
+    # Check AI providers
+    ai_status = "⚪ AI 未設定"
+    try:
+        manager = get_llm_manager()
+        providers = manager.list_available_providers()
+        if providers:
+            ai_status = f"🟢 AI ({len(providers)} 提供者)"
+    except Exception:
+        pass
 
-    current_repo = get_discord_user_repo(user_id)
-    repo_display = current_repo.split("/")[-1] if current_repo else "未設定"
-
-    content = f"**📊 系統狀態**\n\n**Background Agent:** {bg_status}\n**目前倉庫:** {repo_display}\n**執行中任務:** {running}\n**平台:** Discord"
+    content = f"**📊 系統狀態**\n\n**Cursor CLI:** {cli_status}\n**AI 提供者:** {ai_status}\n**平台:** Discord"
 
     if interaction:
         await interaction.followup.send(content)
@@ -1513,9 +1415,6 @@ __all__ = [
     "handle_start",
     "handle_help",
     "handle_status",
-    "handle_ask",
-    "handle_tasks",
-    "handle_repo",
     "handle_memory",
     "handle_skills",
 ]

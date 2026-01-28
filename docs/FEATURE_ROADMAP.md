@@ -1,9 +1,9 @@
 # CursorBot Feature Roadmap
 
-對標 [Clawdbot](https://docs.clawd.bot/) 的功能實作進度追蹤。
+對標 [Moltbot/Clawdbot](https://github.com/moltbot/moltbot) 的功能實作進度追蹤。
 
 **最後更新**: 2026-01-27  
-**總體完成度**: 98% (122/124)
+**總體完成度**: 85% (153/180)
 
 ---
 
@@ -22,27 +22,35 @@
 11. [運維與監控](#11-運維與監控)
 12. [部署支援](#12-部署支援)
 13. [CLI 命令](#13-cli-命令)
+14. [外部整合](#14-外部整合)
+15. [RAG 知識庫](#15-rag-知識庫)
+16. [Apps & Nodes](#16-apps--nodes) ← 新增
+17. [進階功能](#17-進階功能) ← 新增
 
 ---
 
 ## 1. 通訊平台支援
 
-**完成度**: 58% (7/12)
+**完成度**: 50% (7/14)
 
-| 狀態 | 功能 | Clawdbot 實現 | CursorBot 實現 | 優先級 | 備註 |
+根據 [Moltbot GitHub](https://github.com/moltbot/moltbot)，支援的通訊平台：
+
+| 狀態 | 功能 | Moltbot 實現 | CursorBot 實現 | 優先級 | 備註 |
 |:----:|------|--------------|---------------|:------:|------|
 | ✅ | Telegram | grammY | python-telegram-bot | - | 已完成 |
 | ✅ | Discord | discord.js | discord.py | - | 已完成 |
 | ✅ | WhatsApp | Baileys | whatsapp-web.js | - | v0.3 新增 |
 | ✅ | iMessage | imsg CLI | AppleScript | - | v0.3 新增 (macOS) |
-| ✅ | Slack | Plugin | slack_sdk | - | v0.3 新增 |
-| ⬜ | Mattermost | Plugin | - | 🟢 低 | 開源替代 |
-| ⬜ | Signal | - | - | 🟢 低 | 隱私優先 |
-| ✅ | MS Teams | - | botbuilder | - | v0.3 新增 |
-| ⬜ | Matrix | - | - | 🟢 低 | 開源協議 |
+| ✅ | Slack | Bolt | slack_sdk | - | v0.3 新增 |
+| ✅ | MS Teams | Extension | botbuilder | - | v0.3 新增 |
 | ✅ | Line | - | line-bot-sdk | - | v0.3 新增 |
-| ⬜ | Google Chat | - | - | 🟢 低 | Google 生態 |
-| ⬜ | Zalo | - | - | 🟢 低 | 越南市場 |
+| ✅ | Signal | signal-cli | signal_bot.py | - | v0.3 新增 |
+| ✅ | Google Chat | Chat API | google_chat_bot.py | - | v0.3 新增 |
+| ⬜ | Matrix | Extension | - | 🟢 低 | 開源協議 |
+| ⬜ | BlueBubbles | Extension | - | 🟢 低 | iMessage 替代 |
+| ⬜ | Zalo | Extension | - | 🟢 低 | 越南市場 |
+| ⬜ | Zalo Personal | Extension | - | 🟢 低 | 越南個人版 |
+| ⬜ | Mattermost | Plugin | - | 🟢 低 | 開源替代 |
 
 ### 待辦事項
 
@@ -50,6 +58,8 @@
 - [x] 實現 Slack Bot API 整合
 - [x] 實現 MS Teams Bot 整合
 - [x] 評估 iMessage 整合可行性
+- [ ] 實現 Signal 整合 (signal-cli)
+- [ ] 實現 Google Chat 整合
 
 ---
 
@@ -358,9 +368,192 @@
 
 ---
 
+## 14. 外部整合
+
+**完成度**: 50% (4/8)
+
+根據 [Clawdbot 功能分析](https://grenade.tw/blog/clawdbot-ai-agent/)，以下為「開箱即用」和「進階功能」的整合需求：
+
+| 狀態 | 功能 | 說明 | 優先級 | 備註 |
+|:----:|------|------|:------:|------|
+| ✅ | Google Calendar | 日曆讀取/管理 | - | v0.3 新增 |
+| ⬜ | Apple Calendar | macOS 日曆整合 | 🟡 中 | macOS 專用 |
+| ✅ | Gmail | 郵件讀取/發送/搜尋 | - | v0.3 新增 |
+| ⬜ | Outlook | 郵件整合 | 🟡 中 | 企業需求 |
+| ✅ | GitHub | 倉庫管理 | - | Git 整合 |
+| ⬜ | Twitter/X | 社群自動化 | 🟡 中 | API 限制多 |
+| ⬜ | LinkedIn | 社群發布 | 🟢 低 | 商業用途 |
+| ✅ | Notion | 筆記整合 | - | Agent Skill |
+
+### Clawdbot 「開箱即用」功能對照
+
+| 功能 | Clawdbot | CursorBot | 狀態 |
+|------|----------|-----------|:----:|
+| 文件管理 | ✅ 整理下載、尋找 PDF | ✅ File Operations | ✅ |
+| 基礎調查 | ✅ 搜尋新聞、總結文章 | ✅ Web Search/Fetch | ✅ |
+| 日曆讀取 | ✅ 查看日程 | ✅ Google Calendar | ✅ |
+| 郵件讀取 | ✅ 讀取/搜尋郵件 | ✅ Gmail 整合 | ✅ |
+| 簡單自動化 | ✅ 定時腳本、監控網站 | ✅ Scheduler/Webhook | ✅ |
+| 文字處理 | ✅ 總結文檔、提取關鍵點 | ✅ Agent 能力 | ✅ |
+
+### Clawdbot 「進階功能」對照
+
+| 功能 | Clawdbot | CursorBot | 狀態 |
+|------|----------|-----------|:----:|
+| 高階郵件管理 | ✅ 自動分類、智慧過濾 | ⬜ 未實現 | ⬜ |
+| 交易/市場監控 | ✅ 價格警報 | ⬜ 未實現 | ⬜ |
+| 社群媒體自動化 | ✅ 多平台發布 | ⬜ 部分實現 | 🟡 |
+| 複雜代碼項目 | ✅ 建立應用、管理 GitHub | ✅ Cursor Agent | ✅ |
+| 自訂集成 | ✅ 透過 Skills | ✅ Skills 系統 | ✅ |
+
+### 待辦事項
+
+- [ ] 實現 Google Calendar 整合
+- [ ] 實現 Gmail 整合 (OAuth2)
+- [ ] 評估 Apple Calendar 整合可行性
+- [ ] 設計郵件自動分類 Skill
+- [ ] 評估 Twitter API 整合需求
+
+---
+
+## 15. RAG 知識庫
+
+**完成度**: 100% (8/8)
+
+檢索增強生成（Retrieval-Augmented Generation）系統，讓 AI 能基於用戶文件回答問題。
+
+| 狀態 | 功能 | 說明 | 優先級 | 備註 |
+|:----:|------|------|:------:|------|
+| ✅ | 文件索引 | 索引 PDF/MD/Code/JSON | - | v0.3 新增 |
+| ✅ | 文字分塊 | 固定/句子/段落/程式碼 | - | v0.3 新增 |
+| ✅ | 向量嵌入 | OpenAI/Google/Ollama | - | v0.3 新增 |
+| ✅ | 向量儲存 | ChromaDB 持久化 | - | v0.3 新增 |
+| ✅ | 相似度搜尋 | Top-K 檢索 | - | v0.3 新增 |
+| ✅ | 上下文增強 | RAG Query | - | v0.3 新增 |
+| ✅ | 自動對話存儲 | Agent/Ask/CLI 對話存入 RAG | - | v0.3 新增 |
+| ✅ | URL 索引 | 索引網頁內容 | - | v0.3 新增 |
+
+### RAG 指令
+
+| 指令 | 說明 |
+|------|------|
+| `/rag <問題>` | 基於索引內容回答問題 |
+| `/index <檔案>` | 索引單一檔案 |
+| `/index_dir <目錄>` | 索引整個目錄 |
+| `/index_url <網址>` | 索引網頁內容 |
+| `/index_text <文字>` | 索引手動輸入的文字 |
+| `/search <關鍵字>` | 搜尋索引內容（不生成回答） |
+| `/ragstats` | 查看 RAG 統計資訊 |
+| `/ragconfig` | 配置 RAG 設定 |
+| `/ragclear confirm` | 清除所有索引 |
+
+### 對話自動存儲
+
+Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
+- 對話問答記憶
+- 基於歷史對話的知識檢索
+- 跨 session 的知識累積
+
+---
+
+## 16. Apps & Nodes
+
+**完成度**: 25% (2/8)
+
+根據 [Moltbot GitHub](https://github.com/moltbot/moltbot)，支援的原生應用和設備節點：
+
+| 狀態 | 功能 | Moltbot 說明 | CursorBot 實現 | 優先級 | 備註 |
+|:----:|------|--------------|---------------|:------:|------|
+| ✅ | macOS Menu Bar | 控制面板、Voice Wake、WebChat | 基本實現 | - | v0.3 新增 |
+| ⬜ | macOS App (完整) | Talk Mode overlay、debug tools、remote gateway | - | 🟡 中 | SwiftUI |
+| ⬜ | iOS Node | Canvas、Voice Wake、Talk Mode、camera | - | 🟡 中 | SwiftUI |
+| ⬜ | Android Node | Canvas、Talk Mode、camera、screen recording | - | 🟡 中 | Kotlin |
+| ✅ | WebChat | Gateway 提供的網頁聊天 | Dashboard 內建 | - | v0.3 新增 |
+| ✅ | Voice Wake | 語音喚醒 (always-on) | voice_wake.py | - | v0.3 新增 |
+| ✅ | Talk Mode | 持續對話模式 | talk_mode.py | - | v0.3 新增 |
+| ⬜ | Bonjour Pairing | mDNS 設備配對 | - | 🟢 低 | 區網發現 |
+
+### Moltbot Node 功能對照
+
+| 功能 | Moltbot | CursorBot | 狀態 |
+|------|---------|-----------|:----:|
+| `system.run` | 本地命令執行 | Terminal Exec | ✅ |
+| `system.notify` | 系統通知 | - | ⬜ |
+| `canvas.*` | 視覺工作區 | - | ⬜ |
+| `camera.snap/clip` | 相機拍照/錄影 | - | ⬜ |
+| `screen.record` | 螢幕錄製 | - | ⬜ |
+| `location.get` | 位置取得 | Location Skill | ✅ |
+| `node.invoke` | 設備節點調用 | - | ⬜ |
+
+### 待辦事項
+
+- [ ] 評估 SwiftUI macOS App 開發
+- [ ] 評估 iOS/Android Node 架構
+- [ ] 實現 Voice Wake 功能
+- [ ] 實現 Talk Mode 持續對話
+- [ ] 實現 system.notify 系統通知
+
+---
+
+## 17. 進階功能
+
+**完成度**: 40% (6/15)
+
+根據 [Moltbot GitHub](https://github.com/moltbot/moltbot) 的進階功能：
+
+| 狀態 | 功能 | Moltbot 說明 | CursorBot 實現 | 優先級 | 備註 |
+|:----:|------|--------------|---------------|:------:|------|
+| ✅ | Agent Loop | Pi agent runtime | Agent Loop | - | 已完成 |
+| ✅ | Skills Platform | bundled/managed/workspace skills | Skills 系統 | - | 已完成 |
+| ✅ | Skills Registry | ClawdHub skill registry | Skills Registry | - | v0.3 新增 |
+| ⬜ | Live Canvas | A2UI agent-driven workspace | - | 🟡 中 | 視覺化工作區 |
+| ✅ | Browser Control | Chrome/Chromium CDP | Playwright | - | 已完成 |
+| ✅ | Gmail 整合 | 郵件讀取/發送/搜尋 | Gmail Manager | - | v0.3 新增 |
+| ✅ | Cron | 排程任務 | Scheduler | - | 已完成 |
+| ✅ | Webhooks | 事件觸發 | Webhook | - | 已完成 |
+| ✅ | Agent to Agent | sessions_* tools 跨 session 協作 | agent_to_agent.py | - | v0.3 新增 |
+| ⬜ | DM Pairing | 設備配對碼 | - | 🟡 中 | 安全配對 |
+| ⬜ | Elevated Mode | 權限提升模式 | - | 🟢 低 | /elevated on|off |
+| ✅ | Model Failover | 自動切換備用模型 | Model Failover | - | v0.2 新增 |
+| ⬜ | Nix Mode | 聲明式配置 | - | 🟢 低 | 可重現環境 |
+| ⬜ | SSH Tunnels | 遠端訪問 | - | 🟢 低 | 內網穿透 |
+| ⬜ | Multiple Gateways | 多閘道高可用 | - | 🟢 低 | HA 架構 |
+
+### Moltbot Chat Commands 對照
+
+| 指令 | Moltbot | CursorBot | 狀態 |
+|------|---------|-----------|:----:|
+| `/status` | 狀態查詢 | `/status` | ✅ |
+| `/new` or `/reset` | 重置 session | `/new`, `/clear` | ✅ |
+| `/compact` | 壓縮上下文 | `/compact` | ✅ |
+| `/think <level>` | 思考等級 (off~xhigh) | 部分支援 | 🟡 |
+| `/verbose on\|off` | 詳細模式 | - | ⬜ |
+| `/usage off\|tokens\|full` | 使用量顯示 | `/stats` | ✅ |
+| `/restart` | 重啟 Gateway | - | ⬜ |
+| `/activation mention\|always` | 群組激活模式 | 已支援 | ✅ |
+| `/elevated on\|off` | 權限提升 | - | ⬜ |
+
+### 待辦事項
+
+- [x] 實現 Gmail 整合（讀取/發送/搜尋）
+- [x] 實現 Skills Registry (ClawdHub 風格)
+- [x] 實現 Google Calendar 整合
+- [x] 實現 Signal 整合
+- [x] 實現 Google Chat 整合
+- [x] 實現 Voice Wake 語音喚醒
+- [x] 實現 Talk Mode 持續對話
+- [x] 實現 Agent to Agent 跨 session 協作
+- [ ] 實現 Gmail Pub/Sub 郵件觸發器
+- [ ] 實現 Live Canvas (A2UI)
+- [ ] 實現 DM Pairing 設備配對
+- [ ] 添加 /verbose 指令
+- [ ] 添加 /elevated 權限提升
+
+---
+
 ## 版本規劃
 
-### v0.2.0 (當前版本)
+### v0.2.0 (已發布)
 - ✅ Model Failover
 - ✅ Usage Tracking
 - ✅ @提及觸發
@@ -372,7 +565,7 @@
 - ✅ Typing 指示器
 - ✅ Health Check 增強
 
-### v0.3.0 (當前開發中)
+### v0.3.0 (當前版本)
 - [x] Compaction (對話壓縮)
 - [x] Subagents (子代理系統)
 - [x] Thinking Mode (Claude 思考模式)
@@ -394,18 +587,76 @@
 - [x] Line Bot (亞洲市場)
 - [x] GLM 智譜 AI (中國市場)
 - [x] macOS Menu Bar 應用
+- [x] RAG 知識庫系統
+- [x] 對話自動存儲到 RAG
+- [x] GitHub Copilot / GitHub Models 整合
+- [x] Google Calendar 整合
+- [x] Gmail 整合（讀取/發送/搜尋）
+- [x] Skills Registry（技能市集）
+- [x] Signal 整合
+- [x] Google Chat 整合
+- [x] Voice Wake 語音喚醒
+- [x] Talk Mode 持續對話
+- [x] Agent to Agent 跨 session 協作
 
 ### v0.4.0 (規劃中)
-- [ ] 原生應用 (iOS/Android)
-- [ ] Bridge Protocol
-- [ ] Voice Call 支援
+- [ ] Gmail Pub/Sub 郵件觸發器
+- [ ] 郵件自動分類 Skill
+- [ ] DM Pairing 設備配對
+- [ ] Live Canvas (A2UI)
 - [ ] Minimax AI
+- [ ] Apple Calendar 整合
+- [ ] /verbose 指令
+- [ ] /elevated 權限提升
+
+### v0.5.0 (規劃中)
+- [ ] macOS App 完整版 (SwiftUI)
+- [ ] Live Canvas (A2UI)
+- [ ] Agent to Agent 跨 session 協作
+- [ ] DM Pairing 設備配對
+- [ ] system.notify 系統通知
 
 ### v1.0.0 (長期目標)
+- [ ] iOS Node
+- [ ] Android Node
 - [ ] 完整 Gateway 架構
-- [ ] 原生應用
-- [ ] 完整 CLI 工具
+- [ ] 完整 CLI 工具 (`cursorbot` binary)
+- [ ] Multiple Gateways 高可用
+- [ ] Nix Mode 聲明式配置
 - [ ] 多雲部署支援
+
+---
+
+## Moltbot 功能差距總結
+
+根據 [Moltbot GitHub](https://github.com/moltbot/moltbot) 分析，主要差距：
+
+### 高優先級 (🔴) ✅ 已完成
+| 功能 | 說明 | 狀態 |
+|------|------|:----:|
+| Gmail 整合 | 郵件讀取/發送/搜尋 | ✅ v0.3 |
+| Google Calendar | 日曆讀取/管理/新增 | ✅ v0.3 |
+| Skills Registry | 自動搜尋安裝技能 | ✅ v0.3 |
+
+### 中優先級 (🟡)
+| 功能 | 說明 | 難度 |
+|------|------|:----:|
+| Signal | 隱私優先通訊 | 中 |
+| Google Chat | Google 生態 | 低 |
+| Voice Wake | 語音喚醒 | 高 |
+| Talk Mode | 持續對話模式 | 高 |
+| Live Canvas | A2UI 視覺工作區 | 高 |
+| Agent to Agent | 跨 session 協作 | 中 |
+| iOS/Android Node | 原生設備節點 | 高 |
+
+### 低優先級 (🟢)
+| 功能 | 說明 | 難度 |
+|------|------|:----:|
+| Matrix | 開源協議 | 中 |
+| Zalo | 越南市場 | 中 |
+| Nix Mode | 聲明式配置 | 低 |
+| SSH Tunnels | 內網穿透 | 低 |
+| Bonjour Pairing | mDNS 設備發現 | 中 |
 
 ---
 
@@ -427,6 +678,8 @@
 
 ## 參考資源
 
-- [Clawdbot 官方文檔](https://docs.clawd.bot/)
-- [Clawdbot GitHub](https://github.com/clawdbot/clawdbot)
+- [Moltbot/Clawdbot GitHub](https://github.com/moltbot/moltbot)
+- [Moltbot 官方網站](https://molt.bot)
+- [Clawdbot 文檔](https://docs.clawd.bot/)
+- [Clawdbot 終極指南](https://grenade.tw/blog/clawdbot-ai-agent/)
 - [CursorBot GitHub](https://github.com/your-repo/cursorBot)

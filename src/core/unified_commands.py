@@ -82,15 +82,18 @@ COMMANDS: dict[str, CommandDefinition] = {
     "climodel": CommandDefinition("climodel", "CLI 模型設定", CommandCategory.AI),
     "agent": CommandDefinition("agent", "啟動 AI Agent 執行任務", CommandCategory.AGENT),
     
-    # Background Agent commands
-    "ask": CommandDefinition("ask", "向 Cursor Agent 發送問題", CommandCategory.AGENT),
-    "tasks": CommandDefinition("tasks", "查看我的任務", CommandCategory.AGENT),
-    "repo": CommandDefinition("repo", "切換 GitHub 倉庫", CommandCategory.AGENT),
-    "repos": CommandDefinition("repos", "查看帳號中的倉庫", CommandCategory.AGENT),
-    
     # Memory commands
     "memory": CommandDefinition("memory", "記憶系統管理", CommandCategory.MEMORY),
     "clear": CommandDefinition("clear", "清除對話上下文", CommandCategory.MEMORY),
+    
+    # RAG commands
+    "rag": CommandDefinition("rag", "基於索引內容回答問題", CommandCategory.MEMORY),
+    "index": CommandDefinition("index", "索引單一檔案", CommandCategory.MEMORY),
+    "index_dir": CommandDefinition("index_dir", "索引整個目錄", CommandCategory.MEMORY),
+    "index_text": CommandDefinition("index_text", "索引文字", CommandCategory.MEMORY),
+    "ragstats": CommandDefinition("ragstats", "RAG 統計資訊", CommandCategory.MEMORY),
+    "ragconfig": CommandDefinition("ragconfig", "RAG 設定", CommandCategory.MEMORY),
+    "ragclear": CommandDefinition("ragclear", "清除 RAG 索引", CommandCategory.MEMORY),
     
     # Session commands
     "new": CommandDefinition("new", "開始新對話", CommandCategory.SESSION),
@@ -118,7 +121,6 @@ async def handle_start(ctx: CommandContext) -> CommandResult:
     """Handle /start command."""
     from ..utils.config import settings
     from ..cursor.cli_agent import is_cli_available, get_cli_agent
-    from ..cursor.background_agent import get_background_agent
     
     # Build status
     status_items = []
@@ -127,10 +129,6 @@ async def handle_start(ctx: CommandContext) -> CommandResult:
         cli = get_cli_agent()
         cli_model = cli.get_user_model(ctx.user_id) or "auto"
         status_items.append(f"CLI ({cli_model})")
-    
-    agent = get_background_agent()
-    if agent and agent.is_authenticated():
-        status_items.append("Background Agent")
     
     status = " | ".join(status_items) if status_items else "基本模式"
     
@@ -166,7 +164,7 @@ CursorBot 是一個多平台 AI 編程助手，支援 Telegram、Discord、Line 
 
 async def handle_help(ctx: CommandContext) -> CommandResult:
     """Handle /help command."""
-    message = """📖 CursorBot 完整指令說明
+    message = """📖 CursorBot 指令說明
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🔹 基礎指令
@@ -174,62 +172,63 @@ async def handle_help(ctx: CommandContext) -> CommandResult:
 /start - 開始使用
 /help - 顯示此說明
 /status - 狀態總覽
+/doctor - 系統診斷
 
 ━━━━━━━━━━━━━━━━━━━━━━
 ⚡ 對話模式
 ━━━━━━━━━━━━━━━━━━━━━━
-/mode - 查看/切換對話模式
+/mode - 查看目前模式
 /mode cli - Cursor CLI 模式
 /mode agent - Agent Loop 模式
+/mode auto - 自動選擇
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🤖 AI 模型管理
 ━━━━━━━━━━━━━━━━━━━━━━
-/model - 查看目前模型
-/model list - 列出所有可用模型
-/model set <provider> - 切換模型
+/model - 查看 Agent 模型設定
+/model set <id> - 切換 Agent 模型
+
 /climodel - CLI 模型設定
+/climodel list - 列出所有 CLI 模型
+/climodel set <id> - 切換 CLI 模型
+/climodel reset - 恢復預設模型
 
-支援: OpenAI (GPT-5), Claude 4.5, Gemini 3, Copilot
-
-━━━━━━━━━━━━━━━━━━━━━━
-📋 Background Agent
-━━━━━━━━━━━━━━━━━━━━━━
-/ask <問題> - 發送問題給 Cursor Agent
-/tasks - 查看我的任務
-/repo <owner/repo> - 切換 GitHub 倉庫
-/repos - 查看帳號中的倉庫
+支援: GPT-5, Claude 4.5 Opus/Sonnet, Gemini 3
 
 ━━━━━━━━━━━━━━━━━━━━━━
-🤖 Agent Loop
+🤖 Agent 功能
 ━━━━━━━━━━━━━━━━━━━━━━
-/agent <任務> - 啟動 AI Agent 執行任務
+/agent <任務> - 執行 AI Agent 任務
 /skills - 查看可用技能
 
 ━━━━━━━━━━━━━━━━━━━━━━
-💬 Session 管理
+💬 對話管理
 ━━━━━━━━━━━━━━━━━━━━━━
 /new - 開始新對話
-/session - 查看 session 資訊
-/compact - 壓縮對話歷史
+/clear - 清除對話上下文
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🧠 記憶系統
 ━━━━━━━━━━━━━━━━━━━━━━
-/memory - 查看我的記憶
-/memory add <key> <value> - 新增記憶
-/memory del <key> - 刪除記憶
-/clear - 清除對話上下文
+/memory - 記憶管理
+/memory list - 查看記憶列表
+/memory clear - 清除記憶
 
 ━━━━━━━━━━━━━━━━━━━━━━
-🔧 其他功能
+📁 工作區
 ━━━━━━━━━━━━━━━━━━━━━━
-/workspace - 工作區設定
+/workspace - 工作區資訊
+/workspace list - 列出工作區
+/workspace switch <name> - 切換工作區
+/ws - /workspace 的縮寫
+
+━━━━━━━━━━━━━━━━━━━━━━
+📊 統計與設定
+━━━━━━━━━━━━━━━━━━━━━━
 /stats - 使用統計
-/settings - Bot 設定
-/doctor - 系統診斷
 
-直接發送訊息即可開始對話！
+━━━━━━━━━━━━━━━━━━━━━━
+💡 直接發送訊息即可開始 AI 對話！
 """
     
     return CommandResult(success=True, message=message)
@@ -239,7 +238,6 @@ async def handle_status(ctx: CommandContext) -> CommandResult:
     """Handle /status command."""
     from ..utils.config import settings
     from ..cursor.cli_agent import is_cli_available, get_cli_agent
-    from ..cursor.background_agent import get_background_agent
     from ..core.llm_providers import get_llm_manager
     from ..core.session import get_session_manager
     
@@ -252,13 +250,6 @@ async def handle_status(ctx: CommandContext) -> CommandResult:
         lines.append(f"✅ Cursor CLI: {model}")
     else:
         lines.append("⚪ Cursor CLI: 未安裝")
-    
-    # Background Agent
-    agent = get_background_agent()
-    if agent and agent.is_authenticated():
-        lines.append("✅ Background Agent: 已連線")
-    else:
-        lines.append("⚪ Background Agent: 未啟用")
     
     # LLM Provider
     manager = get_llm_manager()
@@ -339,7 +330,6 @@ async def handle_new(ctx: CommandContext) -> CommandResult:
 async def handle_doctor(ctx: CommandContext) -> CommandResult:
     """Handle /doctor command - system diagnostics."""
     from ..cursor.cli_agent import is_cli_available
-    from ..cursor.background_agent import get_background_agent
     from ..core.llm_providers import get_llm_manager
     
     checks = []
@@ -349,13 +339,6 @@ async def handle_doctor(ctx: CommandContext) -> CommandResult:
         checks.append("✅ Cursor CLI")
     else:
         checks.append("❌ Cursor CLI (未安裝)")
-    
-    # Background Agent
-    agent = get_background_agent()
-    if agent and agent.is_authenticated():
-        checks.append("✅ Background Agent")
-    else:
-        checks.append("⚪ Background Agent (未啟用)")
     
     # LLM Providers
     manager = get_llm_manager()
@@ -376,6 +359,256 @@ async def handle_doctor(ctx: CommandContext) -> CommandResult:
     )
 
 
+async def handle_model(ctx: CommandContext) -> CommandResult:
+    """Handle /model command - AI model selection."""
+    from ..core.llm_providers import get_llm_manager
+    
+    manager = get_llm_manager()
+    providers = manager.list_available_providers()
+    current = manager.get_current_model() if hasattr(manager, 'get_current_model') else "auto"
+    
+    if ctx.args:
+        model_id = ctx.args[0].lower()
+        try:
+            if hasattr(manager, 'set_model'):
+                manager.set_model(model_id)
+                return CommandResult(success=True, message=f"✅ 已切換至模型: {model_id}")
+            else:
+                return CommandResult(success=False, message="❌ 此平台不支援模型切換")
+        except Exception as e:
+            return CommandResult(success=False, message=f"❌ 切換失敗: {str(e)[:50]}")
+    
+    lines = ["🤖 **AI 模型設定**", ""]
+    lines.append(f"目前模型: **{current}**")
+    lines.append("")
+    lines.append("可用提供者:")
+    for p in providers[:5]:
+        lines.append(f"• {p}")
+    if len(providers) > 5:
+        lines.append(f"... 還有 {len(providers) - 5} 個")
+    lines.append("")
+    lines.append("用法: /model <model_id>")
+    
+    return CommandResult(success=True, message="\n".join(lines))
+
+
+async def handle_climodel(ctx: CommandContext) -> CommandResult:
+    """Handle /climodel command - CLI model selection."""
+    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    
+    if not is_cli_available():
+        return CommandResult(success=False, message="❌ Cursor CLI 未安裝")
+    
+    cli = get_cli_agent()
+    models = await cli.list_models()
+    current = cli.get_user_model(ctx.user_id) or "auto"
+    
+    if ctx.args:
+        if ctx.args[0] == "list":
+            if not models:
+                return CommandResult(success=False, message="❌ 無法獲取模型列表")
+            
+            lines = ["📋 **CLI 可用模型**", ""]
+            for i, m in enumerate(models[:20], 1):
+                flag = "✓ " if m['id'] == current else ""
+                lines.append(f"{i}. {flag}{m['id']}")
+            if len(models) > 20:
+                lines.append(f"... 還有 {len(models) - 20} 個")
+            lines.append("")
+            lines.append("用法: /climodel set <model_id>")
+            return CommandResult(success=True, message="\n".join(lines))
+        
+        elif ctx.args[0] == "set" and len(ctx.args) > 1:
+            model_id = ctx.args[1]
+            # Check if model exists
+            valid_ids = [m['id'] for m in models]
+            if model_id not in valid_ids:
+                return CommandResult(success=False, message=f"❌ 找不到模型: {model_id}")
+            
+            cli.set_user_model(ctx.user_id, model_id)
+            return CommandResult(success=True, message=f"✅ 已切換至: {model_id}")
+        
+        elif ctx.args[0] == "reset":
+            cli.clear_user_model(ctx.user_id)
+            return CommandResult(success=True, message="✅ 已恢復預設模型")
+    
+    lines = ["⚙️ **CLI 模型設定**", ""]
+    lines.append(f"目前模型: **{current}**")
+    lines.append(f"可用模型: {len(models)} 個")
+    lines.append("")
+    lines.append("指令:")
+    lines.append("• /climodel list - 顯示所有模型")
+    lines.append("• /climodel set <id> - 切換模型")
+    lines.append("• /climodel reset - 恢復預設")
+    
+    return CommandResult(success=True, message="\n".join(lines))
+
+
+async def handle_clear(ctx: CommandContext) -> CommandResult:
+    """Handle /clear command - clear conversation context."""
+    from ..core.session import get_session_manager
+    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    
+    session_manager = get_session_manager()
+    session_manager.reset_session(ctx.user_id)
+    
+    if is_cli_available():
+        cli = get_cli_agent()
+        cli.clear_user_chat(ctx.user_id)
+    
+    return CommandResult(success=True, message="🧹 已清除對話上下文")
+
+
+async def handle_memory(ctx: CommandContext) -> CommandResult:
+    """Handle /memory command - memory system."""
+    from ..core.memory import get_memory_manager
+    
+    memory = get_memory_manager()
+    memories = memory.get_all_memories(ctx.user_id)
+    
+    if ctx.args:
+        if ctx.args[0] == "list":
+            if not memories:
+                return CommandResult(success=True, message="📝 暫無記憶")
+            
+            lines = ["📝 **記憶列表**", ""]
+            for i, m in enumerate(memories[:10], 1):
+                content = m.get('content', '')[:50]
+                lines.append(f"{i}. {content}...")
+            if len(memories) > 10:
+                lines.append(f"... 還有 {len(memories) - 10} 條")
+            return CommandResult(success=True, message="\n".join(lines))
+        
+        elif ctx.args[0] == "clear":
+            memory.clear_memories(ctx.user_id)
+            return CommandResult(success=True, message="🗑️ 已清除所有記憶")
+    
+    lines = ["🧠 **記憶系統**", ""]
+    lines.append(f"記憶數量: {len(memories)}")
+    lines.append("")
+    lines.append("指令:")
+    lines.append("• /memory list - 查看記憶")
+    lines.append("• /memory clear - 清除記憶")
+    
+    return CommandResult(success=True, message="\n".join(lines))
+
+
+async def handle_workspace(ctx: CommandContext) -> CommandResult:
+    """Handle /workspace command - workspace management."""
+    from ..cursor.agent import WorkspaceAgent
+    
+    agent = WorkspaceAgent()
+    workspaces = await agent.list_workspaces()
+    current = agent.get_current_workspace()
+    
+    if ctx.args:
+        if ctx.args[0] == "list":
+            if not workspaces:
+                return CommandResult(success=True, message="📁 暫無工作區")
+            
+            lines = ["📁 **工作區列表**", ""]
+            for i, ws in enumerate(workspaces[:10], 1):
+                flag = "✓ " if ws == current else ""
+                lines.append(f"{i}. {flag}{ws}")
+            if len(workspaces) > 10:
+                lines.append(f"... 還有 {len(workspaces) - 10} 個")
+            return CommandResult(success=True, message="\n".join(lines))
+        
+        elif ctx.args[0] == "switch" and len(ctx.args) > 1:
+            ws_name = ctx.args[1]
+            try:
+                agent.switch_workspace(ws_name)
+                return CommandResult(success=True, message=f"✅ 已切換至: {ws_name}")
+            except Exception as e:
+                return CommandResult(success=False, message=f"❌ 切換失敗: {str(e)[:50]}")
+    
+    lines = ["📁 **工作區**", ""]
+    lines.append(f"目前: **{current or '未設定'}**")
+    lines.append(f"可用: {len(workspaces)} 個")
+    lines.append("")
+    lines.append("指令:")
+    lines.append("• /workspace list - 列出所有")
+    lines.append("• /workspace switch <name> - 切換")
+    
+    return CommandResult(success=True, message="\n".join(lines))
+
+
+async def handle_skills(ctx: CommandContext) -> CommandResult:
+    """Handle /skills command - list available skills."""
+    from ..core.skills import get_skill_manager
+    from ..core.skills_registry import get_skills_registry
+    
+    manager = get_skill_manager()
+    registry = get_skills_registry()
+    
+    skills = manager.list_skills()
+    installed = registry.list_installed()
+    
+    lines = ["🛠️ **可用技能**", ""]
+    
+    # Show installed skills from registry
+    if installed:
+        lines.append("**📦 已安裝:**")
+        for s in installed[:5]:
+            status = "✅" if s.enabled else "⬜"
+            lines.append(f"{status} {s.manifest.name}")
+        if len(installed) > 5:
+            lines.append(f"... 還有 {len(installed) - 5} 個")
+        lines.append("")
+    
+    # Show built-in skills
+    if skills:
+        lines.append("**🔧 內建技能:**")
+        for skill in skills[:8]:
+            name = skill.get('name', 'unknown')
+            lines.append(f"• {name}")
+        if len(skills) > 8:
+            lines.append(f"... 還有 {len(skills) - 8} 個")
+        lines.append("")
+    
+    lines.append("**安裝更多技能:**")
+    lines.append("• /skills_search <關鍵字>")
+    lines.append("• /skills_install <skill_id>")
+    lines.append("• 瀏覽: https://skillsmp.com")
+    
+    return CommandResult(success=True, message="\n".join(lines))
+
+
+async def handle_stats(ctx: CommandContext) -> CommandResult:
+    """Handle /stats command - usage statistics."""
+    from ..core.llm_providers import get_llm_manager
+    
+    manager = get_llm_manager()
+    
+    lines = ["📊 **使用統計**", ""]
+    
+    if hasattr(manager, 'get_usage_stats'):
+        stats = manager.get_usage_stats()
+        lines.append(f"總請求: {stats.get('total_requests', 0)}")
+        lines.append(f"成功: {stats.get('successful_requests', 0)}")
+        lines.append(f"失敗: {stats.get('failed_requests', 0)}")
+    else:
+        lines.append("統計功能尚未啟用")
+    
+    return CommandResult(success=True, message="\n".join(lines))
+
+
+async def handle_agent(ctx: CommandContext) -> CommandResult:
+    """Handle /agent command - run agent task."""
+    if not ctx.args:
+        return CommandResult(
+            success=False,
+            message="❌ 請提供任務描述\n\n用法: /agent <任務描述>"
+        )
+    
+    task = " ".join(ctx.args)
+    
+    return CommandResult(
+        success=True,
+        message=f"🤖 正在執行任務...\n\n任務: {task[:100]}\n\n(此功能在 {ctx.platform} 平台上為基礎版本)"
+    )
+
+
 # ============================================
 # Command Router
 # ============================================
@@ -387,6 +620,15 @@ COMMAND_HANDLERS: dict[str, Callable] = {
     "mode": handle_mode,
     "new": handle_new,
     "doctor": handle_doctor,
+    "model": handle_model,
+    "climodel": handle_climodel,
+    "clear": handle_clear,
+    "memory": handle_memory,
+    "workspace": handle_workspace,
+    "ws": handle_workspace,  # Alias
+    "skills": handle_skills,
+    "stats": handle_stats,
+    "agent": handle_agent,
 }
 
 

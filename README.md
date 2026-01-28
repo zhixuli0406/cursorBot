@@ -1,6 +1,6 @@
 # CursorBot
 
-透過 Telegram 和 Discord 遠端控制 Cursor Background Agent。
+多平台 AI 編程助手，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 等平台。整合 Cursor CLI、多種 AI 模型、Agent Loop、SkillsMP 技能市集等功能。
 
 靈感來自 [cursor-telegram-bot](https://github.com/Hormold/cursor-telegram-bot) 和 [ClawdBot](https://clawd.bot/)。
 
@@ -9,10 +9,13 @@
 ### 多平台支援
 - **Telegram** - 完整的 Telegram Bot 支援
 - **Discord** - 完整的 Discord Bot 支援（斜線指令、按鈕）
-- **WhatsApp** - WhatsApp Web 整合（透過 Node.js 橋接）
+- **LINE** - LINE Messaging API 整合（亞洲市場）
+- **Slack** - Slack Events API + 斜線指令
+- **WhatsApp** - WhatsApp Cloud API 整合
 - **MS Teams** - Microsoft Teams Bot Framework 整合
-- **Slack** - Slack 工作區整合（Socket Mode）
-- **統一介面** - 所有平台使用相同的功能
+- **Google Chat** - Google Workspace 整合
+- **統一指令系統** - 所有平台使用相同的指令（`/help`, `/status` 等）
+- **統一 Webhook** - 簡化的 webhook 端點（`/webhook/line`, `/webhook/slack` 等）
 
 ### 核心功能
 - **完全遠端** - 無需開啟 IDE，雲端執行
@@ -34,66 +37,71 @@
 - **代理工具** - 檔案操作、命令執行、網頁抓取
 
 ### v0.3 新增功能
-- **CLI 模型選擇** - Cursor CLI 支援多種 AI 模型切換
+
+#### 多平台 Webhook 整合
+- **統一 Webhook 端點** - 所有社群平台使用統一的 API Server
+  - `/webhook/line` - LINE Messaging API
+  - `/webhook/slack` - Slack Events API
+  - `/webhook/slack/commands` - Slack 斜線指令
+  - `/webhook/whatsapp` - WhatsApp Cloud API
+  - `/webhook/teams` - Microsoft Teams Bot Framework
+  - `/webhook/google-chat` - Google Chat
+- **統一指令系統** - 所有平台支援相同指令（`/help`, `/status`, `/model` 等）
+- **使用者權限控制** - 各平台可設定允許的使用者 ID
+
+#### CLI 模型選擇
+- Cursor CLI 支援多種 AI 模型切換
   - GPT-5.2 系列（含 Codex 程式碼專用版）
   - Claude 4.5 Opus / Sonnet（含 Thinking 深度思考版）
   - Gemini 3 Pro / Flash
   - Grok
   - 使用 `/climodel` 指令管理
+
+#### SkillsMP 技能市集整合
+- **10萬+ 開源技能** - 支援 [SkillsMP.com](https://skillsmp.com) 技能市集
+- **多種安裝格式**：
+  - GitHub 縮寫：`/skills_install github:owner/repo/path`
+  - GitHub URL：`/skills_install https://github.com/...`
+  - SkillsMP ID：`/skills_install owner-repo-path-skill-md`
+- **SKILL.md 標準** - 相容 Anthropic/OpenAI 的開放技能格式
+
+#### TUI 終端介面
+- **互動式終端 UI** - 美觀的終端聊天介面
+- **Rich 支援** - 使用 rich 函式庫提供豐富格式
+- **CLI 工具整合** - `./cursorbot tui` 或 `./cursorbot chat`
+
+#### 其他新功能
 - **Session 管理** - ClawdBot 風格的 Session 管理系統
-  - 持久化 Session 存儲
-  - 重置策略（每日/閒置/手動）
-  - DM 範圍控制（main/per-peer/per-channel-peer）
-  - 身份連結（跨平台用戶映射）
-  - Token 追蹤與統計
 - **Compaction** - 對話壓縮，自動摘要歷史對話以減少 Token 使用
 - **Thinking Mode** - 支援 Claude Extended Thinking 深度思考模式
 - **Subagents** - 子代理系統，可分解複雜任務給專門代理執行
-- **Sandbox** - 沙盒執行，安全隔離執行程式碼（Docker/Subprocess）
-- **TTS** - 語音輸出，支援 OpenAI、Edge TTS、ElevenLabs
-- **OAuth** - OAuth 2.0 認證，支援 GitHub、Google、Discord 登入
-- **Heartbeat** - 心跳機制，自動監控服務健康狀態
-- **Retry** - 重試機制，指數退避自動重試失敗請求
-- **Queue** - 任務佇列，優先級任務排程管理
-- **Doctor** - 系統診斷工具，全面健康檢查
-- **Reactions** - 訊息表情回應，UX 增強
-- **Apply Patch** - Git 補丁應用與管理
-- **Chunking** - 智慧訊息分塊，保留程式碼區塊完整性
-- **Tool Policy** - 工具存取控制與審計
-- **CLI Tool** - 命令列工具 `cursorbot`
-- **WhatsApp** - WhatsApp 整合，透過 whatsapp-web.js 橋接
-- **MS Teams** - Microsoft Teams 整合，Bot Framework 支援
-- **iMessage** - macOS iMessage 整合，AppleScript 支援
-- **Discord Voice** - Discord 語音頻道監聯與轉錄
-- **Tailscale** - Tailscale VPN 整合，安全遠端存取
-- **Chrome Extension** - 瀏覽器擴展，網頁整合
-- **Moonshot AI** - 月之暗面 AI 整合，中國市場支援
-- **GLM 智譜** - ChatGLM AI 整合，中國市場支援
-- **Line Bot** - Line Messaging API 整合，亞洲市場
-- **macOS Menu Bar** - macOS 選單列快速存取應用
-- **Web Dashboard** - 網頁管理儀表板
-- **WebChat** - 瀏覽器即時聊天介面
-- **Control UI** - 網頁控制台配置管理
-- **RAG** - 檢索增強生成（Retrieval-Augmented Generation）
+- **Sandbox** - 沙盒執行，安全隔離執行程式碼
+- **TTS** - 語音輸出（OpenAI、Edge TTS、ElevenLabs）
+- **OAuth** - OAuth 2.0 認證
+- **Heartbeat** - 心跳監控機制
+- **Queue** - 任務佇列
+- **Doctor** - 系統診斷工具
+- **RAG** - 檢索增強生成
   - 支援多種文件格式（PDF、Markdown、程式碼、JSON）
-  - 智慧文字分塊（固定大小、句子、段落、程式碼感知）
+  - 智慧文字分塊
   - 多種嵌入提供者（OpenAI、Google、Ollama）
-  - 向量儲存（ChromaDB 持久化 + 記憶體模式）
-  - 相似度搜尋與上下文增強生成
+  - 向量儲存（ChromaDB）
 
 ## 運作原理
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Telegram   │────▶│             │     │             │
-│  Discord    │────▶│  CursorBot  │────▶│ Cursor API  │
-│  (你)       │◀────│  (Bot)      │◀────│ (雲端 Agent)│
+│  Telegram   │────▶│             │────▶│ Cursor CLI  │
+│  Discord    │────▶│  CursorBot  │────▶│ AI Providers│
+│  LINE       │────▶│  (API Server│────▶│ (OpenAI,    │
+│  Slack      │────▶│   + Bot)    │◀────│  Claude,    │
+│  WhatsApp   │◀────│             │◀────│  Gemini...) │
 └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-1. 你在 Telegram 或 Discord 發送問題
-2. CursorBot 呼叫 Cursor Background Agent API
-3. Cursor 雲端 Agent 自動執行任務
+1. 你在任何支援的平台發送問題
+2. CursorBot 統一處理指令和訊息
+3. 根據模式調用 Cursor CLI 或 AI 提供者
 4. 完成後自動回傳結果
 
 ## 快速開始
@@ -200,12 +208,7 @@ DISCORD_BOT_TOKEN=your_discord_token
 DISCORD_ALLOWED_GUILDS=123456789
 DISCORD_ALLOWED_USERS=987654321
 
-# === Background Agent 設定 ===
-BACKGROUND_AGENT_ENABLED=true
-CURSOR_API_KEY=your_api_key_here
-
-# === 可選設定 ===
-CURSOR_GITHUB_REPO=https://github.com/your-username/your-repo
+# === 工作區設定 ===
 CURSOR_WORKSPACE_PATH=/path/to/your/projects
 
 # === CLI 模式設定（可選）===
@@ -213,17 +216,7 @@ CURSOR_CLI_MODEL=auto
 CURSOR_CLI_TIMEOUT=300
 ```
 
-#### 4. 取得 Cursor API Key
-
-1. 前往 [Cursor Dashboard](https://cursor.com/dashboard?tab=background-agents)
-2. 登入你的 Cursor 帳號
-3. 點擊 **Background Agents** 標籤
-4. 建立或複製你的 API Key
-5. 將值貼到 `.env` 的 `CURSOR_API_KEY`
-
-> ⚠️ 需要 Cursor Pro 訂閱才能使用 Background Agent
-
-#### 5. 設定 AI 提供者（多模型支援）
+#### 4. 設定 AI 提供者（多模型支援）
 
 `/agent` 指令支援多種 AI 提供者，只需在 `.env` 填入對應的 API Key 即可使用。
 
@@ -484,24 +477,22 @@ python -m src.main
 
 ## 使用流程
 
-### 1. 選擇倉庫
+### 1. 選擇對話模式
 
 ```
-/repo lizhixu/my-project
-→ ✅ 已切換倉庫: my-project
-   [🔗 在 GitHub 開啟] [💬 發送任務]
+/mode cli
+→ ✅ 已切換至 CLI 模式
 ```
 
-或點擊「選擇倉庫」按鈕從帳號中選擇。
+或使用 `/mode agent` 切換到 Agent 模式。
 
 ### 2. 發送任務
 
 **文字訊息:**
 ```
 幫我實作一個快速排序函數
-→ 🚀 正在啟動 Background Agent...
-→ ✅ 任務已建立
-   [🔗 在 Cursor 開啟] [🔄 查看狀態] [❌ 取消]
+→ 🤖 正在處理...
+→ ✅ 完成！
 ```
 
 **語音訊息:**
@@ -533,23 +524,12 @@ python -m src.main
 [🔗 在 Cursor 開啟] [💬 追問] [📋 複製結果]
 ```
 
-**持續輪詢功能：**
+**對話模式：**
 
-Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而中斷：
-- 自動追蹤任務狀態直到最終結果
-- 執行中每 30 秒更新一次狀態訊息
-- 顯示已執行時間，讓你掌握進度
-- 即使長時間任務也能正確獲得結果
-
-```
-🔄 任務執行中...
-
-🆔 abc12345
-📊 狀態: running
-⏱️ 已執行: 5分30秒
-
-任務仍在執行，請耐心等候...
-```
+CursorBot 支援多種對話模式：
+- **CLI 模式** - 使用 Cursor CLI 執行任務
+- **Agent 模式** - 使用 Agent Loop 多步驟推理
+- **Auto 模式** - 自動選擇最佳模式
 
 ## 指令說明
 
@@ -567,17 +547,20 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 
 | 指令 | 說明 |
 |------|------|
-| `/ask <問題>` | 發送問題給 Cursor Background Agent |
-| `/agent <任務>` | 啟動 Agent Loop 執行複雜任務 |
+| `/agent <任務>` | 啟動 Agent Loop 執行任務 |
 | `/model` | 查看目前使用的 AI 模型 |
 | `/model list` | 列出所有可用模型 |
 | `/model set <provider> [model]` | 切換 AI 模型 |
 | `/model reset` | 恢復預設模型 |
-| `/repo <owner/repo>` | 切換 GitHub 倉庫 |
-| `/repos` | 查看帳號中所有的 GitHub 倉庫 |
-| `/tasks` | 查看我的任務列表 |
-| `/result <ID>` | 查看任務結果 |
-| `/cancel_task <ID>` | 取消執行中的任務 |
+| `/climodel` | 查看 CLI 模型設定 |
+| `/climodel list` | 列出所有 CLI 可用模型 |
+| `/climodel set <model>` | 切換 CLI 模型 |
+| `/climodel reset` | 恢復 CLI 預設模型 |
+| `/mode` | 查看/切換對話模式 |
+| `/mode cli` | 切換到 Cursor CLI 模式 |
+| `/mode agent` | 切換到 Agent Loop 模式 |
+| `/new` | 開始新對話 |
+| `/clear` | 清除對話上下文 |
 | `/tts <文字>` | 文字轉語音 |
 
 ### 系統管理（v0.3）
@@ -625,7 +608,7 @@ Background Agent 任務會持續輪詢直到完成或失敗，不會因超時而
 | `/mode auto` | 自動選擇最佳模式 ⭐ (預設) |
 | `/mode cli` | 切換到 Cursor CLI 模式 |
 | `/mode agent` | 切換到 Agent Loop 模式 |
-| `/mode cursor` | 切換到 Background Agent 模式 |
+| `/mode auto` | 自動選擇模式 |
 | `/chatinfo` | 查看 CLI 對話上下文資訊 |
 | `/newchat` | 清除 CLI 對話記憶，開始新對話 |
 | `/climodel` | 查看 CLI 模型設定 |
@@ -697,20 +680,15 @@ Cursor CLI 支援多種 AI 模型，可以根據需求切換：
 | `gemini-3-flash` | Gemini 3 Flash |
 | `grok` | Grok |
 
-**`/ask` vs `/agent` 的差別：**
+**CLI 模式 vs Agent 模式：**
 
-| | `/ask` | `/agent` |
+| | CLI 模式 | Agent 模式 |
 |---|--------|----------|
-| 後端 | Cursor Background Agent | 可切換（OpenAI/Claude/Gemini 等） |
+| 後端 | Cursor CLI | LLM Provider（OpenAI/Claude/Gemini 等） |
 | 用途 | 程式碼相關任務 | 通用 AI 對話和分析 |
-| 需要 | Cursor Pro 訂閱 | OpenRouter 或 Gemini API Key |
-| 特點 | 可直接修改 GitHub 倉庫 | 多步驟推理、通用問答 |
-
-**倉庫切換範例：**
-```
-/repo lizhixu/cursorBot
-/repo https://github.com/facebook/react
-```
+| 需要 | Cursor CLI 安裝 | API Key |
+| 特點 | 支援對話記憶、多種模型 | 多步驟推理、工具調用 |
+| 切換 | `/mode cli` | `/mode agent` |
 
 **Agent Loop 範例：**
 ```
@@ -719,9 +697,242 @@ Cursor CLI 支援多種 AI 模型，可以根據需求切換：
 /agent 解釋什麼是 RAG
 ```
 
+### Google Calendar 整合
+
+與 Google 日曆無縫整合，查看和管理你的行程。
+
+| 指令 | 說明 |
+|------|------|
+| `/calendar` | 顯示今日行程 |
+| `/calendar week` | 顯示本週行程 |
+| `/calendar list` | 列出所有日曆 |
+| `/calendar add <標題> <時間>` | 新增行程 |
+| `/calendar auth` | 開始 Google 認證 |
+
+**設定步驟：**
+1. 前往 [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. 建立 OAuth 2.0 用戶端 ID（桌面應用程式）
+3. 啟用 Google Calendar API
+4. 下載 JSON 並儲存為 `data/google/credentials.json`
+5. 執行 `/calendar auth` 進行認證
+
+### Gmail 整合
+
+讀取和發送 Gmail 郵件。
+
+| 指令 | 說明 |
+|------|------|
+| `/gmail` | 顯示最近郵件 |
+| `/gmail unread` | 顯示未讀數量 |
+| `/gmail search <查詢>` | 搜尋郵件 |
+| `/gmail send <收件人> <主旨> \| <內文>` | 發送郵件 |
+| `/gmail labels` | 列出標籤 |
+| `/gmail auth` | 開始 Google 認證 |
+
+**搜尋範例：**
+```
+/gmail search from:example@gmail.com
+/gmail search subject:報告 is:unread
+/gmail search after:2026/01/01 has:attachment
+```
+
+### Skills Registry（技能市集）
+
+搜尋、安裝和管理 AI 技能。支援 [SkillsMP.com](https://skillsmp.com) 的 10 萬+ 開源技能。
+
+| 指令 | 說明 |
+|------|------|
+| `/skills` | 查看已安裝技能 |
+| `/skills_search [關鍵字]` | 搜尋可用技能（本地 + GitHub） |
+| `/skills_install <技能ID>` | 安裝技能 |
+| `/skills_list` | 列出已安裝技能 |
+| `/skills_uninstall <技能ID>` | 解除安裝技能 |
+
+**支援的安裝格式：**
+
+| 格式 | 範例 |
+|------|------|
+| 內建技能 ID | `/skills_install web-search` |
+| GitHub 縮寫 | `/skills_install github:vercel/next.js/.claude/skills` |
+| GitHub URL | `/skills_install https://github.com/facebook/react/...` |
+| SkillsMP ID | `/skills_install facebook-react-claude-skills-test-skill-md` |
+
+**從 SkillsMP.com 安裝技能：**
+1. 前往 [skillsmp.com](https://skillsmp.com)
+2. 搜尋想要的技能（如 React、Next.js 等）
+3. 複製技能 ID
+4. 使用 `/skills_install <ID>` 安裝
+
+**內建技能：**
+- `web-search` - 網路搜尋
+- `code-analysis` - 程式碼分析
+- `file-manager` - 檔案管理
+- `git-helper` - Git 操作
+- `translator` - 翻譯
+- `calculator` - 計算機
+- `weather` - 天氣查詢
+- `json-tools` - JSON 處理
+- `api-tester` - API 測試
+
+### 多平台 Webhook 設定
+
+所有社群平台都使用統一的 API Server（預設 port 8000）處理 webhook。
+
+#### LINE 設定
+
+1. 前往 [LINE Developers Console](https://developers.line.biz/)
+2. 建立 Provider 和 Messaging API Channel
+3. 取得 Channel Access Token 和 Channel Secret
+4. 設定 Webhook URL: `https://你的domain:8000/webhook/line`
+5. 開啟「Use webhook」選項
+
+```env
+LINE_ENABLED=true
+LINE_CHANNEL_ACCESS_TOKEN=你的token
+LINE_CHANNEL_SECRET=你的secret
+LINE_ALLOWED_USERS=  # 可選，限制使用者
+```
+
+#### Slack 設定
+
+1. 前往 [Slack API](https://api.slack.com/apps) 建立 App
+2. 啟用 Event Subscriptions，設定 URL: `https://你的domain:8000/webhook/slack`
+3. 訂閱 `message.channels` 和 `message.im` 事件
+4. 設定 Slash Commands URL: `https://你的domain:8000/webhook/slack/commands`
+
+```env
+SLACK_ENABLED=true
+SLACK_BOT_TOKEN=xoxb-你的token
+SLACK_SIGNING_SECRET=你的signing_secret
+SLACK_ALLOWED_USERS=  # 可選
+```
+
+#### WhatsApp Cloud API 設定
+
+1. 前往 [Meta for Developers](https://developers.facebook.com/)
+2. 建立 WhatsApp Business App
+3. 設定 Webhook URL: `https://你的domain:8000/webhook/whatsapp`
+4. 設定驗證 Token（自訂）
+
+```env
+WHATSAPP_ENABLED=true
+WHATSAPP_ACCESS_TOKEN=你的access_token
+WHATSAPP_VERIFY_TOKEN=你的自訂驗證token
+WHATSAPP_PHONE_NUMBER_ID=你的phone_number_id
+WHATSAPP_ALLOWED_NUMBERS=  # 可選
+```
+
+#### MS Teams 設定
+
+1. 前往 [Azure Portal](https://portal.azure.com/) 註冊 Bot
+2. 建立 Azure AD App Registration
+3. 設定 Messaging Endpoint: `https://你的domain:8000/webhook/teams`
+
+```env
+TEAMS_ENABLED=true
+TEAMS_APP_ID=你的app_id
+TEAMS_APP_PASSWORD=你的app_password
+TEAMS_ALLOWED_USERS=  # 可選
+```
+
+#### Google Chat 設定
+
+1. 前往 [Google Cloud Console](https://console.cloud.google.com/)
+2. 啟用 Chat API
+3. 建立服務帳戶
+4. 設定 Webhook URL: `https://你的domain:8000/webhook/google-chat`
+
+```env
+GOOGLE_CHAT_ENABLED=true
+GOOGLE_CHAT_CREDENTIALS=data/google/chat_service_account.json
+GOOGLE_CHAT_ALLOWED_USERS=  # 可選
+```
+
+### Signal 整合
+
+隱私優先的 Signal 通訊整合。
+
+**設定步驟：**
+1. 安裝 [signal-cli](https://github.com/AsamK/signal-cli)
+2. 註冊或連結電話號碼
+3. 設定環境變數：
+   ```
+   SIGNAL_ENABLED=true
+   SIGNAL_PHONE_NUMBER=+886912345678
+   ```
+
+### Google Chat 整合
+
+與 Google Workspace 整合，支援 Google Chat 訊息。
+
+**設定步驟：**
+1. 在 Google Cloud Console 啟用 Chat API
+2. 建立服務帳戶並下載憑證
+3. 設定環境變數：
+   ```
+   GOOGLE_CHAT_ENABLED=true
+   GOOGLE_CHAT_CREDENTIALS=data/google/chat_service_account.json
+   ```
+
+### Voice Wake 語音喚醒
+
+使用語音喚醒詞啟動對話。
+
+| 設定 | 說明 |
+|------|------|
+| `VOICE_WAKE_ENGINE` | 引擎：vosk, porcupine |
+| `VOICE_WAKE_WORDS` | 喚醒詞（逗號分隔） |
+| `VOSK_MODEL_PATH` | Vosk 模型路徑 |
+
+**支援的喚醒引擎：**
+- **Vosk** - 免費離線語音辨識
+- **Porcupine** - Picovoice 高精度喚醒
+
+### Talk Mode 持續對話
+
+持續語音對話模式，支援即時語音轉文字和文字轉語音。
+
+**功能：**
+- 語音活動偵測（VAD）
+- 即時語音轉文字（STT）
+- 文字轉語音回應（TTS）
+- 對話上下文保持
+
+**支援的 STT 引擎：** Whisper、Vosk、Google Cloud  
+**支援的 TTS 引擎：** ElevenLabs、Edge TTS、Google Cloud
+
+### Agent to Agent 協作
+
+跨 session 的多代理人協作系統。
+
+**功能：**
+- Session 發現與註冊
+- 跨 session 訊息傳遞
+- 任務委派與結果收集
+- 多代理人工作流程
+
+**使用範例：**
+```python
+from src.core.agent_to_agent import get_a2a_manager
+
+a2a = get_a2a_manager()
+await a2a.start(name="Main", capabilities=["code", "research"])
+
+# 列出活躍 session
+sessions = await a2a.list_sessions()
+
+# 委派任務
+result = await a2a.delegate_task(session_id, "分析這段程式碼...")
+```
+
 ### RAG（檢索增強生成）
 
 RAG 系統讓你可以索引文件並基於內容進行問答。
+
+**自動對話記憶功能：**
+- `/agent` 模式的對話會自動存入 RAG
+- CLI 模式的對話會自動存入 RAG
+- 使用 `/rag` 可以基於過往對話進行問答
 
 | 指令 | 說明 |
 |------|------|
@@ -1225,6 +1436,13 @@ CursorBot 提供命令列工具 `cursorbot` 進行管理：
 # 啟動 Bot
 ./cursorbot start
 
+# 啟動 TUI 終端介面
+./cursorbot tui
+
+# 互動式聊天（輕量版 TUI）
+./cursorbot chat
+./cursorbot chat --model opus-4.5
+
 # 發送訊息給用戶
 ./cursorbot message --user-id 123456 --text "Hello"
 
@@ -1234,6 +1452,37 @@ CursorBot 提供命令列工具 `cursorbot` 進行管理：
 # 重置 Bot 資料
 ./cursorbot reset --confirm
 ```
+
+#### TUI 終端介面
+
+美觀的終端使用者介面，支援互動式 AI 對話。
+
+**安裝依賴：**
+```bash
+pip install rich
+```
+
+**啟動方式：**
+```bash
+# 完整 TUI 介面
+./cursorbot tui
+
+# 簡易聊天模式
+./cursorbot chat
+
+# 或直接執行模組
+python -m src.cli.tui
+```
+
+**TUI 內建指令：**
+| 指令 | 說明 |
+|------|------|
+| `/help` | 顯示幫助 |
+| `/status` | 系統狀態 |
+| `/model` | 顯示目前模型 |
+| `/clear` | 清除聊天 |
+| `/export` | 匯出聊天記錄 |
+| `/quit` | 退出 |
 
 ## 專案結構
 
@@ -1246,47 +1495,51 @@ cursorBot/
 │   │   ├── callbacks.py         # 按鈕回調處理
 │   │   ├── media_handlers.py    # 語音/圖片處理
 │   │   ├── core_handlers.py     # 核心功能處理
+│   │   ├── google_handlers.py   # Google/Skills 處理
 │   │   └── keyboards.py         # 按鈕佈局
 │   ├── channels/                # 多平台支援
 │   │   ├── base.py              # Channel 抽象層
 │   │   ├── manager.py           # Channel 管理器
 │   │   ├── discord_channel.py   # Discord 實現
 │   │   └── discord_handlers.py  # Discord 處理器
+│   ├── cli/                     # CLI 工具
+│   │   └── tui.py               # Terminal UI
 │   ├── cursor/                  # Cursor 整合
 │   │   ├── agent.py             # 工作區管理
-│   │   ├── background_agent.py  # Background Agent API
+│   │   ├── cli_agent.py         # Cursor CLI Agent
 │   │   ├── file_operations.py
 │   │   └── terminal.py
-│   ├── core/                    # 核心功能（對標 ClawdBot）
+│   ├── core/                    # 核心功能
+│   │   ├── unified_commands.py  # 統一指令系統
+│   │   ├── skills_registry.py   # 技能市集（含 SkillsMP）
 │   │   ├── memory.py            # 記憶系統
 │   │   ├── skills.py            # 技能系統
-│   │   ├── context.py           # 對話上下文 + Compaction
-│   │   ├── approvals.py         # 審批系統
-│   │   ├── scheduler.py         # 排程任務
-│   │   ├── webhooks.py          # Webhook 處理
-│   │   ├── tools.py             # 代理工具
-│   │   ├── browser.py           # 瀏覽器自動化
+│   │   ├── context.py           # 對話上下文
 │   │   ├── agent_loop.py        # Agent 執行循環
-│   │   ├── llm_providers.py     # 多 LLM 提供者管理
-│   │   ├── heartbeat.py         # 心跳監控 + 重試機制
-│   │   ├── queue.py             # 任務佇列
-│   │   ├── tts.py               # 語音合成（TTS）
-│   │   ├── subagents.py         # 子代理系統
-│   │   ├── sandbox.py           # 沙盒執行
-│   │   └── oauth.py             # OAuth 認證
+│   │   ├── llm_providers.py     # 多 LLM 提供者
+│   │   ├── session.py           # Session 管理
+│   │   ├── rag.py               # RAG 系統
+│   │   ├── tts.py               # 語音合成
+│   │   └── ...
+│   ├── platforms/               # 社群平台整合
+│   │   ├── line_bot.py          # LINE Bot
+│   │   ├── slack_bot.py         # Slack Bot
+│   │   ├── whatsapp_bot.py      # WhatsApp Bot
+│   │   ├── teams_bot.py         # MS Teams Bot
+│   │   └── google_chat_bot.py   # Google Chat Bot
 │   ├── server/                  # API Server
+│   │   ├── api.py               # FastAPI 主程式
+│   │   └── social_webhooks.py   # 社群平台 Webhook
 │   └── utils/                   # 工具模組
+├── skills/                      # 自訂技能
+│   └── agent/                   # Agent 技能
 ├── data/                        # 資料儲存
-├── skills/                      # 自訂技能（可選）
-├── Dockerfile                   # Docker 映像定義
-├── docker-compose.yml           # Docker Compose 設定
-├── docker-start.bat             # Windows Docker 啟動腳本
-├── docker-start.sh              # Linux/macOS Docker 啟動腳本
-├── start.bat                    # Windows 本地啟動腳本
-├── start.ps1                    # PowerShell 本地啟動腳本
-├── start.sh                     # Linux/macOS 本地啟動腳本
-├── env.example                  # 環境變數範例
-├── requirements.txt             # Python 依賴
+├── cursorbot                    # CLI 工具入口
+├── Dockerfile
+├── docker-compose.yml
+├── start.bat / start.sh
+├── env.example
+├── requirements.txt
 └── README.md
 ```
 
@@ -1322,12 +1575,13 @@ DISCORD_ALLOWED_GUILDS=your_guild_id
 | `/start` | 開始使用 |
 | `/help` | 顯示說明 |
 | `/status` | 系統狀態 |
-| `/ask <問題>` | 發送問題給 Cursor Agent |
-| `/agent <任務>` | 啟動 Agent Loop（OpenRouter/Gemini） |
-| `/repo <owner/repo>` | 設定倉庫 |
-| `/tasks` | 查看任務 |
+| `/model` | 模型管理 |
+| `/climodel` | CLI 模型管理 |
+| `/mode` | 對話模式切換 |
+| `/agent <任務>` | 啟動 Agent Loop |
 | `/memory` | 記憶管理 |
-| `/skills` | 查看技能 |
+| `/workspace` | 工作區管理 |
+| `/skills` | 技能管理 |
 
 ## Docker 終端機功能
 
@@ -1495,11 +1749,15 @@ Pre-built packages not available
 
 ## 注意事項
 
-1. **需要 Cursor Pro** - Background Agent 使用 Max Mode，需要訂閱
-2. **費用較高** - Background Agent 每次任務都會消耗額度
-3. **API Key** - 從 Cursor Dashboard 取得，不會過期
-4. **完全遠端** - 不需要開啟 Cursor IDE
-5. **GitHub 整合** - 必須指定 GitHub 倉庫才能使用
-6. **安全性** - 只有 `TELEGRAM_ALLOWED_USERS` 中的用戶可以使用
-7. **Python 版本** - 建議使用 Python 3.11 或 3.12，不支援 3.13+
-8. **Docker 推薦** - 使用 Docker 可避免所有環境問題
+1. **Cursor CLI** - 使用 CLI 模式需安裝 Cursor CLI（`agent` 指令）
+2. **AI 提供者** - 至少需要設定一個 AI 提供者（OpenRouter、OpenAI、Gemini 等）
+3. **多平台** - 各平台需要獨立設定 API Token 和 Webhook
+4. **安全性** - 建議設定 `ALLOWED_USERS` 限制使用者
+5. **Python 版本** - 建議使用 Python 3.11 或 3.12，不支援 3.13+
+6. **Docker 推薦** - 使用 Docker 可避免所有環境問題
+7. **GitHub Token** - 搜尋 SkillsMP/GitHub 技能時建議設定 `GITHUB_TOKEN` 提高 API 限制
+8. **HTTPS** - 社群平台 Webhook 需要 HTTPS，本地測試可用 ngrok
+
+## 授權
+
+MIT License

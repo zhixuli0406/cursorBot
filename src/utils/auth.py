@@ -33,6 +33,14 @@ def is_user_authorized(user_id: int) -> bool:
     return user_id in allowed_users
 
 
+def is_authorized(user_id) -> bool:
+    """
+    Alias for is_user_authorized.
+    Accepts user_id as int or str.
+    """
+    return is_user_authorized(int(user_id))
+
+
 def authorized_only(func: Callable) -> Callable:
     """
     Decorator to restrict handler access to authorized users only.

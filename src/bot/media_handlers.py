@@ -169,16 +169,16 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await status_msg.edit_text(
                 f"🎤 <b>語音轉錄</b>\n\n"
                 f"<i>{transcription}</i>\n\n"
-                f"正在處理任務...",
+                f"正在處理...",
                 parse_mode="HTML",
             )
 
-            # Process as a task request
-            from .handlers import _handle_background_agent_ask
+            # Process as a message using agent mode
+            from .handlers import _handle_agent_mode
             chat_id = update.effective_chat.id
             username = update.effective_user.username or update.effective_user.first_name
 
-            await _handle_background_agent_ask(
+            await _handle_agent_mode(
                 update, transcription, user_id, username, chat_id
             )
 
