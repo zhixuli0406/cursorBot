@@ -86,6 +86,52 @@
   - 智慧文字分塊
   - 多種嵌入提供者（OpenAI、Google、Ollama）
   - 向量儲存（ChromaDB）
+- **異步執行** - 背景任務系統
+  - Agent/CLI/RAG 背景執行
+  - 任務完成自動推送結果
+  - 任務管理與取消
+  - 並行任務支援
+
+### v0.4 新增功能
+
+#### MCP (Model Context Protocol)
+- **Anthropic MCP 標準** - 支援 Anthropic 的 Model Context Protocol
+- **MCP Server 管理** - 連接、斷開多個 MCP 伺服器
+- **工具與資源** - 存取 MCP 提供的工具和資源
+- 使用 `/mcp` 指令管理
+
+#### Workflow Engine（工作流程引擎）
+- **宣告式工作流程** - YAML/JSON 定義多步驟自動化任務
+- **條件執行** - 支援條件判斷與分支
+- **並行處理** - 步驟可並行或序列執行
+- **錯誤處理** - 自動重試與錯誤恢復
+- 使用 `/workflow` 指令管理
+
+#### Analytics（使用分析）
+- **事件追蹤** - 追蹤訊息、指令、AI 請求等事件
+- **用戶統計** - 個人使用量與成本估算
+- **每日報告** - 自動生成每日統計
+- **資料匯出** - 支援 JSON/CSV 匯出
+- 使用 `/analytics` 指令查看
+
+#### Code Review（程式碼審查）
+- **自動化審查** - AI 驅動的程式碼品質分析
+- **靜態分析** - 整合 pylint、ruff、eslint
+- **安全掃描** - 檢測常見安全漏洞
+- **Git Diff 審查** - 支援審查變更內容
+- 使用 `/review` 指令執行
+
+#### Conversation Export（對話匯出）
+- **多種格式** - JSON、Markdown、HTML、TXT、CSV
+- **隱私保護** - 自動遮蔽敏感資訊
+- **篩選功能** - 依日期、使用者篩選
+- 使用 `/export` 指令匯出
+
+#### Auto-Documentation（自動文件生成）
+- **程式碼文件** - 從 docstring 生成文件
+- **API 參考** - 自動生成 API 文件
+- **README 生成** - 智慧生成專案說明
+- 使用 `/docs` 指令生成
 
 ## 運作原理
 
@@ -616,6 +662,32 @@ CursorBot 支援多種對話模式：
 | `/climodel set <model>` | 切換 CLI 模型 |
 | `/climodel reset` | 恢復 CLI 預設模型 |
 | `/tui` | 終端介面說明 |
+
+### v0.4 新功能指令
+
+| 指令 | 說明 |
+|------|------|
+| `/mcp` | MCP (Model Context Protocol) 狀態 |
+| `/mcp servers` | 列出已連接的 MCP 伺服器 |
+| `/mcp tools` | 列出可用的 MCP 工具 |
+| `/mcp connect <name> <cmd>` | 連接 MCP 伺服器 |
+| `/workflow` | 工作流程引擎狀態 |
+| `/workflow list` | 列出可用工作流程 |
+| `/workflow run <name>` | 執行工作流程 |
+| `/analytics` | 使用分析總覽 |
+| `/analytics me` | 我的使用統計 |
+| `/analytics daily` | 每日統計 |
+| `/analytics export` | 匯出分析資料 |
+| `/review <file>` | 程式碼審查 |
+| `/review dir <path>` | 審查目錄 |
+| `/review diff` | 審查 Git 變更 |
+| `/export` | 匯出對話（Markdown） |
+| `/export json` | 匯出為 JSON |
+| `/export html` | 匯出為 HTML |
+| `/docs <file>` | 生成檔案文件 |
+| `/docs api <dir>` | 生成 API 文件 |
+| `/docs readme` | 生成 README |
+
 | `/whatsapp` | WhatsApp 整合狀態 |
 | `/whatsapp qr` | 顯示 WhatsApp 登入 QR Code |
 | `/teams` | MS Teams 整合狀態 |
@@ -924,6 +996,48 @@ sessions = await a2a.list_sessions()
 # 委派任務
 result = await a2a.delegate_task(session_id, "分析這段程式碼...")
 ```
+
+### 異步執行（背景任務）
+
+Agent 和 CLI 支援背景執行模式，不需要等待任務完成，完成後自動推送結果。
+
+| 指令 | 說明 |
+|------|------|
+| `/agent_async <任務>` | 背景執行 Agent |
+| `/cli_async <任務>` | 背景執行 CLI |
+| `/rag_async <問題>` | 背景執行 RAG 查詢 |
+| `/tasks` | 查看你的待處理任務 |
+| `/cancel <task_id>` | 取消任務 |
+| `/task_status <task_id>` | 查看任務詳情 |
+| `/task_stats` | 任務管理器統計 |
+
+**使用範例：**
+
+```
+# 提交背景任務
+/agent_async 分析這個專案的架構並撰寫文件
+
+# 系統會立即回覆任務 ID
+🚀 Task Submitted
+Task ID: abc12345
+Type: Agent
+
+# 繼續使用 Bot 做其他事
+/help
+/status
+
+# 任務完成後自動推送結果
+✅ Task Completed
+
+[任務結果...]
+```
+
+**特點：**
+- 不需要等待 - 提交後立即返回
+- 自動推送 - 完成後自動發送結果
+- 任務追蹤 - 可查看所有任務狀態
+- 可取消 - 支援取消進行中的任務
+- 並行執行 - 支援多個任務同時執行
 
 ### RAG（檢索增強生成）
 

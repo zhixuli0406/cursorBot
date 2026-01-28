@@ -116,14 +116,15 @@ def get_best_available_mode() -> str:
     """
     Get the best available mode based on priority.
     Priority: CLI -> Agent
+    All modes use async execution by default.
     """
     from ..cursor.cli_agent import is_cli_available
     
-    # 1. Cursor CLI (highest priority)
+    # Prefer CLI if available
     if is_cli_available():
         return "cli"
     
-    # 2. Agent Loop (always available)
+    # Fallback to Agent
     return "agent"
 
 
@@ -390,6 +391,18 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /climodel - CLI 模型設定 (GPT/Claude/Gemini)
 /climodel list - 列出所有 CLI 可用模型
 /climodel set &lt;model&gt; - 切換 CLI 模型
+
+━━━━━━━━━━━━━━━━━━━━━━
+<b>🚀 異步執行 (背景任務)</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/agent_async &lt;任務&gt; - 背景執行 Agent
+/cli_async &lt;任務&gt; - 背景執行 CLI
+/rag_async &lt;問題&gt; - 背景執行 RAG 查詢
+/tasks - 查看待處理任務
+/cancel &lt;task_id&gt; - 取消任務
+/task_status &lt;task_id&gt; - 任務詳情
+/task_stats - 任務統計
+<i>💡 任務完成後會自動推送結果</i>
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>📋 Session 管理</b> (ClawdBot-style)
@@ -726,21 +739,155 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     # Get user's chat mode preference
     chat_mode = get_user_chat_mode(user_id)
     
-    # Handle auto mode - use priority: CLI -> Agent -> Background Agent
+    # Handle auto mode - use priority: CLI -> Agent
     if chat_mode == "auto":
         chat_mode = get_best_available_mode()
     
+    # All modes use async execution (non-blocking)
     if chat_mode == "cli":
-        # Use Cursor CLI mode
+        # Use Cursor CLI mode (async)
         from ..cursor.cli_agent import is_cli_available
         if is_cli_available():
-            await _handle_cli_mode(update, message_text, user_id, username, chat_id)
+            await _handle_async_cli_mode(update, message_text, user_id, username, chat_id)
         else:
-            # Fallback to Agent
-            await _handle_agent_mode(update, message_text, user_id, username, chat_id)
+            # Fallback to Agent (async)
+            await _handle_async_agent_mode(update, message_text, user_id, username, chat_id)
     else:
-        # Use Agent Loop mode
-        await _handle_agent_mode(update, message_text, user_id, username, chat_id)
+        # Use Agent Loop mode (async)
+        await _handle_async_agent_mode(update, message_text, user_id, username, chat_id)
+
+
+async def _handle_async_agent_mode(
+    update: Update,
+    message_text: str,
+    user_id: int,
+    username: str,
+    chat_id: int,
+) -> None:
+    """
+    Handle message using Async Agent mode (non-blocking).
+    
+    Submits task to background and pushes result when complete.
+    User receives immediate confirmation and can continue chatting.
+    """
+    from ..core.async_tasks import get_task_manager
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    
+    try:
+        manager = get_task_manager()
+        
+        # Submit task to background
+        task_id = await manager.submit_agent_task(
+            user_id=str(user_id),
+            chat_id=str(chat_id),
+            platform="telegram",
+            prompt=message_text,
+            timeout=300.0,
+            metadata={
+                "username": username,
+                "source": "message",
+            },
+        )
+        
+        # Send confirmation with task ID
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("查看狀態", callback_data=f"task_status:{task_id}"),
+                InlineKeyboardButton("取消", callback_data=f"task_cancel:{task_id}"),
+            ]
+        ])
+        
+        # Truncate message for display
+        preview = message_text[:50] + "..." if len(message_text) > 50 else message_text
+        safe_preview = _escape_html(preview)
+        
+        await update.message.reply_text(
+            f"🤖 <b>Agent 任務已提交</b>\n\n"
+            f"📝 <code>{safe_preview}</code>\n\n"
+            f"🆔 <code>{task_id}</code>\n\n"
+            f"⏳ 背景執行中，完成後自動通知\n\n"
+            f"💡 <code>/tasks</code> 查看所有任務",
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
+        
+    except Exception as e:
+        logger.error(f"Async agent mode error: {e}")
+        await update.message.reply_text(
+            f"❌ <b>任務提交失敗</b>\n\n"
+            f"錯誤: {_escape_html(str(e)[:200])}",
+            parse_mode="HTML"
+        )
+
+
+async def _handle_async_cli_mode(
+    update: Update,
+    message_text: str,
+    user_id: int,
+    username: str,
+    chat_id: int,
+) -> None:
+    """
+    Handle message using Async CLI mode (non-blocking).
+    
+    Submits CLI task to background and pushes result when complete.
+    """
+    from ..core.async_tasks import get_task_manager
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    
+    try:
+        manager = get_task_manager()
+        
+        # Get current workspace
+        workspace_agent = get_cursor_agent()
+        working_dir = workspace_agent.get_current_workspace()
+        
+        # Submit CLI task to background
+        task_id = await manager.submit_cli_task(
+            user_id=str(user_id),
+            chat_id=str(chat_id),
+            platform="telegram",
+            prompt=message_text,
+            working_directory=working_dir,
+            timeout=300.0,
+            metadata={
+                "username": username,
+                "source": "message",
+                "workspace": working_dir,
+            },
+        )
+        
+        # Send confirmation with task ID
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("查看狀態", callback_data=f"task_status:{task_id}"),
+                InlineKeyboardButton("取消", callback_data=f"task_cancel:{task_id}"),
+            ]
+        ])
+        
+        # Truncate message for display
+        preview = message_text[:50] + "..." if len(message_text) > 50 else message_text
+        safe_preview = _escape_html(preview)
+        workspace_name = _escape_html(workspace_agent.get_current_workspace_name())
+        
+        await update.message.reply_text(
+            f"⌨️ <b>CLI 任務已提交</b>\n\n"
+            f"📝 <code>{safe_preview}</code>\n"
+            f"📂 <code>{workspace_name}</code>\n\n"
+            f"🆔 <code>{task_id}</code>\n\n"
+            f"⏳ 背景執行中，完成後自動通知\n\n"
+            f"💡 <code>/tasks</code> 查看所有任務",
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
+        
+    except Exception as e:
+        logger.error(f"Async CLI mode error: {e}")
+        await update.message.reply_text(
+            f"❌ <b>任務提交失敗</b>\n\n"
+            f"錯誤: {_escape_html(str(e)[:200])}",
+            parse_mode="HTML"
+        )
 
 
 async def _handle_cli_mode(
@@ -975,7 +1122,13 @@ def setup_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("search", search_handler))
     app.add_handler(CommandHandler("project", project_handler))
 
+    # Setup async task handlers FIRST (non-blocking agent/cli execution)
+    # This must be before setup_callback_handlers to ensure task_ callbacks are handled
+    from .async_handlers import register_async_handlers
+    register_async_handlers(app)
+
     # Setup callback handlers for inline keyboards
+    # Note: task_ callbacks are excluded by pattern and handled by async_handlers
     from .callbacks import setup_callback_handlers
     setup_callback_handlers(app)
 
@@ -1000,6 +1153,10 @@ def setup_handlers(app: Application) -> None:
     # Setup Google and Skills Registry handlers
     from .google_handlers import setup_google_handlers
     setup_google_handlers(app)
+
+    # Setup v0.4 feature handlers (MCP, Workflow, Analytics, Code Review, etc.)
+    from .v04_handlers import register_v04_handlers
+    register_v04_handlers(app)
 
     logger.info("Bot handlers configured successfully")
 

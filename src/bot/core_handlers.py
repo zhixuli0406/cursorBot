@@ -3797,7 +3797,7 @@ async def control_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /mode command.
-    Switch between Agent and Cursor CLI.
+    Switch between Agent and Cursor CLI (both use async execution).
     
     Usage:
         /mode - Show current mode
@@ -3847,41 +3847,41 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 ━━━━━━━━━━━━━━━━━━━━━━
 {mode_icon} <b>{mode_name}</b>{effective_mode}
 
+🚀 <b>所有模式皆為異步執行</b>
+   任務背景處理，完成後自動推送結果
+
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>可用模式</b> (優先順序: CLI → Agent)
+<b>可用模式</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-🔄 <b>自動選擇</b> (<code>/mode auto</code>) ⭐ 預設
+🔄 <b>自動選擇</b> (<code>/mode auto</code>)
    自動選擇最佳可用模式
    優先順序: CLI → Agent
 
-⌨️ <b>Cursor CLI</b> (<code>/mode cli</code>)
+⌨️ <b>Cursor CLI</b> (<code>/mode cli</code>) {f'✅' if cli_available else '⚠️'}
    使用官方 Cursor CLI (agent 指令)
    直接與 Cursor AI 互動
    支援檔案編輯、程式碼生成
-   <b>✨ 對話記憶功能</b> - 保持上下文
-   {f'✅ 可用 ({cli_info})' if cli_available else '⚠️ 未安裝'}
+   {f'({cli_info})' if cli_available else '未安裝'}
 
-🤖 <b>Agent Loop</b> (<code>/mode agent</code>)
+🤖 <b>Agent Loop</b> (<code>/mode agent</code>) ✅
    使用內建 AI Agent 處理對話
    支援多種 AI 模型 (OpenAI/Claude/Gemini/GLM)
    可執行複雜任務、使用技能和工具
-   ✅ 可用
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>切換指令</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-<code>/mode auto</code> - 自動選擇 ⭐
+<code>/mode auto</code> - 自動選擇
 <code>/mode cli</code> - Cursor CLI 模式
 <code>/mode agent</code> - Agent Loop 模式
 
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>對話記憶 (CLI)</b>
+<b>任務管理</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-<code>/chatinfo</code> - 查看目前對話資訊
-<code>/newchat</code> - 清除記憶，開始新對話
+<code>/tasks</code> - 查看所有任務
+<code>/cancel &lt;task_id&gt;</code> - 取消任務
 
-設定後，直接發送訊息即可使用選定模式。
-CLI 模式支援對話記憶，可延續之前的上下文。
+直接發送訊息即可使用選定模式。
 """
         await update.message.reply_text(text, parse_mode="HTML")
     
@@ -3895,10 +3895,8 @@ CLI 模式支援對話記憶，可延續之前的上下文。
         await update.message.reply_text(
             "🔄 <b>已切換到自動選擇模式</b>\n\n"
             f"目前最佳模式: <b>{mode_names.get(best, best)}</b>\n\n"
-            "優先順序:\n"
-            "1️⃣ Cursor CLI (如已安裝)\n"
-            "2️⃣ Agent Loop (內建 AI)\n\n"
-            "系統會自動選擇最佳可用模式。",
+            "🚀 所有模式皆為異步執行\n"
+            "任務完成後自動推送結果",
             parse_mode="HTML"
         )
     
@@ -3914,13 +3912,15 @@ CLI 模式支援對話記憶，可延續之前的上下文。
         await update.message.reply_text(
             "🤖 <b>已切換到 Agent Loop 模式</b>\n\n"
             f"模型: <code>{model_info}</code>\n\n"
-            "現在直接發送訊息將由 Agent Loop 處理。\n"
+            "🚀 異步執行，任務背景處理\n"
+            "完成後自動推送結果\n\n"
             "Agent 可以:\n"
             "• 回答問題和對話\n"
             "• 執行複雜任務\n"
             "• 使用已載入的技能\n"
             "• 呼叫各種工具\n\n"
-            "使用 <code>/model</code> 切換 AI 模型",
+            "💡 <code>/model</code> 切換 AI 模型\n"
+            "💡 <code>/tasks</code> 查看任務",
             parse_mode="HTML"
         )
     
@@ -3945,13 +3945,15 @@ CLI 模式支援對話記憶，可延續之前的上下文。
             "⌨️ <b>已切換到 Cursor CLI 模式</b>\n\n"
             f"路徑: <code>{info.get('path', 'agent')}</code>\n"
             f"版本: <code>{info.get('version', 'unknown')}</code>\n\n"
-            "現在直接發送訊息將由 Cursor CLI 處理。\n"
+            "🚀 異步執行，任務背景處理\n"
+            "完成後自動推送結果\n\n"
             "CLI 可以:\n"
             "• 程式碼生成和編輯\n"
             "• 檔案操作\n"
             "• 專案分析\n"
             "• 執行終端指令\n\n"
-            "使用 <code>/repo</code> 設定工作目錄",
+            "💡 <code>/workspace</code> 設定工作目錄\n"
+            "💡 <code>/tasks</code> 查看任務",
             parse_mode="HTML"
         )
     
@@ -3959,9 +3961,10 @@ CLI 模式支援對話記憶，可延續之前的上下文。
         await update.message.reply_text(
             "⚡ <b>Mode 指令</b>\n\n"
             "<code>/mode</code> - 查看目前模式\n"
-            "<code>/mode auto</code> - 自動選擇 ⭐\n"
+            "<code>/mode auto</code> - 自動選擇\n"
             "<code>/mode cli</code> - Cursor CLI 模式\n"
-            "<code>/mode agent</code> - Agent Loop 模式",
+            "<code>/mode agent</code> - Agent Loop 模式\n\n"
+            "🚀 所有模式皆為異步執行",
             parse_mode="HTML"
         )
 

@@ -81,6 +81,7 @@ COMMANDS: dict[str, CommandDefinition] = {
     "model": CommandDefinition("model", "查看/切換 AI 模型", CommandCategory.AI),
     "climodel": CommandDefinition("climodel", "CLI 模型設定", CommandCategory.AI),
     "agent": CommandDefinition("agent", "啟動 AI Agent 執行任務", CommandCategory.AGENT),
+    "think": CommandDefinition("think", "AI 思考模式控制", CommandCategory.AI, aliases=["thinking"]),
     
     # Memory commands
     "memory": CommandDefinition("memory", "記憶系統管理", CommandCategory.MEMORY),
@@ -110,6 +111,14 @@ COMMANDS: dict[str, CommandDefinition] = {
     
     # Diagnostic
     "doctor": CommandDefinition("doctor", "診斷系統狀態", CommandCategory.DIAGNOSTIC),
+    
+    # v0.4 Commands
+    "verbose": CommandDefinition("verbose", "詳細輸出模式", CommandCategory.ADMIN, aliases=["v"]),
+    "elevated": CommandDefinition("elevated", "權限提升模式", CommandCategory.ADMIN, aliases=["elevate", "el"]),
+    "alias": CommandDefinition("alias", "指令別名管理", CommandCategory.ADMIN),
+    "notify": CommandDefinition("notify", "通知設定", CommandCategory.ADMIN),
+    "health": CommandDefinition("health", "健康檢查", CommandCategory.DIAGNOSTIC),
+    "ratelimit": CommandDefinition("ratelimit", "Rate Limit 狀態", CommandCategory.DIAGNOSTIC),
 }
 
 
@@ -610,6 +619,239 @@ async def handle_agent(ctx: CommandContext) -> CommandResult:
 
 
 # ============================================
+# v0.4 Command Handlers
+# ============================================
+
+async def handle_verbose(ctx: CommandContext) -> CommandResult:
+    """Handle /verbose command - detailed output mode."""
+    from .verbose import get_verbose_manager, VerbosityLevel
+    
+    manager = get_verbose_manager()
+    
+    if ctx.args:
+        arg = ctx.args[0].lower()
+        
+        if arg == "on":
+            manager.set_enabled(ctx.user_id, True)
+            return CommandResult(success=True, message="✅ Verbose 模式已啟用")
+        
+        elif arg == "off":
+            manager.set_enabled(ctx.user_id, False)
+            return CommandResult(success=True, message="✅ Verbose 模式已停用")
+        
+        elif arg == "level" and len(ctx.args) > 1:
+            try:
+                level = int(ctx.args[1])
+                manager.set_level(ctx.user_id, level)
+                return CommandResult(success=True, message=f"✅ Verbose 等級設為 {level}")
+            except ValueError:
+                return CommandResult(success=False, message="❌ 等級必須是 0-3 的數字")
+        
+        elif arg == "tokens":
+            if len(ctx.args) > 1:
+                enabled = ctx.args[1].lower() in ("on", "true", "1")
+                manager.set_option(ctx.user_id, "show_tokens", enabled)
+                return CommandResult(success=True, message=f"✅ Token 顯示: {'開啟' if enabled else '關閉'}")
+    
+    return CommandResult(success=True, message=manager.get_status_message(ctx.user_id))
+
+
+async def handle_elevated(ctx: CommandContext) -> CommandResult:
+    """Handle /elevated command - permission elevation."""
+    from .elevated import get_elevated_manager
+    
+    manager = get_elevated_manager()
+    
+    if ctx.args:
+        arg = ctx.args[0].lower()
+        
+        if arg == "on":
+            minutes = 15
+            if len(ctx.args) > 1:
+                try:
+                    minutes = int(ctx.args[1])
+                except ValueError:
+                    pass
+            
+            request = await manager.request_elevation(ctx.user_id, minutes=minutes)
+            if request.granted:
+                return CommandResult(
+                    success=True,
+                    message=f"✅ 權限提升已啟用，有效期 {request.remaining_minutes} 分鐘"
+                )
+            else:
+                return CommandResult(
+                    success=False,
+                    message="❌ 權限提升請求被拒絕"
+                )
+        
+        elif arg == "off":
+            manager.revoke_elevation(ctx.user_id)
+            return CommandResult(success=True, message="✅ 權限提升已撤銷")
+    
+    return CommandResult(success=True, message=manager.get_status_message(ctx.user_id))
+
+
+async def handle_think(ctx: CommandContext) -> CommandResult:
+    """Handle /think command - AI thinking mode."""
+    from .thinking import get_thinking_manager, LEVEL_NAMES
+    
+    manager = get_thinking_manager()
+    
+    if ctx.args:
+        arg = ctx.args[0].lower()
+        
+        # Check if it's a level name
+        success, config = manager.set_level_by_name(ctx.user_id, arg)
+        if success:
+            return CommandResult(
+                success=True,
+                message=f"✅ 思考模式設為 **{config.level_name}** (預算: {config.budget:,} tokens)"
+            )
+        
+        if arg == "show" and len(ctx.args) > 1:
+            enabled = ctx.args[1].lower() in ("on", "true", "1")
+            manager.set_show_thinking(ctx.user_id, enabled)
+            return CommandResult(
+                success=True,
+                message=f"✅ 顯示思考過程: {'開啟' if enabled else '關閉'}"
+            )
+        
+        elif arg == "auto" and len(ctx.args) > 1:
+            enabled = ctx.args[1].lower() in ("on", "true", "1")
+            config = manager.get_config(ctx.user_id)
+            config.auto_adjust = enabled
+            return CommandResult(
+                success=True,
+                message=f"✅ 自動調整: {'開啟' if enabled else '關閉'}"
+            )
+        
+        return CommandResult(
+            success=False,
+            message=f"❌ 無效的等級。可用: {', '.join(LEVEL_NAMES.values())}"
+        )
+    
+    return CommandResult(success=True, message=manager.get_status_message(ctx.user_id))
+
+
+async def handle_alias(ctx: CommandContext) -> CommandResult:
+    """Handle /alias command - command aliases."""
+    from .command_alias import get_alias_manager
+    
+    manager = get_alias_manager()
+    
+    if ctx.args:
+        action = ctx.args[0].lower()
+        
+        if action == "add" and len(ctx.args) >= 3:
+            name = ctx.args[1]
+            command = " ".join(ctx.args[2:])
+            success, message = manager.add_alias(ctx.user_id, name, command)
+            return CommandResult(success=success, message=message)
+        
+        elif action == "remove" and len(ctx.args) >= 2:
+            name = ctx.args[1]
+            success, message = manager.remove_alias(ctx.user_id, name)
+            return CommandResult(success=success, message=message)
+        
+        elif action == "clear":
+            count = manager.clear_aliases(ctx.user_id)
+            return CommandResult(success=True, message=f"✅ 已清除 {count} 個別名")
+        
+        elif action == "list":
+            pass  # Fall through to status message
+        
+        else:
+            return CommandResult(
+                success=False,
+                message="❌ 用法: /alias add <名稱> <指令> | /alias remove <名稱> | /alias clear"
+            )
+    
+    return CommandResult(success=True, message=manager.get_status_message(ctx.user_id))
+
+
+async def handle_notify(ctx: CommandContext) -> CommandResult:
+    """Handle /notify command - notification settings."""
+    from .notifications import get_notification_manager
+    
+    manager = get_notification_manager()
+    
+    if ctx.args:
+        arg = ctx.args[0].lower()
+        
+        if arg == "on":
+            manager.set_enabled(ctx.user_id, True)
+            return CommandResult(success=True, message="✅ 通知已啟用")
+        
+        elif arg == "off":
+            manager.set_enabled(ctx.user_id, False)
+            return CommandResult(success=True, message="✅ 通知已停用")
+        
+        elif arg == "sound":
+            if len(ctx.args) > 1:
+                enabled = ctx.args[1].lower() in ("on", "true", "1")
+                manager.set_sound_enabled(ctx.user_id, enabled)
+                return CommandResult(
+                    success=True,
+                    message=f"✅ 通知音效: {'開啟' if enabled else '關閉'}"
+                )
+        
+        elif arg == "quiet" and len(ctx.args) >= 3:
+            try:
+                start = int(ctx.args[1])
+                end = int(ctx.args[2])
+                manager.set_quiet_hours(ctx.user_id, start, end)
+                return CommandResult(
+                    success=True,
+                    message=f"✅ 靜音時段: {start}:00 - {end}:00"
+                )
+            except ValueError:
+                return CommandResult(
+                    success=False,
+                    message="❌ 時間必須是 0-23 的數字"
+                )
+    
+    return CommandResult(success=True, message=manager.get_status_message(ctx.user_id))
+
+
+async def handle_health(ctx: CommandContext) -> CommandResult:
+    """Handle /health command - health check."""
+    from .health import get_health_manager
+    
+    manager = get_health_manager()
+    
+    if ctx.args and ctx.args[0].lower() == "detail":
+        report = await manager.check(include_components=True)
+        lines = [
+            f"💚 **Health Report**",
+            "",
+            f"Status: {report.status.value}",
+            f"Version: {report.version}",
+            f"Uptime: {report.uptime_seconds:.0f}s",
+            f"Checks: {report.checks_passed}/{report.checks_passed + report.checks_failed} passed",
+            "",
+        ]
+        
+        if report.components:
+            lines.append("**Components:**")
+            for c in report.components:
+                icon = "✅" if c.status.value == "healthy" else "⚠️" if c.status.value == "degraded" else "❌"
+                lines.append(f"{icon} {c.name}: {c.message or c.status.value}")
+        
+        return CommandResult(success=True, message="\n".join(lines))
+    
+    return CommandResult(success=True, message=manager.get_status_message())
+
+
+async def handle_ratelimit(ctx: CommandContext) -> CommandResult:
+    """Handle /ratelimit command - rate limit status."""
+    from .rate_limit import get_rate_limiter
+    
+    limiter = get_rate_limiter()
+    return CommandResult(success=True, message=limiter.get_status_message(ctx.user_id))
+
+
+# ============================================
 # Command Router
 # ============================================
 
@@ -629,6 +871,18 @@ COMMAND_HANDLERS: dict[str, Callable] = {
     "skills": handle_skills,
     "stats": handle_stats,
     "agent": handle_agent,
+    # v0.4 commands
+    "verbose": handle_verbose,
+    "v": handle_verbose,  # Alias
+    "elevated": handle_elevated,
+    "elevate": handle_elevated,  # Alias
+    "el": handle_elevated,  # Alias
+    "think": handle_think,
+    "thinking": handle_think,  # Alias
+    "alias": handle_alias,
+    "notify": handle_notify,
+    "health": handle_health,
+    "ratelimit": handle_ratelimit,
 }
 
 

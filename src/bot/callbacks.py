@@ -567,9 +567,10 @@ def setup_callback_handlers(app) -> None:
     # - ws_ : workspace_callback_handler
     # - model_ : model_callback_handler (core_handlers.py)
     # - climodel_ : climodel_callback_handler (core_handlers.py)
+    # - task_ : task_callback_handler (async_handlers.py)
     app.add_handler(CallbackQueryHandler(
         callback_handler,
-        pattern=r"^(?!ws_|model_|climodel_).*"  # Negative lookahead to exclude specific prefixes
+        pattern=r"^(?!ws_|model_|climodel_|task_).*"  # Negative lookahead to exclude specific prefixes
     ))
     logger.info("Callback handlers configured")
 

@@ -622,6 +622,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 ### v0.4.0 (Release Candidate) - 進入 v1.0 的最終版本
 
 **目標**: 完成 v0.4 後即可發布 v1.0 正式版
+**狀態**: 核心功能已完成 (2026-01-28)
 
 #### 1. 穩定性與品質 (必須)
 | 狀態 | 項目 | 說明 |
@@ -640,25 +641,25 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 | ⬜ | 互動式安裝引導 | `cursorbot setup` 引導式設定 |
 | ⬜ | 平台設定教學 | 各平台 Webhook 設定圖文教學 |
 | ⬜ | 疑難排解指南 | 常見問題 FAQ |
-| ⬜ | CHANGELOG | 完整版本變更記錄 |
-| ⬜ | 貢獻指南 | CONTRIBUTING.md |
+| ✅ | CHANGELOG | 完整版本變更記錄 |
+| ✅ | 貢獻指南 | CONTRIBUTING.md |
 
 #### 3. 核心功能補齊 (必須)
 | 狀態 | 項目 | 說明 |
 |:----:|------|------|
-| ⬜ | /verbose 指令 | 詳細輸出模式 on/off |
-| ⬜ | /elevated 權限提升 | 敏感操作確認機制 |
-| ⬜ | /think 指令完善 | 思考等級 off/low/medium/high/xhigh |
-| ⬜ | 系統通知 | 桌面/行動推播通知 |
-| ⬜ | 指令別名系統 | 用戶自訂指令別名 |
+| ✅ | /verbose 指令 | 詳細輸出模式 off/low/medium/high |
+| ✅ | /elevated 權限提升 | 敏感操作確認機制 (time-limited) |
+| ✅ | /think 指令完善 | 思考等級 off/low/medium/high/xhigh |
+| ✅ | 系統通知 | 桌面推播通知 (macOS/Windows/Linux) |
+| ✅ | 指令別名系統 | 用戶自訂指令別名 (system + user aliases) |
 
 #### 4. 安全性 (必須)
 | 狀態 | 項目 | 說明 |
 |:----:|------|------|
 | ⬜ | 安全審計 | 程式碼安全掃描 |
-| ⬜ | 敏感資料處理 | 環境變數加密、日誌脫敏 |
-| ⬜ | Rate Limiting | API 請求限制 |
-| ⬜ | 輸入驗證 | 防注入、XSS 防護 |
+| ✅ | 敏感資料處理 | 日誌脫敏 (API keys, tokens, passwords) |
+| ✅ | Rate Limiting | Token bucket 演算法 (requests, tokens, commands) |
+| ✅ | 輸入驗證 | Command injection, Path traversal, XSS 防護 |
 | ⬜ | 權限最小化 | 各平台最小權限原則 |
 
 #### 5. 部署與運維 (必須)
@@ -666,9 +667,9 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 |:----:|------|------|
 | ⬜ | Docker 映像優化 | 縮小映像體積、多階段建構 |
 | ⬜ | 一鍵部署腳本優化 | Railway/Render/Fly.io 模板 |
-| ⬜ | 環境變數驗證 | 啟動時檢查必要設定 |
-| ⬜ | 健康檢查端點 | /health, /ready 端點 |
-| ⬜ | Graceful Shutdown | 優雅關閉處理 |
+| ✅ | 環境變數驗證 | 啟動時檢查必要設定 (format, pattern) |
+| ✅ | 健康檢查端點 | /health, /ready 端點 |
+| ✅ | Graceful Shutdown | 優雅關閉處理 (signal handlers) |
 
 #### 6. 進階功能 (Apps & Architecture)
 | 狀態 | 項目 | 說明 | 技術 |

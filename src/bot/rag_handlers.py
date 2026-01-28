@@ -33,6 +33,94 @@ from ..utils.auth import is_authorized
 
 
 # ============================================
+# Security Utilities
+# ============================================
+
+def _validate_path(file_path: str, workspace: str) -> tuple[bool, str]:
+    """
+    Validate file path to prevent path traversal attacks.
+    
+    Args:
+        file_path: The path to validate
+        workspace: The allowed workspace directory
+        
+    Returns:
+        Tuple of (is_valid, resolved_path_or_error_message)
+    """
+    try:
+        # Resolve both paths to absolute
+        workspace_path = Path(workspace).resolve()
+        
+        # If relative, join with workspace
+        if not os.path.isabs(file_path):
+            target_path = (workspace_path / file_path).resolve()
+        else:
+            target_path = Path(file_path).resolve()
+        
+        # Security: Ensure target is within workspace (prevent path traversal)
+        try:
+            target_path.relative_to(workspace_path)
+        except ValueError:
+            return False, f"Access denied: Path is outside workspace"
+        
+        # Check for suspicious patterns
+        path_str = str(target_path).lower()
+        dangerous_patterns = [".env", "credentials", "secrets", ".pem", ".key", "password"]
+        for pattern in dangerous_patterns:
+            if pattern in path_str:
+                return False, f"Access denied: Cannot access potentially sensitive files"
+        
+        return True, str(target_path)
+        
+    except Exception as e:
+        return False, f"Invalid path: {str(e)}"
+
+
+def _escape_markdown(text: str) -> str:
+    """Escape Markdown special characters for safe display."""
+    # Characters that need escaping in Markdown
+    special_chars = ['*', '_', '`', '[', ']', '(', ')', '#', '+', '-', '.', '!', '|', '{', '}', '>', '<', '~']
+    for char in special_chars:
+        text = text.replace(char, f"\\{char}")
+    return text
+
+
+# ============================================
+# Rate Limiting
+# ============================================
+
+import time
+from collections import defaultdict
+
+# Rate limit: max requests per user per minute
+_RATE_LIMIT_REQUESTS = 10
+_RATE_LIMIT_WINDOW = 60  # seconds
+_user_request_times: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(user_id: str) -> tuple[bool, str]:
+    """
+    Check if user has exceeded rate limit.
+    
+    Returns:
+        Tuple of (is_allowed, message)
+    """
+    now = time.time()
+    user_times = _user_request_times[user_id]
+    
+    # Remove old entries outside the window
+    user_times[:] = [t for t in user_times if now - t < _RATE_LIMIT_WINDOW]
+    
+    if len(user_times) >= _RATE_LIMIT_REQUESTS:
+        wait_time = int(_RATE_LIMIT_WINDOW - (now - user_times[0]))
+        return False, f"Rate limit exceeded. Please wait {wait_time} seconds."
+    
+    # Record this request
+    user_times.append(now)
+    return True, ""
+
+
+# ============================================
 # RAG Query Command
 # ============================================
 
@@ -50,6 +138,12 @@ async def rag_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     
     if not is_authorized(user_id):
         await update.message.reply_text("You are not authorized to use this bot.")
+        return
+    
+    # Rate limiting
+    is_allowed, rate_msg = _check_rate_limit(user_id)
+    if not is_allowed:
+        await update.message.reply_text(rate_msg)
         return
     
     # Get question from command
@@ -138,6 +232,12 @@ async def index_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text("You are not authorized to use this bot.")
         return
     
+    # Rate limiting
+    is_allowed, rate_msg = _check_rate_limit(user_id)
+    if not is_allowed:
+        await update.message.reply_text(rate_msg)
+        return
+    
     if not context.args:
         await update.message.reply_text(
             "**Index File**\n\n"
@@ -156,15 +256,24 @@ async def index_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     
     file_path = " ".join(context.args)
+    workspace = os.getenv("CURSOR_WORKSPACE_PATH", os.getcwd())
     
-    # Resolve relative paths
-    if not os.path.isabs(file_path):
-        workspace = os.getenv("CURSOR_WORKSPACE_PATH", os.getcwd())
-        file_path = os.path.join(workspace, file_path)
+    # Security: Validate path to prevent path traversal
+    is_valid, result = _validate_path(file_path, workspace)
+    if not is_valid:
+        await update.message.reply_text(f"Error: {result}")
+        return
+    
+    file_path = result
     
     # Check if file exists
     if not os.path.exists(file_path):
-        await update.message.reply_text(f"File not found: `{file_path}`", parse_mode="Markdown")
+        await update.message.reply_text(f"File not found: `{os.path.basename(file_path)}`", parse_mode="Markdown")
+        return
+    
+    # Check if it's a file (not directory)
+    if not os.path.isfile(file_path):
+        await update.message.reply_text("Error: Path is not a file. Use `/index_dir` for directories.", parse_mode="Markdown")
         return
     
     processing_msg = await update.message.reply_text(
@@ -222,15 +331,24 @@ async def index_dir_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
     
     dir_path = " ".join(context.args)
+    workspace = os.getenv("CURSOR_WORKSPACE_PATH", os.getcwd())
     
-    # Resolve relative paths
-    if not os.path.isabs(dir_path):
-        workspace = os.getenv("CURSOR_WORKSPACE_PATH", os.getcwd())
-        dir_path = os.path.join(workspace, dir_path)
+    # Security: Validate path to prevent path traversal
+    is_valid, result = _validate_path(dir_path, workspace)
+    if not is_valid:
+        await update.message.reply_text(f"Error: {result}")
+        return
+    
+    dir_path = result
     
     # Check if directory exists
+    if not os.path.exists(dir_path):
+        await update.message.reply_text(f"Directory not found: `{os.path.basename(dir_path)}`", parse_mode="Markdown")
+        return
+    
+    # Check if it's a directory
     if not os.path.isdir(dir_path):
-        await update.message.reply_text(f"Directory not found: `{dir_path}`", parse_mode="Markdown")
+        await update.message.reply_text("Error: Path is not a directory. Use `/index` for files.", parse_mode="Markdown")
         return
     
     processing_msg = await update.message.reply_text(
@@ -366,7 +484,8 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return
         
         # Format results
-        response = f"**Search Results for:** `{query}`\n\n"
+        escaped_query = _escape_markdown(query)
+        response = f"**Search Results for:** `{escaped_query}`\n\n"
         
         for i, result in enumerate(results):
             source = result.document.metadata.get("filename",
@@ -378,10 +497,11 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             if len(result.document.content) > 200:
                 content += "..."
             
-            # Escape markdown special characters
-            content = content.replace("*", "\\*").replace("_", "\\_").replace("`", "\\`")
+            # Escape markdown special characters for safe display
+            content = _escape_markdown(content)
+            source = _escape_markdown(str(source))
             
-            response += f"**{i+1}. {source}** (relevance: {score})\n"
+            response += f"**{i+1}\\. {source}** (relevance: {score})\n"
             response += f"{content}\n\n"
         
         await processing_msg.edit_text(response, parse_mode="Markdown")

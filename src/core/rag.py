@@ -41,6 +41,27 @@ from ..utils.logger import logger
 
 
 # ============================================
+# Security Constants
+# ============================================
+
+# Maximum file size for indexing (50MB)
+MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
+
+# Maximum content length for text indexing (1MB)
+MAX_TEXT_LENGTH = 1 * 1024 * 1024
+
+# Maximum URL content size (10MB)
+MAX_URL_CONTENT_SIZE = 10 * 1024 * 1024
+
+# Dangerous file patterns that should not be indexed
+DANGEROUS_PATTERNS = {
+    ".env", ".env.local", ".env.production",
+    "credentials", "secrets", "password", "api_key",
+    ".pem", ".key", ".p12", ".pfx",
+}
+
+
+# ============================================
 # Data Classes and Enums
 # ============================================
 
@@ -151,6 +172,17 @@ class TextLoader(DocumentLoader):
         if not path.exists():
             raise FileNotFoundError(f"File not found: {source}")
         
+        # Security: Check file size
+        file_size = path.stat().st_size
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise ValueError(f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE_BYTES})")
+        
+        # Security: Check for sensitive file patterns
+        filename_lower = path.name.lower()
+        for pattern in DANGEROUS_PATTERNS:
+            if pattern in filename_lower:
+                raise ValueError(f"Cannot index potentially sensitive file: {path.name}")
+        
         content = path.read_text(encoding="utf-8", errors="ignore")
         return [Document(
             id=hashlib.md5(source.encode()).hexdigest()[:16],
@@ -176,6 +208,11 @@ class MarkdownLoader(DocumentLoader):
         path = Path(source)
         if not path.exists():
             raise FileNotFoundError(f"File not found: {source}")
+        
+        # Security: Check file size
+        file_size = path.stat().st_size
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise ValueError(f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE_BYTES})")
         
         content = path.read_text(encoding="utf-8", errors="ignore")
         
@@ -250,6 +287,17 @@ class CodeLoader(DocumentLoader):
         path = Path(source)
         if not path.exists():
             raise FileNotFoundError(f"File not found: {source}")
+        
+        # Security: Check file size
+        file_size = path.stat().st_size
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise ValueError(f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE_BYTES})")
+        
+        # Security: Check for sensitive file patterns
+        filename_lower = path.name.lower()
+        for pattern in DANGEROUS_PATTERNS:
+            if pattern in filename_lower:
+                raise ValueError(f"Cannot index potentially sensitive file: {path.name}")
         
         content = path.read_text(encoding="utf-8", errors="ignore")
         language = self._detect_language(path.suffix)
@@ -345,6 +393,11 @@ class PDFLoader(DocumentLoader):
         if not path.exists():
             raise FileNotFoundError(f"File not found: {source}")
         
+        # Security: Check file size
+        file_size = path.stat().st_size
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise ValueError(f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE_BYTES})")
+        
         try:
             import pypdf
             
@@ -396,6 +449,17 @@ class JSONLoader(DocumentLoader):
         path = Path(source)
         if not path.exists():
             raise FileNotFoundError(f"File not found: {source}")
+        
+        # Security: Check file size
+        file_size = path.stat().st_size
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise ValueError(f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE_BYTES})")
+        
+        # Security: Check for sensitive file patterns
+        filename_lower = path.name.lower()
+        for pattern in DANGEROUS_PATTERNS:
+            if pattern in filename_lower:
+                raise ValueError(f"Cannot index potentially sensitive file: {path.name}")
         
         content = path.read_text(encoding="utf-8", errors="ignore")
         
@@ -501,12 +565,24 @@ class TextChunker:
     def _chunk_fixed_size(self, text: str) -> list[str]:
         """Split text into fixed-size chunks with overlap."""
         if len(text) <= self.chunk_size:
-            return [text]
+            return [text] if text.strip() else []
+        
+        # Validate overlap is less than chunk size to prevent infinite loop
+        effective_overlap = min(self.chunk_overlap, self.chunk_size - 1)
         
         chunks = []
         start = 0
+        prev_start = -1  # Track previous start to detect infinite loops
         
         while start < len(text):
+            # Infinite loop protection
+            if start == prev_start:
+                logger.warning("Chunk loop detected, forcing progress")
+                start += max(1, self.chunk_size // 2)
+                if start >= len(text):
+                    break
+            prev_start = start
+            
             end = start + self.chunk_size
             
             # Try to find a good break point (space, newline)
@@ -523,9 +599,10 @@ class TextChunker:
             if chunk:
                 chunks.append(chunk)
             
-            start = end - self.chunk_overlap
-            if start < 0:
-                start = 0
+            # Calculate next start position
+            next_start = end - effective_overlap
+            # Ensure we always make forward progress
+            start = max(next_start, start + 1)
         
         return chunks
     
@@ -1067,6 +1144,32 @@ class RAGManager:
         """Set the LLM provider for generation."""
         self._llm_provider = provider
     
+    def _sanitize_metadata(self, metadata: dict) -> dict:
+        """
+        Sanitize metadata for ChromaDB compatibility.
+        ChromaDB only supports str, int, float, bool values.
+        """
+        if not metadata:
+            return {}
+        
+        sanitized = {}
+        for key, value in metadata.items():
+            # Convert key to string
+            key = str(key)
+            
+            # Convert value to compatible type
+            if value is None:
+                sanitized[key] = ""
+            elif isinstance(value, (str, int, float, bool)):
+                sanitized[key] = value
+            elif isinstance(value, (list, dict)):
+                # Serialize complex types to JSON string
+                sanitized[key] = json.dumps(value, ensure_ascii=False)
+            else:
+                sanitized[key] = str(value)
+        
+        return sanitized
+    
     def _get_loader(self, source: str) -> Optional[DocumentLoader]:
         """Find appropriate loader for source."""
         for loader in self._loaders:
@@ -1103,6 +1206,10 @@ class RAGManager:
         
         # Chunk documents
         chunked = self._chunker.chunk_documents(documents)
+        
+        # Sanitize metadata for ChromaDB compatibility
+        for doc in chunked:
+            doc.metadata = self._sanitize_metadata(doc.metadata)
         
         # Generate embeddings
         embedding_provider = self._get_embedding_provider()
@@ -1216,10 +1323,20 @@ class RAGManager:
         Returns:
             Number of chunks indexed
         """
+        # Security: Validate text length
+        if len(text) > MAX_TEXT_LENGTH:
+            raise ValueError(f"Text too long: {len(text)} chars (max: {MAX_TEXT_LENGTH})")
+        
+        if not text.strip():
+            raise ValueError("Cannot index empty text")
+        
+        # Sanitize metadata for ChromaDB compatibility
+        safe_metadata = self._sanitize_metadata(metadata or {"source": "manual", "type": "text"})
+        
         doc = Document(
             id=doc_id or hashlib.md5(text.encode()).hexdigest()[:16],
             content=text,
-            metadata=metadata or {"source": "manual", "type": "text"},
+            metadata=safe_metadata,
         )
         
         # Chunk
@@ -1256,11 +1373,33 @@ class RAGManager:
             Number of chunks indexed
         """
         import httpx
+        from urllib.parse import urlparse
         
-        async with httpx.AsyncClient(timeout=30) as client:
+        # Security: Validate URL
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f"Invalid URL scheme: {parsed.scheme}")
+        
+        # Security: Block local/internal URLs
+        hostname = parsed.hostname or ""
+        blocked_hosts = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+        if hostname in blocked_hosts or hostname.startswith("192.168.") or hostname.startswith("10."):
+            raise ValueError(f"Cannot index internal/local URLs: {hostname}")
+        
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True, max_redirects=5) as client:
             response = await client.get(url)
             response.raise_for_status()
+            
+            # Security: Check content size
+            content_length = response.headers.get("content-length")
+            if content_length and int(content_length) > MAX_URL_CONTENT_SIZE:
+                raise ValueError(f"URL content too large: {content_length} bytes")
+            
             content = response.text
+            
+            # Double-check actual content size
+            if len(content) > MAX_URL_CONTENT_SIZE:
+                raise ValueError(f"URL content too large: {len(content)} bytes")
         
         # Determine content type
         content_type = response.headers.get("content-type", "")

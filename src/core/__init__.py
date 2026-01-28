@@ -131,6 +131,93 @@ from .rag import (
     OpenAIEmbedding, GoogleEmbedding, OllamaEmbedding,
     get_rag_manager, reset_rag_manager,
 )
+from .async_tasks import (
+    AsyncTaskManager, AsyncTask, TaskType, TaskStatus, TaskProgress,
+    NotificationSender, get_task_manager, reset_task_manager,
+)
+# v0.4 modules
+from .mcp import (
+    MCPMessageType, MCPMethod, MCPTool, MCPResource, MCPPrompt,
+    MCPServerInfo, MCPConfig, MCPTransport, StdioTransport, SSETransport,
+    MCPClient, MCPManager, get_mcp_manager, initialize_mcp, reset_mcp_manager,
+    BuiltInMCPServers,
+)
+from .workflow import (
+    WorkflowStatus, StepStatus, StepType, StepResult,
+    WorkflowStep, Workflow, WorkflowRun,
+    ActionHandler, RunCommandAction, SendMessageAction, HttpRequestAction,
+    SetVariableAction, WaitAction, LLMAction, RAGQueryAction, FileOperationAction,
+    WorkflowEngine, get_workflow_engine, reset_workflow_engine,
+    ExpressionEvaluator, create_code_review_workflow, create_deploy_workflow,
+)
+from .analytics import (
+    EventType, Event, UserStats, DailyStats,
+    CostEstimator, AnalyticsStorage, AnalyticsManager,
+    get_analytics, track_event, reset_analytics,
+)
+from .code_review import (
+    ReviewSeverity, ReviewCategory, ReviewFinding, ReviewResult, ReviewConfig,
+    StaticAnalyzer, PylintAnalyzer, RuffAnalyzer, ESLintAnalyzer,
+    AICodeReviewer, SecurityScanner, CodeReviewManager,
+    get_code_reviewer, reset_code_reviewer,
+)
+from .conversation_export import (
+    ExportFormat, ExportMessage, ExportConfig, ExportResult,
+    PrivacyRedactor, BaseExporter, JSONExporter, MarkdownExporter,
+    HTMLExporter, TxtExporter, CSVExporter, ConversationExporter,
+    get_exporter, reset_exporter,
+)
+from .auto_docs import (
+    DocFormat, DocType, DocParameter, DocReturn, DocElement, ModuleDoc, DocConfig,
+    CodeParser, MarkdownGenerator, HTMLGenerator, AutoDocGenerator,
+    get_doc_generator, reset_doc_generator,
+)
+# v0.4 core feature modules
+from .verbose import (
+    VerbosityLevel, VerboseConfig, VerboseManager,
+    get_verbose_manager, reset_verbose_manager,
+)
+from .elevated import (
+    ElevationReason, ElevationRequest, ElevatedAction, ElevatedManager,
+    ELEVATED_ACTIONS, get_elevated_manager, reset_elevated_manager,
+    require_elevation,
+)
+from .thinking import (
+    ThinkingLevel, ThinkingConfig, ThinkingManager,
+    THINKING_BUDGETS, LEVEL_NAMES, NAME_TO_LEVEL,
+    get_thinking_manager, reset_thinking_manager,
+)
+from .notifications import (
+    NotificationPriority, NotificationCategory, Notification,
+    NotificationSettings, NotificationManager,
+    get_notification_manager, reset_notification_manager,
+)
+from .command_alias import (
+    CommandAlias, AliasManager, SYSTEM_ALIASES, RESERVED_COMMANDS,
+    get_alias_manager, reset_alias_manager,
+)
+from .rate_limit import (
+    RateLimitType, RateLimitRule, RateLimitBucket, RateLimitResult,
+    RateLimiter, RateLimitExceeded, rate_limit, DEFAULT_RULES,
+    get_rate_limiter, reset_rate_limiter,
+)
+from .input_validation import (
+    ValidationResult, InputValidator, SENSITIVE_PATTERNS,
+    validate_input, sanitize_for_log, validated_input,
+    get_input_validator, reset_input_validator,
+)
+from .env_validation import (
+    EnvVarType, EnvVarSeverity, EnvVarSpec,
+    ValidationError as EnvValidationError, ValidationReport as EnvValidationReport,
+    EnvironmentValidator, ENV_SPECS,
+    validate_environment, require_env_var,
+    get_env_validator, reset_env_validator,
+)
+from .health import (
+    HealthStatus, ComponentType, ComponentHealth, HealthReport,
+    HealthManager, get_health_manager, reset_health_manager,
+    register_default_checks,
+)
 
 __all__ = [
     # Memory
@@ -372,4 +459,188 @@ __all__ = [
     "OllamaEmbedding",
     "get_rag_manager",
     "reset_rag_manager",
+    # Async Tasks
+    "AsyncTaskManager",
+    "AsyncTask",
+    "TaskType",
+    "TaskStatus",
+    "TaskProgress",
+    "NotificationSender",
+    "get_task_manager",
+    "reset_task_manager",
+    # MCP (v0.4)
+    "MCPMessageType",
+    "MCPMethod",
+    "MCPTool",
+    "MCPResource",
+    "MCPPrompt",
+    "MCPServerInfo",
+    "MCPConfig",
+    "MCPTransport",
+    "StdioTransport",
+    "SSETransport",
+    "MCPClient",
+    "MCPManager",
+    "get_mcp_manager",
+    "initialize_mcp",
+    "reset_mcp_manager",
+    "BuiltInMCPServers",
+    # Workflow (v0.4)
+    "WorkflowStatus",
+    "StepStatus",
+    "StepType",
+    "StepResult",
+    "WorkflowStep",
+    "Workflow",
+    "WorkflowRun",
+    "ActionHandler",
+    "RunCommandAction",
+    "SendMessageAction",
+    "HttpRequestAction",
+    "SetVariableAction",
+    "WaitAction",
+    "LLMAction",
+    "RAGQueryAction",
+    "FileOperationAction",
+    "WorkflowEngine",
+    "get_workflow_engine",
+    "reset_workflow_engine",
+    "ExpressionEvaluator",
+    "create_code_review_workflow",
+    "create_deploy_workflow",
+    # Analytics (v0.4)
+    "EventType",
+    "Event",
+    "UserStats",
+    "DailyStats",
+    "CostEstimator",
+    "AnalyticsStorage",
+    "AnalyticsManager",
+    "get_analytics",
+    "track_event",
+    "reset_analytics",
+    # Code Review (v0.4)
+    "ReviewSeverity",
+    "ReviewCategory",
+    "ReviewFinding",
+    "ReviewResult",
+    "ReviewConfig",
+    "StaticAnalyzer",
+    "PylintAnalyzer",
+    "RuffAnalyzer",
+    "ESLintAnalyzer",
+    "AICodeReviewer",
+    "SecurityScanner",
+    "CodeReviewManager",
+    "get_code_reviewer",
+    "reset_code_reviewer",
+    # Conversation Export (v0.4)
+    "ExportFormat",
+    "ExportMessage",
+    "ExportConfig",
+    "ExportResult",
+    "PrivacyRedactor",
+    "BaseExporter",
+    "JSONExporter",
+    "MarkdownExporter",
+    "HTMLExporter",
+    "TxtExporter",
+    "CSVExporter",
+    "ConversationExporter",
+    "get_exporter",
+    "reset_exporter",
+    # Auto-Documentation (v0.4)
+    "DocFormat",
+    "DocType",
+    "DocParameter",
+    "DocReturn",
+    "DocElement",
+    "ModuleDoc",
+    "DocConfig",
+    "CodeParser",
+    "MarkdownGenerator",
+    "HTMLGenerator",
+    "AutoDocGenerator",
+    "get_doc_generator",
+    "reset_doc_generator",
+    # Verbose Mode (v0.4)
+    "VerbosityLevel",
+    "VerboseConfig",
+    "VerboseManager",
+    "get_verbose_manager",
+    "reset_verbose_manager",
+    # Elevated Mode (v0.4)
+    "ElevationReason",
+    "ElevationRequest",
+    "ElevatedAction",
+    "ElevatedManager",
+    "ELEVATED_ACTIONS",
+    "get_elevated_manager",
+    "reset_elevated_manager",
+    "require_elevation",
+    # Thinking Mode (v0.4)
+    "ThinkingLevel",
+    "ThinkingConfig",
+    "ThinkingManager",
+    "THINKING_BUDGETS",
+    "LEVEL_NAMES",
+    "NAME_TO_LEVEL",
+    "get_thinking_manager",
+    "reset_thinking_manager",
+    # Notifications (v0.4)
+    "NotificationPriority",
+    "NotificationCategory",
+    "Notification",
+    "NotificationSettings",
+    "NotificationManager",
+    "get_notification_manager",
+    "reset_notification_manager",
+    # Command Alias (v0.4)
+    "CommandAlias",
+    "AliasManager",
+    "SYSTEM_ALIASES",
+    "RESERVED_COMMANDS",
+    "get_alias_manager",
+    "reset_alias_manager",
+    # Rate Limiting (v0.4)
+    "RateLimitType",
+    "RateLimitRule",
+    "RateLimitBucket",
+    "RateLimitResult",
+    "RateLimiter",
+    "RateLimitExceeded",
+    "rate_limit",
+    "DEFAULT_RULES",
+    "get_rate_limiter",
+    "reset_rate_limiter",
+    # Input Validation (v0.4)
+    "ValidationResult",
+    "InputValidator",
+    "SENSITIVE_PATTERNS",
+    "validate_input",
+    "sanitize_for_log",
+    "validated_input",
+    "get_input_validator",
+    "reset_input_validator",
+    # Environment Validation (v0.4)
+    "EnvVarType",
+    "EnvVarSeverity",
+    "EnvVarSpec",
+    "EnvValidationError",
+    "EnvValidationReport",
+    "EnvironmentValidator",
+    "ENV_SPECS",
+    "validate_environment",
+    "require_env_var",
+    "get_env_validator",
+    "reset_env_validator",
+    # Health Check (v0.4)
+    "HealthStatus",
+    "ComponentType",
+    "ComponentHealth",
+    "HealthReport",
+    "HealthManager",
+    "get_health_manager",
+    "reset_health_manager",
+    "register_default_checks",
 ]
