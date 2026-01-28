@@ -145,27 +145,20 @@ async def handle_start(ctx: CommandContext) -> CommandResult:
 
 您好, {ctx.user_name}!
 
-CursorBot 是一個多平台 AI 編程助手，支援 Telegram、Discord、Line 等平台。
-
 📡 狀態: {status}
 
 🚀 快速開始:
-1. 使用 /mode 選擇對話模式
-2. 使用 /model 或 /climodel 切換 AI 模型
-3. 直接發送問題開始對話
+直接發送訊息即可！背景執行，完成自動推送
 
-✨ 核心功能:
-• Cursor CLI - 使用官方 CLI 對話
-• 多模型 AI - OpenAI/Claude/Gemini/Copilot
-• Agent Loop - 自主任務執行
-• 記憶系統 - 儲存常用資訊
+⚡ 兩種模式:
+• CLI - Cursor CLI 處理
+• Agent - AI Agent 處理
 
 📋 常用指令:
-/help - 完整指令說明
-/mode - 切換對話模式
-/model - 模型設定
-/new - 開始新對話
-/status - 狀態總覽
+/help - 指令說明
+/mode - 切換模式
+/tasks - 查看任務
+/status - 系統狀態
 """
     
     return CommandResult(success=True, message=message)
@@ -175,69 +168,43 @@ async def handle_help(ctx: CommandContext) -> CommandResult:
     """Handle /help command."""
     message = """📖 CursorBot 指令說明
 
-━━━━━━━━━━━━━━━━━━━━━━
-🔹 基礎指令
-━━━━━━━━━━━━━━━━━━━━━━
-/start - 開始使用
-/help - 顯示此說明
-/status - 狀態總覽
-/doctor - 系統診斷
+🔹 基礎
+/start /help /status /doctor
 
-━━━━━━━━━━━━━━━━━━━━━━
-⚡ 對話模式
-━━━━━━━━━━━━━━━━━━━━━━
-/mode - 查看目前模式
-/mode cli - Cursor CLI 模式
-/mode agent - Agent Loop 模式
-/mode auto - 自動選擇
+⚡ 模式 (皆為異步)
+/mode [cli|agent|auto]
+/tasks /cancel <id>
 
-━━━━━━━━━━━━━━━━━━━━━━
-🤖 AI 模型管理
-━━━━━━━━━━━━━━━━━━━━━━
-/model - 查看 Agent 模型設定
-/model set <id> - 切換 Agent 模型
+🤖 AI 模型
+/model [list|set|reset]
+/climodel [list|set|reset]
 
-/climodel - CLI 模型設定
-/climodel list - 列出所有 CLI 模型
-/climodel set <id> - 切換 CLI 模型
-/climodel reset - 恢復預設模型
+🤖 Agent
+/agent <任務>
+/skills /skills_search /skills_install
 
-支援: GPT-5, Claude 4.5 Opus/Sonnet, Gemini 3
+🧠 記憶 & RAG
+/memory [add|get|del|clear]
+/rag <問題> /index <檔案>
+/clear /new /compact
 
-━━━━━━━━━━━━━━━━━━━━━━
-🤖 Agent 功能
-━━━━━━━━━━━━━━━━━━━━━━
-/agent <任務> - 執行 AI Agent 任務
-/skills - 查看可用技能
+📅 日曆 & 郵件
+/calendar [week|list|add]
+/gmail [search|unread]
 
-━━━━━━━━━━━━━━━━━━━━━━
-💬 對話管理
-━━━━━━━━━━━━━━━━━━━━━━
-/new - 開始新對話
-/clear - 清除對話上下文
+📁 檔案 & 工作區
+/file [read|list] /run <cmd>
+/workspace /cd <name>
 
-━━━━━━━━━━━━━━━━━━━━━━
-🧠 記憶系統
-━━━━━━━━━━━━━━━━━━━━━━
-/memory - 記憶管理
-/memory list - 查看記憶列表
-/memory clear - 清除記憶
+🌐 其他
+/browser /translate /tts
+/session /export /review
 
-━━━━━━━━━━━━━━━━━━━━━━
-📁 工作區
-━━━━━━━━━━━━━━━━━━━━━━
-/workspace - 工作區資訊
-/workspace list - 列出工作區
-/workspace switch <name> - 切換工作區
-/ws - /workspace 的縮寫
+🔧 進階
+/mcp /workflow /analytics
+/verbose /elevated /health
 
-━━━━━━━━━━━━━━━━━━━━━━
-📊 統計與設定
-━━━━━━━━━━━━━━━━━━━━━━
-/stats - 使用統計
-
-━━━━━━━━━━━━━━━━━━━━━━
-💡 直接發送訊息即可開始 AI 對話！
+💡 直接發送訊息即可對話
 """
     
     return CommandResult(success=True, message=message)

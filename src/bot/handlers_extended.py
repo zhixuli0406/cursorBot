@@ -15,6 +15,19 @@ from ..utils.config import settings
 from ..utils.logger import logger
 from ..utils.task_queue import TaskPriority, TaskQueue, get_task_queue
 
+
+def _escape_html(text: str) -> str:
+    """Escape HTML special characters to prevent parsing errors."""
+    if not text:
+        return ""
+    return (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
 # Global instances
 file_ops: FileOperations = None
 terminal: TerminalManager = None
@@ -283,20 +296,20 @@ async def run_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             status_emoji = "✅" if result.success else "❌"
             await update.message.reply_text(
                 f"{status_emoji} <b>執行結果</b> (exit={result.exit_code})\n\n"
-                f"<pre>{output}</pre>",
+                f"<pre>{_escape_html(output)}</pre>",
                 parse_mode="HTML",
             )
         else:
             await update.message.reply_text(
                 f"❌ 任務狀態: {task.status.value}\n"
-                f"錯誤: {task.error or '未知'}"
+                f"錯誤: {_escape_html(task.error) or '未知'}"
             )
 
     except ValueError as e:
-        await update.message.reply_text(f"❌ {str(e)}")
+        await update.message.reply_text(f"❌ {_escape_html(str(e))}")
     except Exception as e:
         logger.error(f"Run command error: {e}")
-        await update.message.reply_text(f"❌ 執行錯誤: {str(e)}")
+        await update.message.reply_text(f"❌ 執行錯誤: {_escape_html(str(e))}")
 
 
 @authorized_only

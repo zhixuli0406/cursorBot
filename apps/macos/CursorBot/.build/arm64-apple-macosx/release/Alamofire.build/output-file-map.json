@@ -1,0 +1,271 @@
+{
+  "": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Alamofire.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Alamofire.o",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/master.swiftdeps"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Alamofire.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Alamofire.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Alamofire~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Alamofire.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Alamofire.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/AFError.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AFError.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AFError~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AFError.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AFError.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/DataRequest.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataRequest.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataRequest~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataRequest.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataRequest.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/DataStreamRequest.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataStreamRequest.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataStreamRequest~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataStreamRequest.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataStreamRequest.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/DownloadRequest.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DownloadRequest.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DownloadRequest~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DownloadRequest.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DownloadRequest.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/HTTPHeaders.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPHeaders.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPHeaders~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPHeaders.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPHeaders.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/HTTPMethod.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPMethod.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPMethod~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPMethod.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPMethod.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/Notifications.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Notifications.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Notifications~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Notifications.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Notifications.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/ParameterEncoder.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoder.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoder~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoder.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoder.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/ParameterEncoding.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoding.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoding~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoding.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoding.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/Protected.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Protected.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Protected~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Protected.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Protected.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/Request.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Request.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Request~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Request.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Request.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/RequestTaskMap.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestTaskMap.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestTaskMap~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestTaskMap.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestTaskMap.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/Response.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Response.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Response~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Response.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Response.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/Session.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Session.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Session~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Session.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Session.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/SessionDelegate.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/SessionDelegate.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/SessionDelegate~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/SessionDelegate.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/SessionDelegate.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/URLConvertible+URLRequestConvertible.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLConvertible+URLRequestConvertible.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLConvertible+URLRequestConvertible~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLConvertible+URLRequestConvertible.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLConvertible+URLRequestConvertible.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/UploadRequest.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/UploadRequest.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/UploadRequest~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/UploadRequest.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/UploadRequest.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Core/WebSocketRequest.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/WebSocketRequest.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/WebSocketRequest~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/WebSocketRequest.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/WebSocketRequest.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Extensions/DispatchQueue+Alamofire.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DispatchQueue+Alamofire.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DispatchQueue+Alamofire~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DispatchQueue+Alamofire.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DispatchQueue+Alamofire.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Extensions/OperationQueue+Alamofire.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OperationQueue+Alamofire.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OperationQueue+Alamofire~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OperationQueue+Alamofire.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OperationQueue+Alamofire.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Extensions/Result+Alamofire.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Result+Alamofire.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Result+Alamofire~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Result+Alamofire.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Result+Alamofire.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Extensions/StringEncoding+Alamofire.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/StringEncoding+Alamofire.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/StringEncoding+Alamofire~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/StringEncoding+Alamofire.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/StringEncoding+Alamofire.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Extensions/URLRequest+Alamofire.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLRequest+Alamofire.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLRequest+Alamofire~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLRequest+Alamofire.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLRequest+Alamofire.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Extensions/URLSessionConfiguration+Alamofire.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLSessionConfiguration+Alamofire.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLSessionConfiguration+Alamofire~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLSessionConfiguration+Alamofire.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLSessionConfiguration+Alamofire.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/AlamofireExtended.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AlamofireExtended.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AlamofireExtended~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AlamofireExtended.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AlamofireExtended.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/AuthenticationInterceptor.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AuthenticationInterceptor.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AuthenticationInterceptor~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AuthenticationInterceptor.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AuthenticationInterceptor.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/CachedResponseHandler.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/CachedResponseHandler.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/CachedResponseHandler~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/CachedResponseHandler.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/CachedResponseHandler.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/Combine.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Combine.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Combine~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Combine.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Combine.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/Concurrency.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Concurrency.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Concurrency~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Concurrency.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Concurrency.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/EventMonitor.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/EventMonitor.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/EventMonitor~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/EventMonitor.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/EventMonitor.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/MultipartFormData.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartFormData.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartFormData~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartFormData.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartFormData.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/MultipartUpload.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartUpload.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartUpload~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartUpload.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartUpload.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/NetworkReachabilityManager.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/NetworkReachabilityManager.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/NetworkReachabilityManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/NetworkReachabilityManager.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/NetworkReachabilityManager.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/OfflineRetrier.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OfflineRetrier.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OfflineRetrier~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OfflineRetrier.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OfflineRetrier.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/RedirectHandler.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RedirectHandler.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RedirectHandler~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RedirectHandler.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RedirectHandler.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/RequestCompression.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestCompression.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestCompression~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestCompression.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestCompression.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/RequestInterceptor.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestInterceptor.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestInterceptor~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestInterceptor.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestInterceptor.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/ResponseSerialization.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ResponseSerialization.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ResponseSerialization~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ResponseSerialization.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ResponseSerialization.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/RetryPolicy.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RetryPolicy.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RetryPolicy~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RetryPolicy.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RetryPolicy.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/ServerTrustEvaluation.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ServerTrustEvaluation.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ServerTrustEvaluation~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ServerTrustEvaluation.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ServerTrustEvaluation.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/URLEncodedFormEncoder.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLEncodedFormEncoder.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLEncodedFormEncoder~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLEncodedFormEncoder.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLEncodedFormEncoder.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/Alamofire/Source/Features/Validation.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Validation.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Validation~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Validation.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Validation.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DerivedSources/resource_bundle_accessor.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/resource_bundle_accessor.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/resource_bundle_accessor~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/resource_bundle_accessor.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/resource_bundle_accessor.dia"
+  }
+}

@@ -1,22 +1,60 @@
-# CursorBot Dockerfile
-# Use official Python 3.12 image (Debian Bookworm based)
-FROM python:3.12-slim-bookworm
+# CursorBot Dockerfile - v0.4
+# Multi-stage build for optimized image size
+# Stage 1: Build dependencies
+# Stage 2: Runtime image
+
+# ============================================
+# Stage 1: Builder
+# ============================================
+FROM python:3.12-slim-bookworm AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    RUNNING_IN_DOCKER=true \
-    # Set default workspace path in container
-    DOCKER_WORKSPACE_PATH=/workspace
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Set working directory
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Create virtual environment and install dependencies
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# ============================================
+# Stage 2: Runtime
+# ============================================
+FROM python:3.12-slim-bookworm AS runtime
+
+LABEL maintainer="CursorBot Team"
+LABEL version="0.4.0"
+LABEL description="CursorBot - Multi-platform AI Assistant"
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    RUNNING_IN_DOCKER=true \
+    DOCKER_WORKSPACE_PATH=/workspace \
+    PATH="/opt/venv/bin:$PATH" \
+    # Python optimization
+    PYTHONOPTIMIZE=1
+
 WORKDIR /app
 
-# Install system dependencies for Playwright, development tools, and common utilities
+# Install only runtime dependencies (smaller footprint)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # For Playwright
+    # For Playwright (minimal set)
     libnss3 \
     libnspr4 \
     libatk1.0-0 \
@@ -34,89 +72,75 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     libpango-1.0-0 \
     libcairo2 \
-    # Development tools
+    # Essential tools
     git \
     openssh-client \
-    # Build tools (for npm packages that require compilation)
-    build-essential \
-    # General utilities
     curl \
-    wget \
-    unzip \
-    zip \
     jq \
-    tree \
-    htop \
+    # Process tools
     procps \
-    nano \
-    vim-tiny \
-    # Network utilities
-    iputils-ping \
-    dnsutils \
-    net-tools \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && rm -rf /tmp/* /var/tmp/*
 
-# Install Node.js 20.x LTS (for npm/node commands)
+# Install Node.js 20.x LTS (minimal)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
+    apt-get install -y --no-install-recommends nodejs && \
     npm install -g npm@latest && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* \
+    && npm cache clean --force
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
 
-# Install Python dependencies
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
-
-# Install Playwright browsers (chromium only for smaller size)
+# Install Playwright browsers (chromium only)
 RUN playwright install chromium && \
-    playwright install-deps chromium
+    playwright install-deps chromium && \
+    rm -rf /root/.cache
+
+# Create directories
+RUN mkdir -p /app/data /app/logs /app/skills/agent /workspace
 
 # Copy application code
 COPY src/ ./src/
-
-# Copy skills directory (for custom agent skills)
 COPY skills/ ./skills/
-
-# Copy env.example as reference
 COPY env.example .
+COPY CHANGELOG.md README.md ./
 
-# Create data directory for persistence
-RUN mkdir -p /app/data
-
-# Ensure skills directory exists with proper permissions
-RUN mkdir -p /app/skills/agent
-
-# Create workspace directory with proper permissions
-# This will be the mount point for user's projects
-RUN mkdir -p /workspace && chmod 777 /workspace
-
-# Create non-root user for security with proper home directory
+# Create non-root user
 RUN useradd -m -u 1000 -s /bin/bash cursorbot && \
-    chown -R cursorbot:cursorbot /app && \
-    # Allow cursorbot to write to workspace
-    chown cursorbot:cursorbot /workspace && \
-    # Setup git config for cursorbot user
+    chown -R cursorbot:cursorbot /app /workspace && \
     mkdir -p /home/cursorbot/.config && \
     chown -R cursorbot:cursorbot /home/cursorbot
 
 # Switch to non-root user
 USER cursorbot
 
-# Set git safe directory (for mounted volumes)
-RUN git config --global --add safe.directory '*'
+# Configure git
+RUN git config --global --add safe.directory '*' && \
+    git config --global user.name "CursorBot" && \
+    git config --global user.email "bot@cursorbot.local"
 
-# Set default shell environment
+# Set home environment
 ENV HOME=/home/cursorbot \
     SHELL=/bin/bash
 
-# Expose port for API server (if needed)
+# Expose API port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+# Health check - v0.4 enhanced
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)" || exit 1
 
 # Default command
 CMD ["python", "-m", "src.main"]
+
+# ============================================
+# Build Info
+# ============================================
+# Build: docker build -t cursorbot:0.4.0 .
+# Run:   docker run -d --name cursorbot -p 8000:8000 --env-file .env cursorbot:0.4.0
+# Size:  ~1.2GB (with Playwright)
+# 
+# Without Playwright (smaller ~600MB):
+# docker build --build-arg INSTALL_PLAYWRIGHT=false -t cursorbot:0.4.0-slim .

@@ -155,7 +155,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         if is_cli_available():
             cli = get_cli_agent()
             cli_model = cli.get_user_model(str(user.id)) or "auto"
-            status_items.append(f"🟢 CLI ({cli_model})")
+            # Escape HTML special characters
+            cli_model_safe = _escape_html(str(cli_model))
+            status_items.append(f"🟢 CLI ({cli_model_safe})")
         else:
             status_items.append("⚪ CLI (未安裝)")
     except Exception:
@@ -169,7 +171,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         if available:
             current = manager.get_user_model(str(user.id))
             model_name = f"{current[0]}/{current[1]}" if current else "預設"
-            status_items.append(f"🤖 {model_name}")
+            # Escape HTML special characters
+            model_name_safe = _escape_html(str(model_name))
+            status_items.append(f"🤖 {model_name_safe}")
         else:
             status_items.append("⚪ AI 模型")
     except Exception:
@@ -180,42 +184,35 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         status_items.append("🟢 Discord")
     
     status_text = " | ".join(status_items) if status_items else "⚠️ 請設定 API Key"
+    
+    # Escape user's first name for HTML
+    user_name_safe = _escape_html(user.first_name or "用戶")
 
-    welcome_text = f"""
-👋 <b>歡迎使用 CursorBot!</b>
+    welcome_text = f"""👋 <b>歡迎使用 CursorBot v0.4!</b>
 
-您好, {user.first_name}!
+您好, {user_name_safe}!
 
-CursorBot 是一個多平台 AI 編程助手，支援 <b>Telegram</b>、<b>Discord</b>、<b>Line</b> 等平台，讓你遠端控制 Cursor AI，完全無需開啟 IDE。
-
-<b>📡 狀態:</b>
-{status_text}
+<b>📡 狀態:</b> {status_text}
 
 <b>🚀 快速開始:</b>
-1️⃣ 使用 /mode 選擇對話模式 (CLI/Agent)
-2️⃣ 使用 /climodel 或 /model 切換 AI 模型
-3️⃣ 直接發送問題開始對話
+直接發送訊息即可！背景執行，完成自動推送
 
-<b>✨ v0.3 新功能:</b>
-• 🤖 <b>CLI 模型選擇</b> - GPT-5.2/Claude 4.5/Gemini 3
-• 💬 <b>Session 管理</b> - 對話記憶與壓縮
-• 📱 Line - 亞洲市場訊息平台
-• 🧠 GLM 智譜 - 中國 ChatGLM AI
-• 🖥️ Menu Bar - macOS 選單列應用
-
-<b>✨ 核心功能:</b>
-• <b>Cursor CLI</b> - 直接使用官方 CLI 對話
-• <b>多模型 AI</b> - OpenAI/Claude/Gemini/Copilot
-• <b>Agent Loop</b> - 自主任務執行與 Skills
-• <b>多平台</b> - TG/DC/WhatsApp/Teams/Line
+<b>⚡ 兩種模式:</b>
+• <b>CLI</b> - Cursor CLI 處理
+• <b>Agent</b> - AI Agent 處理
 
 <b>📋 常用指令:</b>
 /help - 完整指令說明
-/mode - 切換對話模式 (CLI/Agent)
-/climodel - CLI 模型設定
-/model - Agent 模型設定
-/new - 開始新對話
-/status - 狀態總覽
+/mode - 切換模式
+/tasks - 查看任務
+/status - 系統狀態
+
+<b>🆕 v0.4 新功能:</b>
+• /verbose - 詳細輸出模式
+• /think - AI 思考深度控制
+• /canvas - 視覺化工作區
+• /pair - 設備配對
+• /gateways - 多閘道管理
 
 點擊下方按鈕或直接發送訊息開始！
 """
@@ -250,191 +247,69 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     status_info = " | ".join(status_parts)
 
-    help_text = f"""
-<b>📖 CursorBot 完整指令說明</b>
+    help_text = f"""<b>📖 CursorBot v0.4 指令說明</b>
+{status_info}
 
-<b>狀態:</b> {status_info}
+<b>🔹 基礎</b>
+/start /help /status /doctor
 
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🔹 基礎指令</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/start - 啟動並顯示歡迎訊息
-/help - 顯示此說明
-/status - 查看系統狀態
-/stats - 使用統計
-/settings - 用戶設定
+<b>⚡ 模式</b> (皆為異步)
+/mode [cli|agent|auto]
+/tasks /cancel &lt;id&gt;
 
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🤖 AI 模型管理</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/model - 查看目前 AI 模型
-/model list - 列出所有可用模型
-/model set &lt;provider&gt; [model] - 切換模型
-/model reset - 恢復預設模型
+<b>🤖 AI 模型</b>
+/model [list|set|reset]
+/climodel [list|set|reset]
 
-<b>支援的提供者:</b>
-• OpenAI (GPT-5, o3)
-• Anthropic (Claude 4.5 + Thinking)
-• Google (Gemini 3)
-• GitHub Copilot (多種模型)
-• OpenRouter (免費/付費模型)
-• Ollama (本地模型)
+<b>🤖 Agent</b>
+/agent &lt;任務&gt;
+/skills /skills_search /skills_install
 
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🤖 Agent Loop &amp; Skills</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/agent &lt;任務&gt; - 啟動 AI Agent 執行任務
-/skills - 查看所有可用技能
-/skills agent - 查看 Agent 專用技能
+<b>🧠 記憶 &amp; RAG</b>
+/memory [add|get|del|clear]
+/rag &lt;問題&gt; /index &lt;檔案&gt;
+/clear /new /compact
 
-<b>內建 Agent Skills:</b>
-• 網路搜尋、程式碼分析
-• 檔案讀取、指令執行
-• UI/UX 設計系統生成
+<b>📅 日曆 &amp; 郵件</b>
+/calendar [week|list|add]
+/gmail [search|unread]
 
-<i>💡 也可以直接發送訊息、語音或圖片</i>
+<b>📁 檔案 &amp; 工作區</b>
+/file [read|list] /run &lt;cmd&gt;
+/workspace /cd &lt;name&gt;
 
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🧠 記憶系統</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/memory - 查看我的記憶
-/memory add &lt;key&gt; &lt;value&gt; - 新增記憶
-/memory get &lt;key&gt; - 取得記憶
-/memory del &lt;key&gt; - 刪除記憶
-/clear - 清除對話上下文
+<b>🌐 其他</b>
+/browser /translate /tts
+/session /export /review
 
+<b>🆕 v0.4 新功能</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-<b>📚 RAG 檢索增強</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/rag &lt;問題&gt; - 基於索引內容回答
-/index &lt;檔案&gt; - 索引檔案
-/index_dir &lt;目錄&gt; - 索引目錄
-/search &lt;關鍵字&gt; - 搜尋索引內容
-/ragstats - RAG 統計資訊
-<i>💡 Agent/Ask/CLI 對話自動存入 RAG</i>
+/verbose [on|off|level] - 詳細輸出模式
+/think [off|low|medium|high|xhigh] - AI 思考深度
+/elevated [on|off] - 權限提升模式
+/alias [add|remove] - 指令別名
+/notify [on|off|quiet] - 通知設定
 
-━━━━━━━━━━━━━━━━━━━━━━
-<b>📅 Google 整合</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/calendar - 顯示今日行程
-/calendar week - 顯示本週行程
-/gmail - 顯示最近郵件
-/gmail search &lt;查詢&gt; - 搜尋郵件
+<b>🎨 進階功能</b>
+/canvas [new|list|add] - 視覺化工作區
+/gateways [list|add|strategy] - 多閘道管理
+/pair [qr] - 設備配對
+/devices - 已配對設備
+/lang [set|list] - 多語系設定
+/classify - 郵件分類
 
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🧩 技能市集</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/skills_search - 搜尋可用技能
-/skills_install &lt;ID&gt; - 安裝技能
-/skills_list - 已安裝技能
+<b>🔧 系統</b>
+/mcp /workflow /analytics
+/health /review /docs
 
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🎯 指令技能</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/translate &lt;lang&gt; &lt;text&gt; - 翻譯文字
-/calc &lt;expression&gt; - 計算表達式
-/remind &lt;time&gt; &lt;msg&gt; - 設定提醒
-/schedule - 查看排程任務
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>📁 檔案 &amp; 終端機</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/file read &lt;路徑&gt; - 讀取檔案
-/file list &lt;目錄&gt; - 列出檔案
-/run &lt;命令&gt; - 執行命令
-/run_bg &lt;命令&gt; - 背景執行
-/jobs - 查看執行中命令
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>📂 工作區管理</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/workspace - 顯示工作區
-/cd &lt;名稱&gt; - 切換工作區
-/search &lt;關鍵字&gt; - 搜尋程式碼
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🌐 Browser 工具</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/browser navigate &lt;URL&gt; - 開啟網頁
-/browser screenshot - 網頁截圖
-/browser text &lt;selector&gt; - 取得文字
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🌐 多平台支援</b>
-━━━━━━━━━━━━━━━━━━━━━━
-• <b>Telegram</b> - 你正在使用
-• <b>Discord</b> - 相同功能，斜線指令
-• <b>WhatsApp</b> - 透過 whatsapp-web.js
-• <b>MS Teams</b> - Bot Framework 整合
-• <b>Slack</b> - 企業工作區整合
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>✨ v0.3 新功能指令</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/doctor - 系統診斷
-/sessions - 會話管理
-/tts &lt;文字&gt; - 文字轉語音
-/lock - 閘道鎖定控制
-/presence - 在線狀態
-/gateway - 統一閘道
-/agents - 代理管理
-/whatsapp - WhatsApp 狀態
-/teams - MS Teams 狀態
-/tailscale - Tailscale VPN 狀態
-/imessage - iMessage 狀態 (macOS)
-/line - Line Bot 狀態
-/menubar - macOS Menu Bar 說明
-/control - 系統控制面板
-/mode - 切換對話模式 (Agent/CLI/Cursor)
-/newchat - 清除 CLI 對話上下文
-/chatinfo - 查看 CLI 對話資訊
-/climodel - CLI 模型設定 (GPT/Claude/Gemini)
-/climodel list - 列出所有 CLI 可用模型
-/climodel set &lt;model&gt; - 切換 CLI 模型
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🚀 異步執行 (背景任務)</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/agent_async &lt;任務&gt; - 背景執行 Agent
-/cli_async &lt;任務&gt; - 背景執行 CLI
-/rag_async &lt;問題&gt; - 背景執行 RAG 查詢
-/tasks - 查看待處理任務
-/cancel &lt;task_id&gt; - 取消任務
-/task_status &lt;task_id&gt; - 任務詳情
-/task_stats - 任務統計
-<i>💡 任務完成後會自動推送結果</i>
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>📋 Session 管理</b> (ClawdBot-style)
-━━━━━━━━━━━━━━━━━━━━━━
-/session - 查看目前 session 資訊
-/session list - 列出所有 sessions
-/session stats - 統計資訊
-/session reset - 重置當前 session
-/session config - 查看設定
-/new - 開始新對話 (重置所有上下文)
-/status - 狀態總覽
-/compact - 壓縮對話歷史
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>🛠️ v0.3 功能特色</b>
-━━━━━━━━━━━━━━━━━━━━━━
-• <b>CLI 模型選擇</b> - GPT-5.2/Claude 4.5/Gemini 3
-• <b>Line</b> - 亞洲市場訊息平台
-• <b>GLM (智譜)</b> - 中國 AI ChatGLM
-• <b>Menu Bar</b> - macOS 選單列應用
-• <b>iMessage</b> - macOS 訊息整合
-• <b>Chrome Extension</b> - 瀏覽器擴展
-• <b>Session 管理</b> - ClawdBot 風格
-
-━━━━━━━━━━━━━━━━━━━━━━
-<b>💡 使用提示</b>
+<i>💡 直接發送訊息即可對話</i>
+<b>💡 快速提示</b>
 ━━━━━━━━━━━━━━━━━━━━━━
 • /climodel set sonnet-4.5 切換 CLI 模型
-• /model set glm 切換 Agent 模型
-• /new 開始全新對話
-• /status 查看目前狀態
-• /compact 壓縮過長的對話
+• /think high 啟用深度思考模式
+• /verbose on 顯示詳細資訊
+• /canvas new 建立視覺工作區
+• /pair 配對新設備
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 
@@ -457,7 +332,9 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             cli = get_cli_agent()
             user_id = str(update.effective_user.id)
             cli_model = cli.get_user_model(user_id) or "auto"
-            cli_status = f"🟢 CLI ({cli_model})"
+            # Escape HTML special characters in model name
+            cli_model_safe = _escape_html(str(cli_model))
+            cli_status = f"🟢 CLI ({cli_model_safe})"
     except Exception:
         pass
     
@@ -472,8 +349,57 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception:
         pass
 
+    # Check v0.4 modules
+    v04_status = []
+    
+    # Check MCP
+    try:
+        from ..core.mcp import get_mcp_manager
+        mcp = get_mcp_manager()
+        connected = len(mcp.list_servers())
+        v04_status.append(f"🔌 MCP ({connected} 伺服器)")
+    except Exception:
+        v04_status.append("⚪ MCP")
+    
+    # Check Workflow
+    try:
+        from ..core.workflow import get_workflow_engine
+        engine = get_workflow_engine()
+        workflows = len(engine.list_workflows())
+        v04_status.append(f"⚙️ Workflow ({workflows} 工作流)")
+    except Exception:
+        v04_status.append("⚪ Workflow")
+    
+    # Check Analytics
+    try:
+        from ..core.analytics import get_analytics_manager
+        analytics = get_analytics_manager()
+        v04_status.append("📊 Analytics")
+    except Exception:
+        v04_status.append("⚪ Analytics")
+    
+    # Check Async Tasks
+    try:
+        from ..core.async_tasks import get_task_manager
+        tm = get_task_manager()
+        stats = await tm.get_stats()
+        pending = stats.get("pending_tasks", 0)
+        v04_status.append(f"⏳ Tasks ({pending} 待處理)")
+    except Exception:
+        v04_status.append("⚪ Tasks")
+    
+    # Check RAG
+    try:
+        from ..core.rag import get_rag_manager
+        rag = get_rag_manager()
+        v04_status.append("📚 RAG")
+    except Exception:
+        v04_status.append("⚪ RAG")
+    
+    v04_text = " | ".join(v04_status)
+
     message = f"""
-<b>📊 系統狀態</b>
+<b>📊 系統狀態 (v0.4)</b>
 
 <b>🤖 Cursor CLI</b>
 {cli_status}
@@ -486,10 +412,15 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 • 檔案數: {ws_info['total_files']}
 • 路徑: <code>{ws_info['path']}</code>
 
+<b>🆕 v0.4 模組</b>
+{v04_text}
+
 <b>💡 使用方式</b>
 • /mode 切換對話模式
 • /model 切換 AI 模型
-• /agent 執行任務
+• /cli_async 背景執行 CLI
+• /review 程式碼審查
+• /analytics 使用分析
 """
     await update.message.reply_text(message, parse_mode="HTML")
 
@@ -707,6 +638,152 @@ def _get_session_key(update: Update) -> str:
         return f"group_{chat_id}"
 
 
+async def _handle_media_task_input(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    message_text: str,
+    user_id: int,
+    username: str,
+    chat_id: int,
+) -> None:
+    """
+    Handle user input for media task description.
+    Creates an actual async task with the media and description.
+    Uses user's current mode (CLI or Agent).
+    """
+    from ..core.async_tasks import get_task_manager
+    from .media_handlers import get_cached_media, clear_cache
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    
+    # Check for cancel
+    if message_text.lower() in ["/cancel", "cancel", "取消"]:
+        context.user_data["waiting_for_media_task"] = False
+        clear_cache(user_id)
+        await update.message.reply_text("❌ 已取消任務建立")
+        return
+    
+    # Clear waiting state
+    context.user_data["waiting_for_media_task"] = False
+    
+    # Get cached media
+    cached_media = get_cached_media(user_id)
+    
+    if not cached_media:
+        await update.message.reply_text("❌ 媒體快取已過期，請重新發送媒體檔案")
+        return
+    
+    # Build prompt with media info
+    media_parts = []
+    for media in cached_media:
+        media_type = media.get("type", "unknown")
+        if media_type == "photo":
+            media_parts.append("[附加圖片]")
+        elif media_type == "voice":
+            transcription = media.get("transcription", "")
+            if transcription:
+                media_parts.append(f"[語音轉錄: {transcription}]")
+            else:
+                media_parts.append("[附加語音]")
+        elif media_type == "document":
+            media_parts.append(f"[附加檔案: {media.get('file_name', 'unknown')}]")
+    
+    media_info = "\n".join(media_parts)
+    full_prompt = f"{message_text}\n\n---\n附加媒體:\n{media_info}"
+    
+    # Show typing
+    await update.effective_chat.send_action("typing")
+    
+    # Get user's current mode
+    chat_mode = get_user_chat_mode(user_id)
+    if chat_mode == "auto":
+        chat_mode = get_best_available_mode()
+    
+    try:
+        manager = get_task_manager()
+        
+        # Submit task based on user's mode
+        if chat_mode == "cli":
+            from ..cursor.cli_agent import is_cli_available
+            if is_cli_available():
+                task_id = await manager.submit_cli_task(
+                    user_id=str(user_id),
+                    chat_id=str(chat_id),
+                    platform="telegram",
+                    prompt=full_prompt,
+                    timeout=900.0,  # 15 minutes for CLI
+                    metadata={
+                        "username": username,
+                        "source": "media_task",
+                        "media_count": len(cached_media),
+                        "media_types": [m.get("type") for m in cached_media],
+                    },
+                )
+                mode_name = "CLI"
+            else:
+                # Fallback to Agent if CLI not available
+                task_id = await manager.submit_agent_task(
+                    user_id=str(user_id),
+                    chat_id=str(chat_id),
+                    platform="telegram",
+                    prompt=full_prompt,
+                    timeout=600.0,
+                    metadata={
+                        "username": username,
+                        "source": "media_task",
+                        "media_count": len(cached_media),
+                        "media_types": [m.get("type") for m in cached_media],
+                    },
+                )
+                mode_name = "Agent (CLI 不可用)"
+        else:
+            # Agent mode
+            task_id = await manager.submit_agent_task(
+                user_id=str(user_id),
+                chat_id=str(chat_id),
+                platform="telegram",
+                prompt=full_prompt,
+                timeout=600.0,  # 10 minutes for Agent
+                metadata={
+                    "username": username,
+                    "source": "media_task",
+                    "media_count": len(cached_media),
+                    "media_types": [m.get("type") for m in cached_media],
+                },
+            )
+            mode_name = "Agent"
+        
+        # Clear media cache after task creation
+        clear_cache(user_id)
+        
+        # Send confirmation
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("查看狀態", callback_data=f"task_status:{task_id}"),
+                InlineKeyboardButton("取消", callback_data=f"task_cancel:{task_id}"),
+            ]
+        ])
+        
+        preview = message_text[:50] + "..." if len(message_text) > 50 else message_text
+        safe_preview = _escape_html(preview)
+        
+        await update.message.reply_text(
+            f"🤖 <b>媒體任務已建立</b> ({mode_name})\n\n"
+            f"📝 <code>{safe_preview}</code>\n"
+            f"📎 包含 {len(cached_media)} 個媒體檔案\n\n"
+            f"🆔 <code>{task_id}</code>\n\n"
+            f"⏳ 背景執行中，完成後自動通知\n\n"
+            f"💡 <code>/tasks</code> 查看所有任務",
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
+        
+        logger.info(f"Media task {task_id} ({mode_name}) created for user {user_id} with {len(cached_media)} media files")
+        
+    except Exception as e:
+        logger.error(f"Failed to create media task: {e}")
+        await update.message.reply_text(f"❌ 建立任務失敗: {str(e)[:100]}")
+
+
 @authorized_only
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
@@ -730,6 +807,11 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     chat_id = update.effective_chat.id
     session_key = _get_session_key(update)
     chat_type = update.effective_chat.type
+    
+    # Check if waiting for media task description
+    if context.user_data.get("waiting_for_media_task"):
+        await _handle_media_task_input(update, context, message_text, user_id, username, chat_id)
+        return
     
     logger.info(f"User {user_id} message in {chat_type} (session: {session_key}): {message_text[:50]}...")
     
@@ -1157,6 +1239,10 @@ def setup_handlers(app: Application) -> None:
     # Setup v0.4 feature handlers (MCP, Workflow, Analytics, Code Review, etc.)
     from .v04_handlers import register_v04_handlers
     register_v04_handlers(app)
+    
+    # Setup v0.4 advanced feature handlers (Gateway, Pairing, Canvas, i18n, etc.)
+    from .v04_advanced_handlers import register_v04_advanced_handlers
+    register_v04_advanced_handlers(app)
 
     logger.info("Bot handlers configured successfully")
 

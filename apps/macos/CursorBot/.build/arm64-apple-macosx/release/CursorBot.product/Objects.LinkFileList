@@ -1,0 +1,397 @@
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AFError.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Alamofire.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AlamofireExtended.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/AuthenticationInterceptor.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/CachedResponseHandler.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Combine.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Concurrency.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataRequest.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DataStreamRequest.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DispatchQueue+Alamofire.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/DownloadRequest.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/EventMonitor.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPHeaders.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/HTTPMethod.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartFormData.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/MultipartUpload.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/NetworkReachabilityManager.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Notifications.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OfflineRetrier.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/OperationQueue+Alamofire.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoder.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ParameterEncoding.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Protected.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RedirectHandler.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Request.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestCompression.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestInterceptor.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RequestTaskMap.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Response.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ResponseSerialization.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Result+Alamofire.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/RetryPolicy.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/ServerTrustEvaluation.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Session.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/SessionDelegate.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/StringEncoding+Alamofire.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLConvertible+URLRequestConvertible.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLEncodedFormEncoder.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLRequest+Alamofire.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/URLSessionConfiguration+Alamofire.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/UploadRequest.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/Validation.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/WebSocketRequest.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Alamofire.build/resource_bundle_accessor.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+BitwiseOperations.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+ChunkedBitsIterators.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Codable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Collection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Copy.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+CustomReflectable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Descriptions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Equatable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+ExpressibleByArrayLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+ExpressibleByStringLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Extras.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Fill.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Hashable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Initializers.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Invariants.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+LosslessStringConvertible.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+RandomBits.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+RangeReplaceableCollection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Shifts.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray+Testing.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray._UnsafeHandle.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitArray.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+BidirectionalCollection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+Codable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+CustomDebugStringConvertible.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+CustomReflectable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+CustomStringConvertible.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+Equatable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+ExpressibleByArrayLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+Extras.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+Hashable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+Initializers.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+Invariants.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+Random.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra basics.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra conformance.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra formIntersection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra formSymmetricDifference.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra formUnion.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra intersection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra isDisjoint.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra isEqualSet.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra isStrictSubset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra isStrictSuperset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra isSubset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra isSuperset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra subtract.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra subtracting.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra symmetricDifference.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+SetAlgebra union.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet+Sorted Collection APIs.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet.Counted.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet.Index.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet._UnsafeHandle.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/BitSet.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/Range+Utilities.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/Slice+Utilities.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/UInt+Tricks.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/BitCollections.build/_Word.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Collections.build/Collections.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/AppState.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/AudioService.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/ContentView.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/CursorBotApp.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/DebugPanelView.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/GatewayConnectionSheet.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/GatewayService.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/HotkeyManager.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/MenuBarView.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/Models.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/CursorBot.build/SettingsView.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+Codable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+Collection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+CustomReflectable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+Descriptions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+Equatable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+ExpressibleByArrayLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+Extras.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+Hashable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque+Testing.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque._Storage.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque._UnsafeHandle.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/Deque.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/_DequeBuffer.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/_DequeBufferHeader.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/_DequeSlot.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/_UnsafeWrappedBuffer.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Codable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Collection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+CustomReflectable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Debugging.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Descriptions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Equatable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+ExpressibleByDictionaryLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Filter.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Hashable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Initializers.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Keys.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+MapValues.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Merge.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Sendable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Sequence.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary+Values.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeDictionary.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Codable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Collection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+CustomReflectable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Debugging.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Descriptions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Equatable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+ExpressibleByArrayLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Extras.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Filter.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Hashable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Sendable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+Sequence.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra Initializers.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra basics.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra formIntersection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra formSymmetricDifference.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra formUnion.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra intersection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra isDisjoint.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra isEqualSet.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra isStrictSubset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra isStrictSuperset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra isSubset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra isSuperset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra subtract.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra subtracting.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra symmetricDifference.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet+SetAlgebra union.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/TreeSet.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_AncestorHashSlots.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_Bitmap.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_Bucket.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_Hash.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashLevel.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Builder.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Debugging.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Initializers.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Invariants.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Lookups.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Primitive Insertions.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Primitive Removals.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Primitive Replacement.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Storage.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural compactMapValues.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural filter.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural intersection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural isDisjoint.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural isEqualSet.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural isSubset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural mapValues.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural merge.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural subtracting.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural symmetricDifference.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Structural union.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Subtree Insertions.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Subtree Modify.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+Subtree Removals.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode+UnsafeHandle.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNode.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashNodeHeader.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashSlot.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashStack.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashTreeIterator.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_HashTreeStatistics.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_RawHashNode+UnsafeHandle.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_RawHashNode.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_UnmanagedHashNode.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HashTreeCollections.build/_UnsafePath.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HeapModule.build/Heap+Descriptions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HeapModule.build/Heap+ExpressibleByArrayLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HeapModule.build/Heap+Invariants.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HeapModule.build/Heap+UnsafeHandle.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HeapModule.build/Heap.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/HeapModule.build/_HeapNode.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/Debugging.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/Descriptions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/FixedWidthInteger+roundUpToPowerOfTwo.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/Integer rank.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/LifetimeOverride.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/RandomAccessCollection+Offsets.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/UInt+first and last set bit.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/UInt+reversed.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/UnsafeBufferPointer+Extras.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/UnsafeMutableBufferPointer+Extras.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/UnsafeMutableRawBufferPointer+Extras.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/UnsafeRawBufferPointer+Extras.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/_SortedCollection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/_UniqueCollection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/_UnsafeBitSet+Index.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/_UnsafeBitSet+_Word.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/InternalCollectionsUtilities.build/_UnsafeBitSet.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Codable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+CustomReflectable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Deprecations.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Descriptions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Elements.SubSequence.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Elements.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Equatable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+ExpressibleByDictionaryLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Hashable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Initializers.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Invariants.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Partial MutableCollection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Partial RangeReplaceableCollection.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Sendable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Sequence.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary+Values.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedDictionary.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Codable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+CustomReflectable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Descriptions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Diffing.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Equatable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+ExpressibleByArrayLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Hashable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Initializers.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Insertions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Invariants.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial MutableCollection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial RangeReplaceableCollection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra formIntersection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra formSymmetricDifference.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra formUnion.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra intersection.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra isDisjoint.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra isEqualSet.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra isStrictSubset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra isStrictSuperset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra isSubset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra isSuperset.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra subtract.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra subtracting.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra symmetricDifference.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra union.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Partial SetAlgebra+Basics.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+RandomAccessCollection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+ReserveCapacity.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Sendable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+SubSequence.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+Testing.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+UnorderedView.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet+UnstableInternals.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/OrderedSet.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_HashTable+Bucket.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_HashTable+BucketIterator.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_HashTable+Constants.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_HashTable+CustomStringConvertible.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_HashTable+Testing.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_HashTable+UnsafeHandle.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_HashTable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_Hashtable+Header.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/OrderedCollections.build/_UnsafeBitset.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/Compression.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/Data+Extensions.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/Engine.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/FoundationHTTPHandler.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/FoundationHTTPServerHandler.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/FoundationSecurity.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/FoundationTransport.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/FrameCollector.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/Framer.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/HTTPHandler.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/NativeEngine.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/Security.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/Server.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/StringHTTPHandler.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/TCPTransport.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/Transport.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/WSCompression.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/WSEngine.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/WebSocket.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/WebSocketServer.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/Starscream.build/resource_bundle_accessor.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Append.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+BidirectionalCollection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Builder.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk+Append and Insert.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk+Breaks.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk+Counts.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk+Description.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk+Indexing by Characters.swift.o'
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk+Indexing by UTF16.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk+RopeElement.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk+Splitting.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Chunk.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Comparable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Contents.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+CustomDebugStringConvertible.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+CustomStringConvertible.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Debugging.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Equatable.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+ExpressibleByStringLiteral.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Hashing.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Index.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Ingester.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Initializers.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Insert.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Invariants.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Iterators.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+LosslessStringConvertible.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Managing Breaks.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Metrics.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+RangeReplaceableCollection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+RemoveSubrange.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+ReplaceSubrange.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Sequence.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Split.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+Summary.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+TextOutputStream.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+UTF16View.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+UTF8View.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString+UnicodeScalarView.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigString.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigSubstring+UTF16View.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigSubstring+UTF8View.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigSubstring+UnicodeScalarView.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/BigSubstring.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Optional Utilities.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Range+BigString.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Append.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Builder.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Collection.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Debugging.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Extract.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Find.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+ForEachWhile.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Index.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Insert.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Invariants.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Join.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+MutatingForEach.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Remove.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+RemoveSubrange.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Sequence.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+Split.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+_Node.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+_Storage.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+_UnmanagedLeaf.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope+_UnsafeHandle.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/Rope.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/RopeElement.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/RopeMetric.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/RopeSummary.swift.o
+'/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/String Utilities.swift.o'
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/String.Index+ABI.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/_CharacterRecognizer.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/_RopeItem.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/_RopePath.swift.o
+/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/_RopeModule.build/_RopeVersion.swift.o

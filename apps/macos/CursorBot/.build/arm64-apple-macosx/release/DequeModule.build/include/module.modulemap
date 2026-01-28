@@ -1,0 +1,3 @@
+module DequeModule {
+    header "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/DequeModule.build/include/DequeModule-Swift.h"
+}

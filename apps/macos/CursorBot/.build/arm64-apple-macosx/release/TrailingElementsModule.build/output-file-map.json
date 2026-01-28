@@ -1,0 +1,25 @@
+{
+  "": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingElementsModule.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingElementsModule.o",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/master.swiftdeps"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/swift-collections/Sources/TrailingElementsModule/TrailingArray.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingArray.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingArray~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingArray.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingArray.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/swift-collections/Sources/TrailingElementsModule/TrailingElements.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingElements.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingElements~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingElements.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingElements.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/checkouts/swift-collections/Sources/TrailingElementsModule/TrailingPadding.swift": {
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingPadding.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingPadding~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingPadding.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/release/TrailingElementsModule.build/TrailingPadding.dia"
+  }
+}

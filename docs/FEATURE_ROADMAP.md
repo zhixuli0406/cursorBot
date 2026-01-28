@@ -3,9 +3,9 @@
 對標 [Moltbot/Clawdbot](https://github.com/moltbot/moltbot) 的功能實作進度追蹤。
 
 **最後更新**: 2026-01-28  
-**總體完成度**: 85% (153/180)  
-**目前版本**: v0.3.0  
-**下一版本**: v0.4.0 (Release Candidate) → v1.0.0
+**總體完成度**: 97% (175/180)  
+**目前版本**: v0.4.0  
+**下一版本**: v1.0.0 (正式版)
 
 ---
 
@@ -622,25 +622,26 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 ### v0.4.0 (Release Candidate) - 進入 v1.0 的最終版本
 
 **目標**: 完成 v0.4 後即可發布 v1.0 正式版
-**狀態**: 核心功能已完成 (2026-01-28)
+**狀態**: ✅ 已完成 (2026-01-28)
+**最新**: 異步執行成為所有模式的預設行為
 
 #### 1. 穩定性與品質 (必須)
 | 狀態 | 項目 | 說明 |
 |:----:|------|------|
-| ⬜ | 單元測試覆蓋 | 核心模組測試覆蓋率 > 80% |
-| ⬜ | 整合測試 | 端對端測試各平台指令 |
-| ⬜ | 錯誤處理統一化 | 統一錯誤訊息格式和 i18n |
-| ⬜ | 效能優化 | 記憶體使用、回應延遲優化 |
-| ⬜ | 壓力測試 | 多用戶並發測試 |
-| ⬜ | Bug 修復 | 修復已知 issue |
+| ✅ | 單元測試覆蓋 | 核心模組測試覆蓋率 > 80% (tests/test_core_modules.py) |
+| ✅ | 整合測試 | 端對端測試各平台指令 (tests/test_integration.py) |
+| ✅ | 錯誤處理統一化 | 統一錯誤訊息格式和 i18n (errors.py) |
+| ✅ | 效能優化 | 記憶體使用、回應延遲優化 |
+| ⬜ | 壓力測試 | 多用戶並發測試 (v1.0 後) |
+| ⬜ | Bug 修復 | 持續修復 (v1.0 後) |
 
 #### 2. 文件與易用性 (必須)
 | 狀態 | 項目 | 說明 |
 |:----:|------|------|
-| ⬜ | 完整 API 文件 | 所有端點和參數說明 |
-| ⬜ | 互動式安裝引導 | `cursorbot setup` 引導式設定 |
-| ⬜ | 平台設定教學 | 各平台 Webhook 設定圖文教學 |
-| ⬜ | 疑難排解指南 | 常見問題 FAQ |
+| ✅ | 完整 API 文件 | 所有端點和參數說明 (docs/API.md) |
+| ✅ | 互動式安裝引導 | `cursorbot setup` 引導式設定 (src/cli/setup.py) |
+| ✅ | 平台設定教學 | 各平台 Webhook 設定圖文教學 (docs/PLATFORM_SETUP.md) |
+| ✅ | 疑難排解指南 | 常見問題 FAQ (docs/FAQ.md) |
 | ✅ | CHANGELOG | 完整版本變更記錄 |
 | ✅ | 貢獻指南 | CONTRIBUTING.md |
 
@@ -656,17 +657,17 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 #### 4. 安全性 (必須)
 | 狀態 | 項目 | 說明 |
 |:----:|------|------|
-| ⬜ | 安全審計 | 程式碼安全掃描 |
+| ✅ | 安全審計 | 程式碼安全掃描 (scripts/security_audit.py) |
 | ✅ | 敏感資料處理 | 日誌脫敏 (API keys, tokens, passwords) |
 | ✅ | Rate Limiting | Token bucket 演算法 (requests, tokens, commands) |
 | ✅ | 輸入驗證 | Command injection, Path traversal, XSS 防護 |
-| ⬜ | 權限最小化 | 各平台最小權限原則 |
+| ✅ | 權限最小化 | 各平台最小權限原則 (permissions_minimal.py) |
 
 #### 5. 部署與運維 (必須)
 | 狀態 | 項目 | 說明 |
 |:----:|------|------|
-| ⬜ | Docker 映像優化 | 縮小映像體積、多階段建構 |
-| ⬜ | 一鍵部署腳本優化 | Railway/Render/Fly.io 模板 |
+| ✅ | Docker 映像優化 | 多階段建構 (Multi-stage build) |
+| ✅ | 一鍵部署腳本優化 | Railway/Render/Fly.io 模板 (docs/DEPLOYMENT.md) |
 | ✅ | 環境變數驗證 | 啟動時檢查必要設定 (format, pattern) |
 | ✅ | 健康檢查端點 | /health, /ready 端點 |
 | ✅ | Graceful Shutdown | 優雅關閉處理 (signal handlers) |
@@ -674,28 +675,28 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 #### 6. 進階功能 (Apps & Architecture)
 | 狀態 | 項目 | 說明 | 技術 |
 |:----:|------|------|------|
-| ⬜ | Live Canvas (A2UI) | Agent 驅動的視覺化工作區 | React/Canvas |
-| ⬜ | macOS App 完整版 | Talk Mode、Debug Tools、Remote Gateway | SwiftUI |
-| ⬜ | iOS Node | Canvas、Voice Wake、Talk Mode、Camera | SwiftUI |
-| ⬜ | Android Node | Canvas、Talk Mode、Camera、Screen Recording | Kotlin |
-| ⬜ | Multiple Gateways | 多閘道高可用架構 | Load Balancer |
-| ⬜ | DM Pairing | 設備配對碼機制 | mDNS/QR Code |
+| ✅ | Live Canvas (A2UI) | Agent 驅動的視覺化工作區 | Python/WebSocket |
+| ✅ | macOS App 完整版 | Talk Mode、Debug Tools、Remote Gateway | SwiftUI |
+| ✅ | iOS Node | Canvas、Voice Wake、Talk Mode、Camera | SwiftUI |
+| ✅ | Android Node | Canvas、Talk Mode、Camera、Screen Recording | Kotlin |
+| ✅ | Multiple Gateways | 多閘道高可用架構 (multi_gateway.py) | Load Balancer |
+| ✅ | DM Pairing | 設備配對碼機制 (dm_pairing.py) | QR Code |
 
 #### 7. 可選功能 (Nice to Have)
 | 狀態 | 項目 | 說明 | 優先級 |
 |:----:|------|------|:------:|
-| ⬜ | 郵件自動分類 Skill | Gmail 智慧過濾 | 🟡 中 |
-| ⬜ | Apple Calendar 整合 | macOS 日曆 | 🟢 低 |
-| ⬜ | Minimax AI | 中國 AI 市場 | 🟢 低 |
-| ⬜ | 多語系支援 | 英文/簡中介面 | 🟡 中 |
+| ✅ | 郵件自動分類 Skill | Gmail 智慧過濾 (email_classifier.py) | 🟡 中 |
+| ✅ | Apple Calendar 整合 | macOS 日曆 (apple_calendar.py) | 🟢 低 |
+| ✅ | Minimax AI | 中國 AI 市場 (llm_providers.py) | 🟢 低 |
+| ✅ | 多語系支援 | 繁中/簡中/英文/日文 (i18n.py) | 🟡 中 |
 
 ### v1.0.0 (正式版)
 
 **v0.4 完成後，經過最終測試即可發布 v1.0**
 
 包含功能：
-- ✅ 7+ 通訊平台支援（Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat）
-- ✅ 8+ AI 模型提供者（OpenAI、Claude、Gemini、OpenRouter、Ollama 等）
+- ✅ 9+ 通訊平台支援（Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat、Signal、iMessage）
+- ✅ 10+ AI 模型提供者（OpenAI、Claude、Gemini、OpenRouter、Ollama、Moonshot、GLM、Minimax 等）
 - ✅ 完整 Cursor CLI 整合
 - ✅ Agent Loop 自主代理
 - ✅ SkillsMP 技能市集
@@ -704,10 +705,13 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 - ✅ Web Dashboard
 - ✅ Docker 部署
 - ✅ 完整文件
-- ✅ Live Canvas (A2UI)
-- ✅ macOS/iOS/Android 原生應用
+- ✅ Live Canvas (A2UI) 視覺工作區
+- ✅ macOS App 完整版 (apps/macos)
+- ✅ iOS Node (apps/ios)
+- ✅ Android Node (apps/android)
 - ✅ Multiple Gateways 高可用
 - ✅ DM Pairing 設備配對
+- ✅ v0.4 核心指令 (verbose, think, elevated, alias, notify)
 
 ### 未來版本 (v1.x Post-Release)
 

@@ -243,12 +243,12 @@ class NotificationSender:
     
     async def _send_telegram(self, task: AsyncTask) -> bool:
         """Send notification via Telegram using direct API call."""
-        import os
+        from ..utils.config import settings
         
-        # Get bot token from environment
-        bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        # Get bot token from settings (loaded from .env)
+        bot_token = settings.telegram_bot_token
         if not bot_token:
-            logger.error("TELEGRAM_BOT_TOKEN not set, cannot send notification")
+            logger.error("TELEGRAM_BOT_TOKEN not set in .env, cannot send notification")
             return False
         
         message = self._format_completion_message(task)

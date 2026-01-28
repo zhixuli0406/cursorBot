@@ -47,14 +47,7 @@ fi
 
 # Install dependencies
 echo "[INFO] Checking dependencies..."
-if ! pip show python-telegram-bot &> /dev/null; then
-    echo "[INFO] Installing dependencies..."
-    pip install -r requirements.txt
-    if [ $? -ne 0 ]; then
-        echo "[ERROR] Failed to install dependencies"
-        exit 1
-    fi
-fi
+pip install -r requirements.txt
 
 # Check Discord support
 if grep -q "DISCORD_ENABLED=true" .env 2>/dev/null; then

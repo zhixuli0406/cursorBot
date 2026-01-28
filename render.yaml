@@ -1,5 +1,6 @@
-# Render Blueprint Configuration for CursorBot
+# Render Blueprint Configuration for CursorBot v0.4
 # Deploy with Render: https://render.com/docs/deploy-from-repo
+# Documentation: docs/DEPLOYMENT.md
 
 services:
   - type: web
@@ -11,10 +12,13 @@ services:
     region: oregon
     healthCheckPath: /health
     envVars:
+      # Telegram (Required)
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: ALLOWED_USERS
+      - key: TELEGRAM_ALLOWED_USERS
         sync: false
+      
+      # AI Providers (at least one required)
       - key: OPENAI_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
@@ -23,16 +27,30 @@ services:
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
-      - key: GITHUB_TOKEN
+      - key: MINIMAX_API_KEY
         sync: false
-      - key: CURSOR_API_BASE
+      
+      # Discord (Optional)
+      - key: DISCORD_ENABLED
+        value: "false"
+      - key: DISCORD_BOT_TOKEN
         sync: false
-      - key: CURSOR_API_TOKEN
+      
+      # LINE (Optional)
+      - key: LINE_CHANNEL_SECRET
         sync: false
-      - key: CURSOR_WORKSPACE_PATH
+      - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
+      
+      # Slack (Optional)
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
+        sync: false
+      
+      # System
       - key: LOG_LEVEL
         value: INFO
-      - key: API_PORT
+      - key: API_SERVER_PORT
         value: "8000"
     autoDeploy: true

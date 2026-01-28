@@ -1,15 +1,16 @@
-# Fly.io Configuration for CursorBot
+# Fly.io Configuration for CursorBot v0.4
 # Deploy: fly launch / fly deploy
+# Documentation: docs/DEPLOYMENT.md
 
 app = "cursorbot"
-primary_region = "nrt"  # Tokyo
+primary_region = "nrt"  # Tokyo - change to nearest region
 
 [build]
   dockerfile = "Dockerfile"
 
 [env]
   LOG_LEVEL = "INFO"
-  API_PORT = "8000"
+  API_SERVER_PORT = "8000"
 
 [http_service]
   internal_port = 8000
@@ -39,10 +40,28 @@ primary_region = "nrt"  # Tokyo
     timeout = "10s"
     type = "http"
 
-# Secrets to set:
+# =============================================
+# Required Secrets (run these commands):
+# =============================================
 # fly secrets set TELEGRAM_BOT_TOKEN=xxx
 # fly secrets set TELEGRAM_ALLOWED_USERS=xxx
-# fly secrets set CURSOR_API_KEY=xxx
+#
+# AI Provider (at least one):
 # fly secrets set OPENAI_API_KEY=xxx
 # fly secrets set ANTHROPIC_API_KEY=xxx
 # fly secrets set OPENROUTER_API_KEY=xxx
+# fly secrets set GOOGLE_GENERATIVE_AI_API_KEY=xxx
+# fly secrets set MINIMAX_API_KEY=xxx
+#
+# Optional - Discord:
+# fly secrets set DISCORD_ENABLED=true
+# fly secrets set DISCORD_BOT_TOKEN=xxx
+#
+# Optional - LINE:
+# fly secrets set LINE_CHANNEL_SECRET=xxx
+# fly secrets set LINE_CHANNEL_ACCESS_TOKEN=xxx
+#
+# Optional - Slack:
+# fly secrets set SLACK_BOT_TOKEN=xxx
+# fly secrets set SLACK_SIGNING_SECRET=xxx
+# =============================================

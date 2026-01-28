@@ -118,6 +118,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         elif action == "terminal_tool":
             await handle_terminal_tool(query)
 
+        # === Media Callbacks ===
+        elif action == "create_task_with_media":
+            await handle_create_task_with_media(query, context)
+
+        elif action == "clear_media_cache":
+            await handle_clear_media_cache(query, context)
+
+        elif action == "cancel_media":
+            await query.message.delete()
+            await query.answer("已取消")
+
         else:
             logger.warning(f"Unknown callback action: {action}")
 
@@ -554,6 +565,66 @@ async def handle_terminal_tool(query) -> None:
 ⚠️ 請小心使用，命令會在伺服器上執行。
 """
     await query.message.edit_text(text, parse_mode="HTML")
+
+
+async def handle_create_task_with_media(query, context) -> None:
+    """Handle creating a task with cached media - ask user for task description."""
+    from .media_handlers import get_cached_media
+    
+    user_id = query.from_user.id
+    cached_media = get_cached_media(user_id)
+    
+    if not cached_media:
+        await query.answer("沒有快取的媒體檔案", show_alert=True)
+        return
+    
+    # Build media description
+    media_descriptions = []
+    for media in cached_media:
+        media_type = media.get("type", "unknown")
+        if media_type == "photo":
+            media_descriptions.append("📷 圖片")
+        elif media_type == "voice":
+            text = media.get("transcription", "")
+            if text:
+                media_descriptions.append(f"🎤 語音: {text[:100]}")
+            else:
+                media_descriptions.append("🎤 語音訊息")
+        elif media_type == "document":
+            media_descriptions.append(f"📄 檔案: {media.get('file_name', 'unknown')}")
+    
+    media_info = "\n".join(media_descriptions)
+    
+    # Save state: waiting for task description
+    context.user_data["waiting_for_media_task"] = True
+    context.user_data["media_chat_id"] = query.message.chat_id
+    
+    await query.message.edit_text(
+        f"📝 <b>請輸入任務描述</b>\n\n"
+        f"<b>已附加媒體:</b>\n{media_info}\n\n"
+        f"<i>直接輸入文字描述你想要執行的任務，例如：</i>\n"
+        f"• 「分析這張圖片中的程式碼」\n"
+        f"• 「根據語音內容撰寫文件」\n"
+        f"• 「幫我處理這個檔案」\n\n"
+        f"輸入 /cancel 取消",
+        parse_mode="HTML"
+    )
+    await query.answer("請輸入任務描述")
+
+
+async def handle_clear_media_cache(query, context) -> None:
+    """Handle clearing media cache."""
+    from .media_handlers import clear_cache, get_cache_count
+    
+    user_id = query.from_user.id
+    count = get_cache_count(user_id)
+    clear_cache(user_id)
+    
+    await query.message.edit_text(
+        f"🗑️ 已清除 {count} 個快取的媒體檔案",
+        parse_mode="HTML"
+    )
+    await query.answer("快取已清除")
 
 
 def setup_callback_handlers(app) -> None:

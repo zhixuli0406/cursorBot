@@ -1,0 +1,3 @@
+module Alamofire {
+    header "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/Alamofire.build/include/Alamofire-Swift.h"
+}

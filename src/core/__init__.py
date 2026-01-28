@@ -218,6 +218,42 @@ from .health import (
     HealthManager, get_health_manager, reset_health_manager,
     register_default_checks,
 )
+from .errors import (
+    ErrorCode, ERROR_MESSAGES, ErrorContext, CursorBotError,
+    ValidationError, AuthenticationError, PermissionError,
+    ElevationRequiredError, NotFoundError, RateLimitError,
+    LLMError, CommandError, ErrorHandler,
+    get_error_handler, reset_error_handler,
+)
+from .permissions_minimal import (
+    Platform as MinimalPlatform, PermissionScope,
+    PlatformPermissions, PermissionAudit,
+    MinimalPermissionsManager, PLATFORM_PERMISSIONS,
+    get_minimal_permissions_manager, reset_minimal_permissions_manager,
+)
+# v0.4 advanced feature modules
+from .multi_gateway import (
+    GatewayState, LoadBalanceStrategy, GatewayInstance, GatewayCluster,
+    MultiGatewayManager, get_multi_gateway_manager, reset_multi_gateway_manager,
+)
+from .dm_pairing import (
+    DeviceType, PairingStatus, PairingCode, PairedDevice,
+    DMPairingManager, get_dm_pairing_manager, reset_dm_pairing_manager,
+)
+from .i18n import (
+    Language, TRANSLATIONS, UserLanguagePreference,
+    I18nManager, get_i18n_manager, reset_i18n_manager, t,
+)
+from .live_canvas import (
+    ComponentType, ChartType, AlertType, Position,
+    CanvasComponent, CanvasSession, LiveCanvasManager,
+    get_live_canvas_manager, reset_live_canvas_manager,
+)
+from .email_classifier import (
+    EmailCategory, EmailPriority, EmailMessage,
+    ClassificationResult, ClassificationRule, DEFAULT_RULES as EMAIL_DEFAULT_RULES,
+    EmailClassifier, get_email_classifier, reset_email_classifier,
+)
 
 __all__ = [
     # Memory
@@ -643,4 +679,73 @@ __all__ = [
     "get_health_manager",
     "reset_health_manager",
     "register_default_checks",
+    # Error Handling (v0.4)
+    "ErrorCode",
+    "ERROR_MESSAGES",
+    "ErrorContext",
+    "CursorBotError",
+    "ValidationError",
+    "AuthenticationError",
+    "PermissionError",
+    "ElevationRequiredError",
+    "NotFoundError",
+    "RateLimitError",
+    "LLMError",
+    "CommandError",
+    "ErrorHandler",
+    "get_error_handler",
+    "reset_error_handler",
+    # Minimal Permissions (v0.4)
+    "MinimalPlatform",
+    "PermissionScope",
+    "PlatformPermissions",
+    "PermissionAudit",
+    "MinimalPermissionsManager",
+    "PLATFORM_PERMISSIONS",
+    "get_minimal_permissions_manager",
+    "reset_minimal_permissions_manager",
+    # Multi-Gateway (v0.4 Advanced)
+    "GatewayState",
+    "LoadBalanceStrategy",
+    "GatewayInstance",
+    "GatewayCluster",
+    "MultiGatewayManager",
+    "get_multi_gateway_manager",
+    "reset_multi_gateway_manager",
+    # DM Pairing (v0.4 Advanced)
+    "DeviceType",
+    "PairingStatus",
+    "PairingCode",
+    "PairedDevice",
+    "DMPairingManager",
+    "get_dm_pairing_manager",
+    "reset_dm_pairing_manager",
+    # i18n (v0.4 Advanced)
+    "Language",
+    "TRANSLATIONS",
+    "UserLanguagePreference",
+    "I18nManager",
+    "get_i18n_manager",
+    "reset_i18n_manager",
+    "t",
+    # Live Canvas (v0.4 Advanced)
+    "ComponentType",
+    "ChartType",
+    "AlertType",
+    "Position",
+    "CanvasComponent",
+    "CanvasSession",
+    "LiveCanvasManager",
+    "get_live_canvas_manager",
+    "reset_live_canvas_manager",
+    # Email Classifier (v0.4 Optional)
+    "EmailCategory",
+    "EmailPriority",
+    "EmailMessage",
+    "ClassificationResult",
+    "ClassificationRule",
+    "EMAIL_DEFAULT_RULES",
+    "EmailClassifier",
+    "get_email_classifier",
+    "reset_email_classifier",
 ]

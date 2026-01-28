@@ -34,6 +34,7 @@ class ProviderType(Enum):
     MOONSHOT = "moonshot"
     GLM = "glm"
     COPILOT = "copilot"
+    MINIMAX = "minimax"
 
 
 @dataclass
@@ -1326,6 +1327,257 @@ class CopilotProvider(LLMProvider):
 
 
 # ============================================
+# Minimax AI Provider (China)
+# ============================================
+
+class MinimaxProvider(LLMProvider):
+    """
+    Minimax AI provider for Chinese market.
+    
+    Minimax (MiniMax) is a Chinese AI company providing large language models.
+    API Documentation: https://api.minimax.chat/document/
+    
+    Models:
+    - abab6.5s-chat: Standard chat model
+    - abab6.5-chat: Enhanced chat model
+    - abab5.5s-chat: Efficient model
+    - abab5.5-chat: Standard model
+    """
+    
+    API_BASE = "https://api.minimax.chat/v1"
+    
+    @property
+    def provider_type(self) -> ProviderType:
+        return ProviderType.MINIMAX
+    
+    def is_available(self) -> bool:
+        """Check if Minimax API key is configured."""
+        return bool(self.config.api_key) and self.config.enabled
+    
+    async def fetch_models(self) -> list[str]:
+        """
+        Return available Minimax models.
+        Minimax doesn't have a public models API, so we return known models.
+        """
+        return [
+            "abab6.5s-chat",
+            "abab6.5-chat", 
+            "abab5.5s-chat",
+            "abab5.5-chat",
+            "abab6-chat",
+        ]
+    
+    async def generate(self, messages: list[dict], **kwargs) -> str:
+        """Generate response using Minimax API."""
+        import httpx
+        
+        api_key = self.config.api_key
+        group_id = self.config.extra.get("group_id", "")
+        model = kwargs.get("model") or self.config.model or "abab6.5s-chat"
+        
+        if not api_key:
+            raise ValueError("MINIMAX_API_KEY not configured")
+        
+        # Minimax API endpoint
+        api_base = self.config.api_base or self.API_BASE
+        
+        # Convert messages to Minimax format
+        minimax_messages = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            
+            # Map roles: Minimax uses 'USER' and 'BOT'
+            if role == "system":
+                # System messages go into bot_setting
+                continue
+            elif role == "assistant":
+                minimax_messages.append({
+                    "sender_type": "BOT",
+                    "sender_name": "Assistant",
+                    "text": content
+                })
+            else:
+                minimax_messages.append({
+                    "sender_type": "USER",
+                    "sender_name": "User",
+                    "text": content
+                })
+        
+        # Extract system prompt
+        system_prompt = ""
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_prompt = msg.get("content", "")
+                break
+        
+        # Build request payload
+        payload = {
+            "model": model,
+            "messages": minimax_messages,
+            "tokens_to_generate": kwargs.get("max_tokens", self.config.max_tokens),
+            "temperature": kwargs.get("temperature", self.config.temperature),
+            "top_p": kwargs.get("top_p", 0.95),
+            "reply_constraints": {
+                "sender_type": "BOT",
+                "sender_name": "Assistant"
+            }
+        }
+        
+        # Add bot_setting if system prompt exists
+        if system_prompt:
+            payload["bot_setting"] = [{
+                "bot_name": "Assistant",
+                "content": system_prompt
+            }]
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        
+        # Add group_id to URL if provided
+        url = f"{api_base}/text/chatcompletion_v2"
+        if group_id:
+            url = f"{url}?GroupId={group_id}"
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    logger.error(f"Minimax API error: {response.status_code} - {error_text}")
+                    raise ValueError(f"Minimax API error: {response.status_code}")
+                
+                result = response.json()
+                
+                # Check for API-level errors
+                if result.get("base_resp", {}).get("status_code", 0) != 0:
+                    error_msg = result.get("base_resp", {}).get("status_msg", "Unknown error")
+                    raise ValueError(f"Minimax error: {error_msg}")
+                
+                # Extract response text
+                choices = result.get("choices", [])
+                if choices:
+                    return choices[0].get("messages", [{}])[0].get("text", "")
+                
+                return ""
+                
+        except httpx.TimeoutException:
+            raise ValueError("Minimax API request timeout")
+        except Exception as e:
+            logger.error(f"Minimax API error: {e}")
+            raise
+    
+    async def generate_stream(self, messages: list[dict], **kwargs):
+        """Stream generate response using Minimax API."""
+        import httpx
+        import json as json_lib
+        
+        api_key = self.config.api_key
+        group_id = self.config.extra.get("group_id", "")
+        model = kwargs.get("model") or self.config.model or "abab6.5s-chat"
+        
+        if not api_key:
+            raise ValueError("MINIMAX_API_KEY not configured")
+        
+        api_base = self.config.api_base or self.API_BASE
+        
+        # Convert messages to Minimax format
+        minimax_messages = []
+        system_prompt = ""
+        
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            
+            if role == "system":
+                system_prompt = content
+            elif role == "assistant":
+                minimax_messages.append({
+                    "sender_type": "BOT",
+                    "sender_name": "Assistant",
+                    "text": content
+                })
+            else:
+                minimax_messages.append({
+                    "sender_type": "USER",
+                    "sender_name": "User",
+                    "text": content
+                })
+        
+        payload = {
+            "model": model,
+            "messages": minimax_messages,
+            "tokens_to_generate": kwargs.get("max_tokens", self.config.max_tokens),
+            "temperature": kwargs.get("temperature", self.config.temperature),
+            "top_p": kwargs.get("top_p", 0.95),
+            "stream": True,
+            "reply_constraints": {
+                "sender_type": "BOT",
+                "sender_name": "Assistant"
+            }
+        }
+        
+        if system_prompt:
+            payload["bot_setting"] = [{
+                "bot_name": "Assistant",
+                "content": system_prompt
+            }]
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        
+        url = f"{api_base}/text/chatcompletion_v2"
+        if group_id:
+            url = f"{url}?GroupId={group_id}"
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                async with client.stream(
+                    "POST",
+                    url,
+                    headers=headers,
+                    json=payload,
+                ) as response:
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        raise ValueError(f"Minimax API error: {response.status_code} - {error_text}")
+                    
+                    async for line in response.aiter_lines():
+                        if not line or not line.startswith("data:"):
+                            continue
+                        
+                        try:
+                            data = json_lib.loads(line[5:].strip())
+                            
+                            if data.get("base_resp", {}).get("status_code", 0) != 0:
+                                continue
+                            
+                            choices = data.get("choices", [])
+                            if choices:
+                                delta = choices[0].get("messages", [{}])[0].get("text", "")
+                                if delta:
+                                    yield delta
+                                    
+                        except json_lib.JSONDecodeError:
+                            continue
+                            
+        except httpx.TimeoutException:
+            raise ValueError("Minimax API request timeout")
+        except Exception as e:
+            logger.error(f"Minimax streaming error: {e}")
+            raise
+
+
+# ============================================
 # Custom OpenAI-Compatible Provider
 # ============================================
 
@@ -1454,6 +1706,7 @@ class LLMProviderManager:
         ProviderType.BEDROCK: BedrockProvider,
         ProviderType.MOONSHOT: MoonshotProvider,
         ProviderType.GLM: GLMProvider,
+        ProviderType.MINIMAX: MinimaxProvider,
     }
     
     # Default models for each provider
@@ -1468,6 +1721,7 @@ class LLMProviderManager:
         ProviderType.MOONSHOT: "moonshot-v1-128k",
         ProviderType.GLM: "glm-4.7-flash",
         ProviderType.COPILOT: "gpt-4o",  # GitHub Models uses simple model names
+        ProviderType.MINIMAX: "abab6.5s-chat",
     }
     
     def __init__(self):
@@ -1578,6 +1832,21 @@ class LLMProviderManager:
             )
             self._providers[ProviderType.GLM] = GLMProvider(config)
             logger.info(f"Loaded GLM provider with model: {glm_model}")
+        
+        # Minimax AI
+        minimax_key = getattr(settings, 'minimax_api_key', None) or os.getenv("MINIMAX_API_KEY")
+        if minimax_key:
+            minimax_model = getattr(settings, 'minimax_model', None) or os.getenv("MINIMAX_MODEL", "abab6.5s-chat")
+            minimax_group_id = getattr(settings, 'minimax_group_id', None) or os.getenv("MINIMAX_GROUP_ID", "")
+            config = ProviderConfig(
+                provider_type=ProviderType.MINIMAX,
+                api_key=minimax_key,
+                model=minimax_model,
+                enabled=True,
+                extra={"group_id": minimax_group_id},
+            )
+            self._providers[ProviderType.MINIMAX] = MinimaxProvider(config)
+            logger.info(f"Loaded Minimax provider with model: {minimax_model}")
         
         # GitHub Copilot / GitHub Models
         copilot_token = getattr(settings, 'github_token', None) or os.getenv("GITHUB_TOKEN")

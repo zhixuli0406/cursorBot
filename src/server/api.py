@@ -6,8 +6,10 @@ Provides REST API and webhook endpoints
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional, List
+import json
+import uuid
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -410,6 +412,320 @@ def register_routes(app: FastAPI) -> None:
             status_code=500,
             content={"error": "Internal server error", "detail": str(exc)},
         )
+    
+    # ============================================
+    # WebSocket Gateway for Native Apps
+    # ============================================
+    
+    # Store connected node clients
+    _node_clients: dict = {}
+    _canvas_states: dict = {}
+    _pairing_codes: dict = {}
+    
+    @app.websocket("/ws/node")
+    async def websocket_node_endpoint(websocket: WebSocket):
+        """
+        WebSocket endpoint for native app nodes (macOS/iOS/Android).
+        
+        Headers:
+        - Authorization: Bearer <token> (optional)
+        - X-Device-ID: <device_id>
+        - X-Device-Type: macos|ios|android
+        """
+        await websocket.accept()
+        
+        # Get device info from headers
+        device_id = websocket.headers.get("x-device-id", str(uuid.uuid4()))
+        device_type = websocket.headers.get("x-device-type", "unknown")
+        auth_header = websocket.headers.get("authorization", "")
+        
+        # Simple token validation (can be enhanced)
+        token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
+        
+        # Register client
+        client_info = {
+            "websocket": websocket,
+            "device_id": device_id,
+            "device_type": device_type,
+            "authenticated": True,  # For now, accept all connections
+            "connected_at": datetime.now().isoformat(),
+            "subscriptions": set(),
+        }
+        _node_clients[device_id] = client_info
+        
+        logger.info(f"Node connected: {device_id} ({device_type})")
+        
+        # Send connected confirmation
+        await websocket.send_json({
+            "type": "connected",
+            "payload": json.dumps({
+                "device_id": device_id,
+                "server_version": "0.4.0",
+                "features": ["chat", "canvas", "pairing", "image"],
+            }),
+        })
+        
+        try:
+            while True:
+                # Receive message
+                data = await websocket.receive_text()
+                
+                try:
+                    message = json.loads(data)
+                    request_id = message.get("id")
+                    msg_type = message.get("type")
+                    payload = message.get("payload", {})
+                    
+                    # Handle different message types
+                    response = await handle_node_message(
+                        device_id, msg_type, payload, _node_clients, _canvas_states, _pairing_codes
+                    )
+                    
+                    # Send response
+                    await websocket.send_json({
+                        "requestId": request_id,
+                        "type": "response",
+                        "payload": json.dumps(response) if isinstance(response, dict) else response,
+                        "error": None,
+                    })
+                    
+                except json.JSONDecodeError:
+                    await websocket.send_json({
+                        "requestId": None,
+                        "type": "error",
+                        "payload": None,
+                        "error": "Invalid JSON",
+                    })
+                except Exception as e:
+                    logger.error(f"Node message error: {e}")
+                    await websocket.send_json({
+                        "requestId": message.get("id") if 'message' in dir() else None,
+                        "type": "error",
+                        "payload": None,
+                        "error": str(e),
+                    })
+                    
+        except WebSocketDisconnect:
+            logger.info(f"Node disconnected: {device_id}")
+        except Exception as e:
+            logger.error(f"Node WebSocket error: {e}")
+        finally:
+            # Cleanup
+            if device_id in _node_clients:
+                del _node_clients[device_id]
+    
+    @app.get("/api/nodes")
+    async def list_connected_nodes():
+        """List all connected native app nodes."""
+        return {
+            "nodes": [
+                {
+                    "device_id": info["device_id"],
+                    "device_type": info["device_type"],
+                    "connected_at": info["connected_at"],
+                }
+                for info in _node_clients.values()
+            ],
+            "count": len(_node_clients),
+        }
+
+
+async def handle_node_message(
+    device_id: str,
+    msg_type: str,
+    payload: dict,
+    clients: dict,
+    canvas_states: dict,
+    pairing_codes: dict,
+) -> any:
+    """
+    Handle incoming messages from native app nodes.
+    
+    Message types:
+    - chat: Send message to AI
+    - canvas: Canvas operations (create, update, delete)
+    - pairing: Device pairing
+    - image: Image analysis
+    - command: Execute command
+    """
+    
+    if msg_type == "chat":
+        # Handle chat message
+        message_text = payload.get("message", "")
+        
+        if not message_text:
+            return {"error": "No message provided"}
+        
+        # Try to get AI response
+        try:
+            from ..core.llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            
+            response = await manager.generate(
+                messages=[{"role": "user", "content": message_text}],
+                temperature=0.7,
+            )
+            
+            return response or "No response from AI"
+            
+        except Exception as e:
+            logger.error(f"Chat error: {e}")
+            return f"Error: {str(e)}"
+    
+    elif msg_type == "canvas":
+        action = payload.get("action", "")
+        
+        if action == "create":
+            # Create new canvas
+            canvas_id = str(uuid.uuid4())
+            canvas_states[canvas_id] = {
+                "id": canvas_id,
+                "components": [],
+                "width": 800,
+                "height": 600,
+                "zoom": 1.0,
+                "panOffsetX": 0,
+                "panOffsetY": 0,
+                "created_by": device_id,
+                "created_at": datetime.now().isoformat(),
+            }
+            return canvas_states[canvas_id]
+        
+        elif action == "update":
+            canvas_id = payload.get("canvasId", "")
+            component_json = payload.get("component", "{}")
+            
+            if canvas_id not in canvas_states:
+                return {"error": "Canvas not found"}
+            
+            try:
+                component = json.loads(component_json)
+                canvas = canvas_states[canvas_id]
+                
+                # Update or add component
+                existing = next(
+                    (c for c in canvas["components"] if c.get("id") == component.get("id")),
+                    None
+                )
+                if existing:
+                    existing.update(component)
+                else:
+                    canvas["components"].append(component)
+                
+                # Broadcast to other clients
+                for cid, client in clients.items():
+                    if cid != device_id:
+                        try:
+                            await client["websocket"].send_json({
+                                "type": "canvas",
+                                "payload": json.dumps(canvas),
+                            })
+                        except Exception:
+                            pass
+                
+                return {"success": True}
+                
+            except Exception as e:
+                return {"error": str(e)}
+        
+        elif action == "get":
+            canvas_id = payload.get("canvasId", "")
+            return canvas_states.get(canvas_id, {"error": "Canvas not found"})
+        
+        elif action == "list":
+            return {
+                "canvases": [
+                    {"id": cid, "created_at": c.get("created_at")}
+                    for cid, c in canvas_states.items()
+                ]
+            }
+        
+        elif action == "delete":
+            canvas_id = payload.get("canvasId", "")
+            if canvas_id in canvas_states:
+                del canvas_states[canvas_id]
+                return {"success": True}
+            return {"error": "Canvas not found"}
+    
+    elif msg_type == "pairing":
+        action = payload.get("action", "")
+        
+        if action == "request_code":
+            # Generate 6-digit pairing code
+            import random
+            code = "".join([str(random.randint(0, 9)) for _ in range(6)])
+            
+            pairing_codes[code] = {
+                "device_id": device_id,
+                "created_at": datetime.now().isoformat(),
+                "expires_at": (datetime.now().replace(minute=datetime.now().minute + 5)).isoformat(),
+            }
+            
+            return code
+        
+        elif action == "verify":
+            code = payload.get("code", "")
+            if code in pairing_codes:
+                info = pairing_codes[code]
+                del pairing_codes[code]
+                return {"success": True, "paired_device": info["device_id"]}
+            return {"success": False, "error": "Invalid or expired code"}
+    
+    elif msg_type == "image":
+        action = payload.get("action", "")
+        
+        if action == "analyze":
+            image_base64 = payload.get("image", "")
+            prompt = payload.get("prompt", "Describe this image in detail.")
+            
+            if not image_base64:
+                return {"error": "No image provided"}
+            
+            # Use vision-capable model if available
+            try:
+                from ..core.llm_providers import get_llm_manager
+                manager = get_llm_manager()
+                
+                # Try to use a vision model
+                response = await manager.generate(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": prompt},
+                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}},
+                            ],
+                        }
+                    ],
+                    model="gpt-4o",  # Use GPT-4o for vision tasks
+                )
+                
+                return response or "Unable to analyze image"
+                
+            except Exception as e:
+                logger.error(f"Image analysis error: {e}")
+                return f"Image analysis not available: {str(e)}"
+    
+    elif msg_type == "command":
+        command = payload.get("command", "")
+        args = payload.get("args", {})
+        
+        # Execute supported commands
+        if command == "status":
+            return {
+                "connected_nodes": len(clients),
+                "active_canvases": len(canvas_states),
+                "server_version": "0.4.0",
+            }
+        
+        elif command == "ping":
+            return {"pong": True, "timestamp": datetime.now().isoformat()}
+        
+        else:
+            return {"error": f"Unknown command: {command}"}
+    
+    else:
+        return {"error": f"Unknown message type: {msg_type}"}
 
 
 # Create default app instance

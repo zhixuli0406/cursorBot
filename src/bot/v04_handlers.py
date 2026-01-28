@@ -19,6 +19,29 @@ from ..utils.logger import logger
 from ..utils.auth import is_authorized
 
 
+def _escape_markdown(text: str) -> str:
+    """Escape special characters for Telegram Markdown."""
+    if not text:
+        return ""
+    # Escape special Markdown characters
+    special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+    result = text
+    for char in special_chars:
+        result = result.replace(char, f'\\{char}')
+    return result
+
+
+def _escape_html(text: str) -> str:
+    """Escape HTML special characters."""
+    if not text:
+        return ""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
 # ============================================
 # MCP Handlers
 # ============================================
@@ -53,24 +76,24 @@ async def mcp_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             servers = mcp.list_servers() if hasattr(mcp, 'list_servers') else []
             
             text = (
-                "🔌 **MCP (Model Context Protocol)**\n\n"
+                "🔌 <b>MCP (Model Context Protocol)</b>\n\n"
                 f"Connected Servers: {len(servers)}\n"
             )
             
             if servers:
-                text += "\n**Servers:**\n"
+                text += "\n<b>Servers:</b>\n"
                 for server in servers:
-                    text += f"• {server}\n"
+                    text += f"• {_escape_html(server)}\n"
             
             text += (
-                "\n**Commands:**\n"
-                "`/mcp servers` - List servers\n"
-                "`/mcp tools` - List tools\n"
-                "`/mcp resources` - List resources\n"
-                "`/mcp connect <name> <cmd>` - Connect server\n"
+                "\n<b>Commands:</b>\n"
+                "<code>/mcp servers</code> - List servers\n"
+                "<code>/mcp tools</code> - List tools\n"
+                "<code>/mcp resources</code> - List resources\n"
+                "<code>/mcp connect &lt;name&gt; &lt;cmd&gt;</code> - Connect server\n"
             )
             
-            await update.message.reply_text(text, parse_mode="Markdown")
+            await update.message.reply_text(text, parse_mode="HTML")
         
         elif args[0] == "servers":
             servers = mcp.list_servers() if hasattr(mcp, 'list_servers') else []
@@ -79,11 +102,11 @@ async def mcp_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 await update.message.reply_text("No MCP servers connected.")
                 return
             
-            text = "🔌 **Connected MCP Servers**\n\n"
+            text = "🔌 <b>Connected MCP Servers</b>\n\n"
             for server in servers:
-                text += f"• `{server}`\n"
+                text += f"• <code>{_escape_html(server)}</code>\n"
             
-            await update.message.reply_text(text, parse_mode="Markdown")
+            await update.message.reply_text(text, parse_mode="HTML")
         
         elif args[0] == "tools":
             tools = await mcp.list_tools() if hasattr(mcp, 'list_tools') else []
@@ -92,16 +115,16 @@ async def mcp_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 await update.message.reply_text("No MCP tools available.")
                 return
             
-            text = "🔧 **Available MCP Tools**\n\n"
+            text = "🔧 <b>Available MCP Tools</b>\n\n"
             for tool in tools[:20]:
                 name = tool.name if hasattr(tool, 'name') else str(tool)
                 desc = tool.description[:50] if hasattr(tool, 'description') else ""
-                text += f"• `{name}` - {desc}\n"
+                text += f"• <code>{_escape_html(name)}</code> - {_escape_html(desc)}\n"
             
             if len(tools) > 20:
                 text += f"\n... and {len(tools) - 20} more"
             
-            await update.message.reply_text(text, parse_mode="Markdown")
+            await update.message.reply_text(text, parse_mode="HTML")
         
         elif args[0] == "resources":
             resources = await mcp.list_resources() if hasattr(mcp, 'list_resources') else []
@@ -110,25 +133,25 @@ async def mcp_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 await update.message.reply_text("No MCP resources available.")
                 return
             
-            text = "📦 **Available MCP Resources**\n\n"
+            text = "📦 <b>Available MCP Resources</b>\n\n"
             for res in resources[:20]:
                 name = res.name if hasattr(res, 'name') else str(res)
-                text += f"• `{name}`\n"
+                text += f"• <code>{_escape_html(name)}</code>\n"
             
-            await update.message.reply_text(text, parse_mode="Markdown")
+            await update.message.reply_text(text, parse_mode="HTML")
         
         elif args[0] == "connect" and len(args) >= 3:
             name = args[1]
             command = " ".join(args[2:])
             
-            await update.message.reply_text(f"Connecting to MCP server `{name}`...", parse_mode="Markdown")
+            await update.message.reply_text(f"Connecting to MCP server <code>{_escape_html(name)}</code>...", parse_mode="HTML")
             
             success = await mcp.connect_server(name, command)
             
             if success:
-                await update.message.reply_text(f"✅ Connected to MCP server `{name}`", parse_mode="Markdown")
+                await update.message.reply_text(f"✅ Connected to MCP server <code>{_escape_html(name)}</code>", parse_mode="HTML")
             else:
-                await update.message.reply_text(f"❌ Failed to connect to `{name}`", parse_mode="Markdown")
+                await update.message.reply_text(f"❌ Failed to connect to <code>{_escape_html(name)}</code>", parse_mode="HTML")
         
         elif args[0] == "disconnect" and len(args) >= 2:
             name = args[1]
@@ -136,19 +159,19 @@ async def mcp_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             success = await mcp.disconnect_server(name) if hasattr(mcp, 'disconnect_server') else False
             
             if success:
-                await update.message.reply_text(f"✅ Disconnected from `{name}`", parse_mode="Markdown")
+                await update.message.reply_text(f"✅ Disconnected from <code>{_escape_html(name)}</code>", parse_mode="HTML")
             else:
-                await update.message.reply_text(f"❌ Failed to disconnect from `{name}`", parse_mode="Markdown")
+                await update.message.reply_text(f"❌ Failed to disconnect from <code>{_escape_html(name)}</code>", parse_mode="HTML")
         
         else:
             await update.message.reply_text(
                 "Usage:\n"
-                "`/mcp` - Show status\n"
-                "`/mcp servers` - List servers\n"
-                "`/mcp tools` - List tools\n"
-                "`/mcp connect <name> <command>` - Connect\n"
-                "`/mcp disconnect <name>` - Disconnect",
-                parse_mode="Markdown"
+                "<code>/mcp</code> - Show status\n"
+                "<code>/mcp servers</code> - List servers\n"
+                "<code>/mcp tools</code> - List tools\n"
+                "<code>/mcp connect &lt;name&gt; &lt;command&gt;</code> - Connect\n"
+                "<code>/mcp disconnect &lt;name&gt;</code> - Disconnect",
+                parse_mode="HTML"
             )
             
     except Exception as e:
@@ -188,19 +211,19 @@ async def workflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             workflows = engine.list_workflows() if hasattr(engine, 'list_workflows') else []
             
             text = (
-                "⚙️ **Workflow Engine**\n\n"
+                "⚙️ <b>Workflow Engine</b>\n\n"
                 f"Registered Workflows: {len(workflows)}\n"
                 f"Active Runs: {stats.get('active_runs', 0)}\n"
             )
             
             text += (
-                "\n**Commands:**\n"
-                "`/workflow list` - List workflows\n"
-                "`/workflow run <name>` - Run workflow\n"
-                "`/workflow status <id>` - Check status\n"
+                "\n<b>Commands:</b>\n"
+                "<code>/workflow list</code> - List workflows\n"
+                "<code>/workflow run &lt;name&gt;</code> - Run workflow\n"
+                "<code>/workflow status &lt;id&gt;</code> - Check status\n"
             )
             
-            await update.message.reply_text(text, parse_mode="Markdown")
+            await update.message.reply_text(text, parse_mode="HTML")
         
         elif args[0] == "list":
             workflows = engine.list_workflows() if hasattr(engine, 'list_workflows') else []
@@ -209,29 +232,29 @@ async def workflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 await update.message.reply_text("No workflows registered.")
                 return
             
-            text = "⚙️ **Available Workflows**\n\n"
+            text = "⚙️ <b>Available Workflows</b>\n\n"
             for wf in workflows:
                 name = wf.name if hasattr(wf, 'name') else str(wf)
                 desc = wf.description[:50] if hasattr(wf, 'description') else ""
-                text += f"• `{name}` - {desc}\n"
+                text += f"• <code>{_escape_html(name)}</code> - {_escape_html(desc)}\n"
             
-            await update.message.reply_text(text, parse_mode="Markdown")
+            await update.message.reply_text(text, parse_mode="HTML")
         
         elif args[0] == "run" and len(args) >= 2:
             name = args[1]
             
-            await update.message.reply_text(f"Starting workflow `{name}`...", parse_mode="Markdown")
+            await update.message.reply_text(f"Starting workflow <code>{_escape_html(name)}</code>...", parse_mode="HTML")
             
             run = await engine.run_workflow(name, context={"user_id": user_id})
             
             if run:
                 run_id = run.id if hasattr(run, 'id') else str(run)
                 await update.message.reply_text(
-                    f"✅ Workflow started\n\nRun ID: `{run_id}`\n\nUse `/workflow status {run_id}` to check progress.",
-                    parse_mode="Markdown"
+                    f"✅ Workflow started\n\nRun ID: <code>{_escape_html(run_id)}</code>\n\nUse <code>/workflow status {_escape_html(run_id)}</code> to check progress.",
+                    parse_mode="HTML"
                 )
             else:
-                await update.message.reply_text(f"❌ Failed to start workflow `{name}`", parse_mode="Markdown")
+                await update.message.reply_text(f"❌ Failed to start workflow <code>{_escape_html(name)}</code>", parse_mode="HTML")
         
         elif args[0] == "status" and len(args) >= 2:
             run_id = args[1]
@@ -240,22 +263,22 @@ async def workflow_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             
             if status:
                 text = (
-                    f"⚙️ **Workflow Status**\n\n"
-                    f"Run ID: `{run_id}`\n"
-                    f"Status: {status.get('status', 'unknown')}\n"
+                    f"⚙️ <b>Workflow Status</b>\n\n"
+                    f"Run ID: <code>{_escape_html(run_id)}</code>\n"
+                    f"Status: {_escape_html(status.get('status', 'unknown'))}\n"
                     f"Progress: {status.get('progress', 0)}%\n"
                 )
-                await update.message.reply_text(text, parse_mode="Markdown")
+                await update.message.reply_text(text, parse_mode="HTML")
             else:
-                await update.message.reply_text(f"Workflow run `{run_id}` not found.", parse_mode="Markdown")
+                await update.message.reply_text(f"Workflow run <code>{_escape_html(run_id)}</code> not found.", parse_mode="HTML")
         
         else:
             await update.message.reply_text(
                 "Usage:\n"
-                "`/workflow list` - List workflows\n"
-                "`/workflow run <name>` - Run workflow\n"
-                "`/workflow status <id>` - Check status",
-                parse_mode="Markdown"
+                "<code>/workflow list</code> - List workflows\n"
+                "<code>/workflow run &lt;name&gt;</code> - Run workflow\n"
+                "<code>/workflow status &lt;id&gt;</code> - Check status",
+                parse_mode="HTML"
             )
             
     except Exception as e:
@@ -293,39 +316,39 @@ async def analytics_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             stats = analytics.get_overall_stats() if hasattr(analytics, 'get_overall_stats') else {}
             
             text = (
-                "📊 **Analytics Overview**\n\n"
+                "📊 <b>Analytics Overview</b>\n\n"
                 f"Total Events: {stats.get('total_events', 0)}\n"
                 f"Total Users: {stats.get('total_users', 0)}\n"
                 f"Today's Events: {stats.get('today_events', 0)}\n"
             )
             
             if 'top_commands' in stats:
-                text += "\n**Top Commands:**\n"
+                text += "\n<b>Top Commands:</b>\n"
                 for cmd, count in stats['top_commands'][:5]:
-                    text += f"• `{cmd}`: {count}\n"
+                    text += f"• <code>{_escape_html(cmd)}</code>: {count}\n"
             
             text += (
-                "\n**Commands:**\n"
-                "`/analytics me` - Your stats\n"
-                "`/analytics daily` - Daily stats\n"
-                "`/analytics export` - Export data\n"
+                "\n<b>Commands:</b>\n"
+                "<code>/analytics me</code> - Your stats\n"
+                "<code>/analytics daily</code> - Daily stats\n"
+                "<code>/analytics export</code> - Export data\n"
             )
             
-            await update.message.reply_text(text, parse_mode="Markdown")
+            await update.message.reply_text(text, parse_mode="HTML")
         
         elif args[0] == "me":
             user_stats = analytics.get_user_stats(user_id) if hasattr(analytics, 'get_user_stats') else None
             
             if user_stats:
                 text = (
-                    "📊 **Your Usage Statistics**\n\n"
+                    "📊 <b>Your Usage Statistics</b>\n\n"
                     f"Total Messages: {user_stats.total_messages}\n"
                     f"Total Commands: {user_stats.total_commands}\n"
                     f"LLM Requests: {user_stats.llm_requests}\n"
                     f"Total Tokens: {user_stats.total_tokens}\n"
                     f"Est. Cost: ${user_stats.estimated_cost:.4f}\n"
                 )
-                await update.message.reply_text(text, parse_mode="Markdown")
+                await update.message.reply_text(text, parse_mode="HTML")
             else:
                 await update.message.reply_text("No usage data found for your account.")
         
@@ -334,14 +357,14 @@ async def analytics_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             
             if daily:
                 text = (
-                    f"📊 **Daily Statistics** ({daily.date})\n\n"
+                    f"📊 <b>Daily Statistics</b> ({daily.date})\n\n"
                     f"Events: {daily.total_events}\n"
                     f"Active Users: {daily.active_users}\n"
                     f"LLM Requests: {daily.llm_requests}\n"
                     f"Tokens Used: {daily.total_tokens}\n"
                     f"Est. Cost: ${daily.estimated_cost:.4f}\n"
                 )
-                await update.message.reply_text(text, parse_mode="Markdown")
+                await update.message.reply_text(text, parse_mode="HTML")
             else:
                 await update.message.reply_text("No daily statistics available.")
         
@@ -364,11 +387,11 @@ async def analytics_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         else:
             await update.message.reply_text(
                 "Usage:\n"
-                "`/analytics` - Overview\n"
-                "`/analytics me` - Your stats\n"
-                "`/analytics daily` - Daily stats\n"
-                "`/analytics export [json|csv]` - Export",
-                parse_mode="Markdown"
+                "<code>/analytics</code> - Overview\n"
+                "<code>/analytics me</code> - Your stats\n"
+                "<code>/analytics daily</code> - Daily stats\n"
+                "<code>/analytics export [json|csv]</code> - Export",
+                parse_mode="HTML"
             )
             
     except Exception as e:
@@ -399,14 +422,14 @@ async def review_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     if not args:
         await update.message.reply_text(
-            "🔍 **Code Review**\n\n"
+            "🔍 <b>Code Review</b>\n\n"
             "Usage:\n"
-            "`/review <file>` - Review a file\n"
-            "`/review dir <path>` - Review directory\n"
-            "`/review diff` - Review git diff\n\n"
+            "<code>/review &lt;file&gt;</code> - Review a file\n"
+            "<code>/review dir &lt;path&gt;</code> - Review directory\n"
+            "<code>/review diff</code> - Review git diff\n\n"
             "Example:\n"
-            "`/review src/main.py`",
-            parse_mode="Markdown"
+            "<code>/review src/main.py</code>",
+            parse_mode="HTML"
         )
         return
     
@@ -420,12 +443,12 @@ async def review_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             directory = args[1]
             full_path = os.path.join(workspace, directory) if not os.path.isabs(directory) else directory
             
-            await update.message.reply_text(f"🔍 Reviewing directory `{directory}`...", parse_mode="Markdown")
+            await update.message.reply_text(f"🔍 Reviewing directory <code>{_escape_html(directory)}</code>...", parse_mode="HTML")
             
             result = await reviewer.review_directory(full_path)
             
         elif args[0] == "diff":
-            await update.message.reply_text("🔍 Reviewing git diff...", parse_mode="Markdown")
+            await update.message.reply_text("🔍 Reviewing git diff...", parse_mode="HTML")
             
             # Get git diff
             import subprocess
@@ -453,21 +476,20 @@ async def review_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             full_path = os.path.join(workspace, file_path) if not os.path.isabs(file_path) else file_path
             
             if not os.path.exists(full_path):
-                await update.message.reply_text(f"File not found: `{file_path}`", parse_mode="Markdown")
+                await update.message.reply_text(f"File not found: <code>{_escape_html(file_path)}</code>", parse_mode="HTML")
                 return
             
-            await update.message.reply_text(f"🔍 Reviewing `{file_path}`...", parse_mode="Markdown")
-            
-            result = await reviewer.review_file(full_path)
+            await update.message.reply_text(f"🔍 Reviewing <code>{_escape_html(file_path)}</code>...", parse_mode="HTML")
         
-        # Format result
-        text = reviewer.format_findings(result, format="markdown")
+        # Format result as plain text (avoid HTML issues)
+        text = reviewer.format_findings(result, format="text")
         
-        # Truncate if too long
+        # Escape HTML and truncate if too long
+        text = _escape_html(text)
         if len(text) > 4000:
             text = text[:3900] + "\n\n... (truncated)"
         
-        await update.message.reply_text(text, parse_mode="Markdown")
+        await update.message.reply_text(text)
         
     except Exception as e:
         logger.error(f"Review command error: {e}")
@@ -569,14 +591,14 @@ async def docs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     if not args:
         await update.message.reply_text(
-            "📝 **Auto-Documentation**\n\n"
+            "📝 <b>Auto-Documentation</b>\n\n"
             "Usage:\n"
-            "`/docs <file>` - Document a file\n"
-            "`/docs api <dir>` - Generate API docs\n"
-            "`/docs readme` - Generate README\n\n"
+            "<code>/docs &lt;file&gt;</code> - Document a file\n"
+            "<code>/docs api &lt;dir&gt;</code> - Generate API docs\n"
+            "<code>/docs readme</code> - Generate README\n\n"
             "Example:\n"
-            "`/docs src/core/rag.py`",
-            parse_mode="Markdown"
+            "<code>/docs src/core/rag.py</code>",
+            parse_mode="HTML"
         )
         return
     
@@ -590,12 +612,12 @@ async def docs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             directory = args[1]
             full_path = os.path.join(workspace, directory) if not os.path.isabs(directory) else directory
             
-            await update.message.reply_text(f"📝 Generating API docs for `{directory}`...", parse_mode="Markdown")
+            await update.message.reply_text(f"📝 Generating API docs for <code>{_escape_html(directory)}</code>...", parse_mode="HTML")
             
             docs = await generator.generate_api_docs(full_path)
             
         elif args[0] == "readme":
-            await update.message.reply_text("📝 Generating README...", parse_mode="Markdown")
+            await update.message.reply_text("📝 Generating README...", parse_mode="HTML")
             
             docs = await generator.generate_readme(workspace)
             
@@ -604,10 +626,10 @@ async def docs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             full_path = os.path.join(workspace, file_path) if not os.path.isabs(file_path) else file_path
             
             if not os.path.exists(full_path):
-                await update.message.reply_text(f"File not found: `{file_path}`", parse_mode="Markdown")
+                await update.message.reply_text(f"File not found: <code>{_escape_html(file_path)}</code>", parse_mode="HTML")
                 return
             
-            await update.message.reply_text(f"📝 Generating docs for `{file_path}`...", parse_mode="Markdown")
+            await update.message.reply_text(f"📝 Generating docs for <code>{_escape_html(file_path)}</code>...", parse_mode="HTML")
             
             docs = await generator.generate_module_docs(full_path)
         
@@ -626,7 +648,8 @@ async def docs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             )
             os.unlink(temp_path)
         else:
-            await update.message.reply_text(docs, parse_mode="Markdown")
+            # Send as plain text to avoid HTML parsing issues
+            await update.message.reply_text(docs)
             
     except Exception as e:
         logger.error(f"Docs command error: {e}")

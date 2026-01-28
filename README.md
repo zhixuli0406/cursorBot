@@ -1,8 +1,13 @@
 # CursorBot
 
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](TODO.md)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 多平台 AI 編程助手，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 等平台。整合 Cursor CLI、多種 AI 模型、Agent Loop、SkillsMP 技能市集等功能。
 
 靈感來自 [cursor-telegram-bot](https://github.com/Hormold/cursor-telegram-bot) 和 [ClawdBot](https://clawd.bot/)。
+
+> 📋 **開發進度**: 查看 [TODO.md](TODO.md) 了解完整的功能清單與開發進度。
 
 ## 特點
 
@@ -18,6 +23,7 @@
 - **統一 Webhook** - 簡化的 webhook 端點（`/webhook/line`, `/webhook/slack` 等）
 
 ### 核心功能
+- **🚀 異步執行（預設）** - 所有請求背景處理，完成後自動推送結果
 - **完全遠端** - 無需開啟 IDE，雲端執行
 - **互動式按鈕** - 直覺的按鈕介面
 - **語音訊息** - 發送語音自動轉錄為任務
@@ -86,10 +92,10 @@
   - 智慧文字分塊
   - 多種嵌入提供者（OpenAI、Google、Ollama）
   - 向量儲存（ChromaDB）
-- **異步執行** - 背景任務系統
-  - Agent/CLI/RAG 背景執行
+- **異步執行（v0.4 預設）** - 所有模式預設背景執行
+  - CLI/Agent 模式皆為異步
   - 任務完成自動推送結果
-  - 任務管理與取消
+  - `/tasks` 查看任務、`/cancel` 取消任務
   - 並行任務支援
 
 ### v0.4 新增功能
@@ -132,6 +138,100 @@
 - **API 參考** - 自動生成 API 文件
 - **README 生成** - 智慧生成專案說明
 - 使用 `/docs` 指令生成
+
+#### v0.4 進階功能
+
+##### Multiple Gateways（多閘道高可用）
+- **負載平衡** - Round-robin、最少連接、加權隨機
+- **自動故障轉移** - Gateway 失敗自動切換
+- **健康監控** - 定期檢查 Gateway 狀態
+- **Session 親和** - 可選的 Sticky Sessions
+
+##### DM Pairing（設備配對）
+- **配對碼** - 6 位數數字配對碼
+- **QR Code** - 支援 QR Code 掃碼配對
+- **多設備** - 每個用戶支援多設備
+- **設備管理** - 查看、解除配對設備
+
+##### Live Canvas（A2UI 視覺工作區）
+- **即時渲染** - WebSocket 即時更新
+- **豐富組件** - 文字、程式碼、表格、圖表
+- **互動元素** - 按鈕、輸入框、滑桿
+- **多人協作** - 分享 Canvas 給其他用戶
+
+##### 多語系支援（i18n）
+- **繁體中文** - 預設語言
+- **簡體中文** - zh-CN
+- **英文** - English
+- **日文** - 日本語
+
+##### 郵件自動分類
+- **智慧分類** - 自動辨識郵件類型
+- **優先級偵測** - 識別緊急郵件
+- **自訂規則** - 新增個人分類規則
+- **多種類別** - 社交、促銷、更新、通知等
+
+##### 原生應用（Native Apps）
+- **macOS App** - SwiftUI 原生應用，支援 Menu Bar、Talk Mode、Live Canvas
+- **iOS Node** - iPhone/iPad 原生應用，支援相機拍攝、裝置配對
+- **Android Node** - Kotlin/Jetpack Compose 原生應用，完整功能支援
+- **WebSocket Gateway** - 透過 `/ws/node` 端點即時連線
+- **跨平台同步** - Canvas、訊息、設定多裝置同步
+
+### v0.4 快速指令參考
+
+| 功能 | 指令 | 說明 |
+|------|------|------|
+| **異步執行** | 直接發送訊息 | 所有模式預設背景執行 |
+| | `/tasks` | 查看待處理任務 |
+| | `/cancel <id>` | 取消任務 |
+| | `/mode cli` | 切換 CLI 模式（異步） |
+| | `/mode agent` | 切換 Agent 模式（異步） |
+| **程式碼審查** | `/review <檔案>` | AI 程式碼審查 |
+| | `/review dir <目錄>` | 審查整個目錄 |
+| | `/review diff` | 審查 Git 變更 |
+| **工作流程** | `/workflow` | 工作流程狀態 |
+| | `/workflow list` | 列出工作流程 |
+| | `/workflow run <名稱>` | 執行工作流程 |
+| **使用分析** | `/analytics` | 使用統計總覽 |
+| | `/analytics me` | 我的使用統計 |
+| | `/analytics daily` | 每日統計 |
+| | `/analytics export` | 匯出分析資料 |
+| **對話匯出** | `/export` | 匯出為 Markdown |
+| | `/export json` | 匯出為 JSON |
+| | `/export html` | 匯出為 HTML |
+| **文件生成** | `/docs <檔案>` | 生成檔案文件 |
+| | `/docs api <目錄>` | 生成 API 文件 |
+| | `/docs readme` | 生成 README |
+| **MCP** | `/mcp` | MCP 狀態 |
+| | `/mcp servers` | 列出 MCP 伺服器 |
+| | `/mcp tools` | 列出 MCP 工具 |
+| | `/mcp connect <名稱> <指令>` | 連接 MCP 伺服器 |
+
+### v0.4 進階功能指令
+
+| 功能 | 指令 | 說明 |
+|------|------|------|
+| **多閘道** | `/gateways` | 閘道叢集狀態 |
+| | `/gateways list` | 列出所有閘道 |
+| | `/gateways add <id> <host> <port>` | 新增閘道 |
+| | `/gateways strategy <type>` | 設定負載平衡策略 |
+| **設備配對** | `/pair` | 產生配對碼 |
+| | `/pair qr` | 產生 QR Code |
+| | `/pair <code>` | 使用配對碼配對 |
+| | `/devices` | 列出已配對設備 |
+| | `/devices remove <id>` | 解除配對 |
+| **Live Canvas** | `/canvas` | Canvas 狀態 |
+| | `/canvas new [名稱]` | 新建 Canvas |
+| | `/canvas list` | 列出 Canvas |
+| | `/canvas add <type> <content>` | 新增元件 |
+| | `/canvas clear` | 清空 Canvas |
+| **多語系** | `/lang` | 目前語言設定 |
+| | `/lang list` | 列出可用語言 |
+| | `/lang set <code>` | 切換語言 |
+| **郵件分類** | `/classify` | 分類功能狀態 |
+| | `/classify <內容>` | 分類郵件內容 |
+| | `/classify rules` | 顯示分類規則 |
 
 ## 運作原理
 
@@ -276,6 +376,7 @@ CURSOR_CLI_TIMEOUT=300
 | OpenRouter | `OPENROUTER_API_KEY` | 代理多種模型（推薦） |
 | GitHub Copilot | `GITHUB_TOKEN` + `COPILOT_ENABLED=true` | GitHub Models (GPT/Claude/Llama) |
 | Ollama | `OLLAMA_ENABLED=true` | 本地模型（Llama, Mistral 等） |
+| Minimax | `MINIMAX_API_KEY` | 中國市場 (abab6.5s-chat 等) |
 | 自訂端點 | `CUSTOM_API_BASE` | 相容 OpenAI API 的端點 |
 
 **方案一：OpenRouter（推薦）**
@@ -483,6 +584,52 @@ CLI_DISABLE_RESUME=
 | `grok` | Grok |
 
 使用 `/climodel list` 查看完整列表，使用 `/climodel set <model>` 切換。
+
+#### 5. Gateway 設定（原生應用連線）
+
+如果需要使用原生應用（macOS/iOS/Android）連接到 CursorBot，需要設定 Gateway。
+
+```env
+# Gateway Token（可選，留空則允許所有連線）
+# 正式環境建議設定 Token
+GATEWAY_TOKEN=your_secret_token_here
+
+# Gateway 功能開關
+GATEWAY_CHAT_ENABLED=true
+GATEWAY_CANVAS_ENABLED=true
+GATEWAY_PAIRING_ENABLED=true
+GATEWAY_IMAGE_ANALYSIS_ENABLED=true
+```
+
+**原生應用連線設定：**
+
+| 設定項目 | 說明 | 範例 |
+|----------|------|------|
+| Gateway URL | WebSocket 連線位址 | `http://your-server-ip:8000` |
+| Token | 認證 Token（與 `GATEWAY_TOKEN` 對應） | 留空或填入 Token |
+
+**WebSocket 端點：**
+- 連線位址：`ws://{SERVER_HOST}:{SERVER_PORT}/ws/node`
+- 已連線節點查詢：`GET /api/nodes`
+
+**支援的訊息類型：**
+
+| 類型 | 功能 |
+|------|------|
+| `chat` | 與 AI 對話 |
+| `canvas` | Live Canvas 操作（建立、更新、刪除） |
+| `pairing` | 裝置配對（取得配對碼、驗證） |
+| `image` | 圖像分析（需要視覺模型） |
+| `command` | 系統指令（status、ping） |
+
+**原生應用下載：**
+
+應用程式碼位於 `apps/` 目錄：
+- `apps/macos/` - macOS 應用（SwiftUI）
+- `apps/ios/` - iOS 應用（SwiftUI）
+- `apps/android/` - Android 應用（Kotlin）
+
+詳細建置說明請參考各目錄中的 `README.md`。
 
 #### 6. 啟動服務
 
@@ -788,6 +935,27 @@ Cursor CLI 支援多種 AI 模型，可以根據需求切換：
 4. 下載 JSON 並儲存為 `data/google/credentials.json`
 5. 執行 `/calendar auth` 進行認證
 
+### Apple Calendar 整合 (macOS)
+
+在 macOS 上整合 Apple Calendar，直接從 Bot 查看和管理行程。
+
+| 指令 | 說明 |
+|------|------|
+| `/calendar` | 顯示今日行程 |
+| `/calendar week` | 顯示本週行程 |
+| `/calendar list` | 列出所有日曆 |
+| `/calendar add <標題> <開始> <結束>` | 新增行程 |
+| `/calendar help` | 查看說明 |
+
+**時間格式**: `YYYY-MM-DDTHH:MM` (ISO 格式)
+
+**範例**:
+```
+/calendar add 開會 2026-01-28T10:00 2026-01-28T11:00
+```
+
+**注意**: 僅在 macOS 上可用，需要授權 Calendar.app 自動化權限。
+
 ### Gmail 整合
 
 讀取和發送 Gmail 郵件。
@@ -807,6 +975,82 @@ Cursor CLI 支援多種 AI 模型，可以根據需求切換：
 /gmail search subject:報告 is:unread
 /gmail search after:2026/01/01 has:attachment
 ```
+
+### Google OAuth 常見問題
+
+#### Q1: 顯示的應用程式名稱不正確（例如顯示其他專案名稱）
+
+**原因**：OAuth 同意畫面顯示的名稱是在 Google Cloud Console 中設定的，不是由 `credentials.json` 決定。
+
+**解決方案**：
+1. 前往 [Google Cloud Console](https://console.cloud.google.com/)
+2. 選擇你的專案
+3. 左側選單 →「API 和服務」→「OAuth 同意畫面」
+4. 點擊「編輯應用程式」，將名稱改為 `CursorBot`
+
+#### Q2: 顯示「未通過 Google 驗證」警告
+
+**這是正常現象**。除非提交應用程式給 Google 審核，否則都會顯示此警告。
+
+**解決方案**：
+- 點擊「進階」→「前往 CursorBot（不安全）」繼續授權
+- 或將你的 Google 帳號加入專案的「測試使用者」名單
+
+#### Q3: 手機 Telegram 無法完成 OAuth 認證（localhost 問題）
+
+**原因**：OAuth callback 設定為 `localhost`，手機無法訪問電腦的 localhost。
+
+**解決方案**（擇一）：
+
+1. **在電腦完成首次認證（推薦）**：
+   ```bash
+   # 在電腦執行認證腳本
+   source venv/bin/activate
+   python test_google_auth.py
+   ```
+   認證完成後會產生 `token.json`，之後手機就可以直接使用。
+
+2. **使用公開 URL**：
+   - 如果有部署伺服器，在 Google Cloud Console 新增公開的 redirect URI
+   - 更新 `.env` 中的 `GOOGLE_OAUTH_REDIRECT_URI`
+
+3. **使用 ngrok 暴露本地服務**：
+   ```bash
+   ngrok http 8080
+   ```
+   將 ngrok URL 加入 Google Cloud Console 的重新導向 URI
+
+#### Q4: 找不到 credentials.json
+
+**解決方案**：
+1. 前往 [Google Cloud Console](https://console.cloud.google.com/)
+2. 建立專案或選擇現有專案
+3. 啟用 Google Calendar API 和 Gmail API
+4. 前往「API 和服務」→「憑證」
+5. 建立「OAuth 2.0 用戶端 ID」（選擇「桌面應用程式」）
+6. 下載 JSON 並儲存為 `data/google/credentials.json`
+
+#### Q5: Token 過期或失效
+
+**解決方案**：
+```bash
+# 刪除舊的 token 檔案
+rm data/google/calendar_token.json
+rm data/google/gmail_token.json
+
+# 重新執行認證
+python test_google_auth.py
+```
+
+#### Q6: 需要的 OAuth 範圍（Scopes）
+
+| 功能 | 範圍 |
+|------|------|
+| Calendar 讀取 | `https://www.googleapis.com/auth/calendar.readonly` |
+| Calendar 編輯 | `https://www.googleapis.com/auth/calendar.events` |
+| Gmail 讀取 | `https://www.googleapis.com/auth/gmail.readonly` |
+| Gmail 發送 | `https://www.googleapis.com/auth/gmail.send` |
+| Gmail 修改 | `https://www.googleapis.com/auth/gmail.modify` |
 
 ### Skills Registry（技能市集）
 
@@ -1871,6 +2115,17 @@ Pre-built packages not available
 6. **Docker 推薦** - 使用 Docker 可避免所有環境問題
 7. **GitHub Token** - 搜尋 SkillsMP/GitHub 技能時建議設定 `GITHUB_TOKEN` 提高 API 限制
 8. **HTTPS** - 社群平台 Webhook 需要 HTTPS，本地測試可用 ngrok
+
+## 版本資訊
+
+| 版本 | 日期 | 說明 |
+|------|------|------|
+| v0.4.0 | 2026-01-27 | MCP、Workflow、Analytics、進階功能 |
+| v0.3.0 | - | CLI 整合、Session 管理、RAG |
+| v0.2.0 | - | 多平台支援、Agent Loop |
+| v0.1.0 | - | 基礎 Telegram Bot |
+
+> 📋 完整開發進度請查看 [TODO.md](TODO.md)
 
 ## 授權
 

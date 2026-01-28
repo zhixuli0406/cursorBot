@@ -8,9 +8,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Live Canvas (A2UI) support (in progress)
-- macOS native app (in progress)
-- iOS/Android nodes (planned)
+- **v0.4 Telegram Command Handlers** - All v0.4 core commands now have full Telegram handlers
+  - `/verbose` - Detailed output mode (off/low/medium/high)
+  - `/think` - AI thinking depth control (off/low/medium/high/xhigh)
+  - `/alias` - User-defined command aliases
+  - `/notify` - System notification settings
+- **Updated /start command** - Shows v0.4 version and new features
+- **Updated /help command** - Complete v0.4 command reference
+- **Live Canvas (A2UI)** - Agent-driven visual workspace
+- **macOS App 完整版** (apps/macos) - SwiftUI native app
+  - Talk Mode with Speech Recognition & TTS
+  - Debug Tools (Logs, Network Inspector)
+  - Remote Gateway connection
+  - Menu Bar integration
+  - Global Hotkeys
+  - Voice Wake support
+- **iOS Node** (apps/ios) - SwiftUI native app
+  - Live Canvas support
+  - Voice Wake
+  - Talk Mode
+  - Camera integration with AI analysis
+  - Device Pairing (QR Code)
+- **Android Node** (apps/android) - Kotlin/Compose native app
+  - Live Canvas support
+  - Talk Mode
+  - CameraX integration
+  - Screen Recording (MediaProjection)
+  - Device Pairing
+
+### Changed
+- **Async execution is now default** - All modes (CLI/Agent) use background execution
+  - Messages are processed in background, results pushed when complete
+  - Users can continue chatting without waiting
+  - Use `/tasks` to view pending tasks, `/cancel <id>` to cancel
+  - Removed separate `/agent_async` and `/cli_async` commands (now default behavior)
+
+### Documentation
+- Updated FEATURE_ROADMAP.md with v0.4 completion status (92% complete)
+- Updated README.md version to v0.4.0
+- Complete API documentation (docs/API.md)
+- Platform setup guide (docs/PLATFORM_SETUP.md)
+- Deployment guide (docs/DEPLOYMENT.md)
 
 ---
 

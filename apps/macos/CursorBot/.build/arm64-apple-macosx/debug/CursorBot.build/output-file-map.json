@@ -1,0 +1,82 @@
+{
+  "": {
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/master.swiftdeps"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/App/AppState.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AppState.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AppState.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AppState~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AppState.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AppState.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/App/CursorBotApp.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/CursorBotApp.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/CursorBotApp.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/CursorBotApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/CursorBotApp.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/CursorBotApp.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Models/Models.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/Models.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/Models.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/Models~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/Models.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/Models.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Services/AudioService.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AudioService.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AudioService.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AudioService~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AudioService.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/AudioService.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Services/GatewayService.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayService.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayService.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayService~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayService.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayService.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Utils/HotkeyManager.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/HotkeyManager.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/HotkeyManager.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/HotkeyManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/HotkeyManager.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/HotkeyManager.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Views/ContentView.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/ContentView.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/ContentView.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/ContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/ContentView.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/ContentView.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Views/DebugPanelView.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/DebugPanelView.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/DebugPanelView.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/DebugPanelView~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/DebugPanelView.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/DebugPanelView.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Views/GatewayConnectionSheet.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayConnectionSheet.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayConnectionSheet.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayConnectionSheet~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayConnectionSheet.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/GatewayConnectionSheet.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Views/MenuBarView.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/MenuBarView.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/MenuBarView.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/MenuBarView~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/MenuBarView.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/MenuBarView.dia"
+  },
+  "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/Sources/Views/SettingsView.swift": {
+    "dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/SettingsView.d",
+    "object": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/SettingsView.swift.o",
+    "swiftmodule": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/SettingsView~partial.swiftmodule",
+    "swift-dependencies": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/SettingsView.swiftdeps",
+    "diagnostics": "/Users/lizhixu/Project/cursorBot/apps/macos/CursorBot/.build/arm64-apple-macosx/debug/CursorBot.build/SettingsView.dia"
+  }
+}

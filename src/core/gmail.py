@@ -597,21 +597,117 @@ class GmailManager:
             return None
         
         try:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                self.credentials_file, SCOPES
-            )
-            flow.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
+            # Read client credentials
+            with open(self.credentials_file, "r") as f:
+                creds_data = json.load(f)
             
-            auth_url, _ = flow.authorization_url(
-                access_type="offline",
-                include_granted_scopes="true",
-            )
+            # Get client info (handle both 'installed' and 'web' types)
+            client_info = creds_data.get("installed") or creds_data.get("web", {})
+            client_id = client_info.get("client_id", "")
+            
+            if not client_id:
+                logger.error("No client_id found in credentials file")
+                return None
+            
+            # Build OAuth URL manually with all required parameters
+            import urllib.parse
+            
+            redirect_uri = "http://localhost:8080"
+            
+            params = {
+                "client_id": client_id,
+                "redirect_uri": redirect_uri,
+                "response_type": "code",
+                "scope": " ".join(SCOPES),
+                "access_type": "offline",
+                "prompt": "consent",
+            }
+            
+            auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
+            
+            # Store redirect_uri for later use
+            self._redirect_uri = redirect_uri
             
             return auth_url
             
         except Exception as e:
             logger.error(f"Failed to get auth URL: {e}")
             return None
+    
+    async def complete_auth_with_code(self, code: str) -> bool:
+        """
+        Complete OAuth with authorization code.
+        
+        Args:
+            code: Authorization code from OAuth callback
+            
+        Returns:
+            True if successful
+        """
+        if not GOOGLE_API_AVAILABLE:
+            return False
+        
+        if not os.path.exists(self.credentials_file):
+            return False
+        
+        try:
+            # Read client credentials
+            with open(self.credentials_file, "r") as f:
+                creds_data = json.load(f)
+            
+            client_info = creds_data.get("installed") or creds_data.get("web", {})
+            client_id = client_info.get("client_id", "")
+            client_secret = client_info.get("client_secret", "")
+            
+            redirect_uri = getattr(self, "_redirect_uri", "http://localhost:8080")
+            
+            # Exchange code for tokens using httpx
+            import httpx
+            
+            token_url = "https://oauth2.googleapis.com/token"
+            data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri,
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(token_url, data=data)
+                
+            if response.status_code != 200:
+                logger.error(f"Token exchange failed: {response.text}")
+                return False
+            
+            token_data = response.json()
+            
+            # Create credentials object
+            creds = Credentials(
+                token=token_data.get("access_token"),
+                refresh_token=token_data.get("refresh_token"),
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=client_id,
+                client_secret=client_secret,
+                scopes=SCOPES,
+            )
+            
+            # Save credentials
+            self.token_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.token_file, "w") as f:
+                f.write(creds.to_json())
+            
+            self._credentials = creds
+            self._service = build("gmail", "v1", credentials=creds)
+            
+            logger.info("Gmail authentication completed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to complete auth: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
 
 
 # Global instance

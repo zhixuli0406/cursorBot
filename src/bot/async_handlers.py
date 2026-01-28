@@ -30,6 +30,18 @@ from ..utils.logger import logger
 from ..utils.auth import is_authorized
 
 
+def _escape_html(text: str) -> str:
+    """Escape HTML special characters to prevent parsing errors."""
+    if not text:
+        return ""
+    return (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
 # ============================================
 # Async Agent Handler
 # ============================================
@@ -53,15 +65,15 @@ async def agent_async_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     if not context.args:
         await update.message.reply_text(
-            "**Async Agent**\n\n"
-            "Usage: `/agent_async <prompt>`\n\n"
+            "<b>Async Agent</b>\n\n"
+            "Usage: <code>/agent_async &lt;prompt&gt;</code>\n\n"
             "The task runs in background. You'll receive a message when it completes.\n\n"
             "Example:\n"
-            "`/agent_async Help me write a Python function to sort a list`\n\n"
+            "<code>/agent_async Help me write a Python function to sort a list</code>\n\n"
             "Related commands:\n"
-            "- `/tasks` - View your pending tasks\n"
-            "- `/cancel <task_id>` - Cancel a task",
-            parse_mode="Markdown"
+            "- <code>/tasks</code> - View your pending tasks\n"
+            "- <code>/cancel &lt;task_id&gt;</code> - Cancel a task",
+            parse_mode="HTML"
         )
         return
     
@@ -91,13 +103,13 @@ async def agent_async_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     ])
     
     await update.message.reply_text(
-        f"🚀 **Task Submitted**\n\n"
-        f"Task ID: `{task_id}`\n"
+        f"🚀 <b>Task Submitted</b>\n\n"
+        f"Task ID: <code>{_escape_html(task_id)}</code>\n"
         f"Type: Agent\n"
         f"Timeout: {int(timeout/60)} minutes\n\n"
         f"Your task is running in the background.\n"
         f"You'll receive a message when it completes.",
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=keyboard,
     )
 
@@ -125,15 +137,15 @@ async def cli_async_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     
     if not context.args:
         await update.message.reply_text(
-            "**Async CLI**\n\n"
-            "Usage: `/cli_async <prompt>`\n\n"
+            "<b>Async CLI</b>\n\n"
+            "Usage: <code>/cli_async &lt;prompt&gt;</code>\n\n"
             "The task runs in background. You'll receive a message when it completes.\n\n"
             "Example:\n"
-            "`/cli_async Refactor the main function in src/main.py`\n\n"
+            "<code>/cli_async Refactor the main function in src/main.py</code>\n\n"
             "Related commands:\n"
-            "- `/tasks` - View your pending tasks\n"
-            "- `/cancel <task_id>` - Cancel a task",
-            parse_mode="Markdown"
+            "- <code>/tasks</code> - View your pending tasks\n"
+            "- <code>/cancel &lt;task_id&gt;</code> - Cancel a task",
+            parse_mode="HTML"
         )
         return
     
@@ -165,14 +177,14 @@ async def cli_async_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     ])
     
     await update.message.reply_text(
-        f"🚀 **Task Submitted**\n\n"
-        f"Task ID: `{task_id}`\n"
+        f"🚀 <b>Task Submitted</b>\n\n"
+        f"Task ID: <code>{_escape_html(task_id)}</code>\n"
         f"Type: Cursor CLI\n"
-        f"Working Dir: `{os.path.basename(working_dir)}`\n"
+        f"Working Dir: <code>{_escape_html(os.path.basename(working_dir))}</code>\n"
         f"Timeout: {int(timeout/60)} minutes\n\n"
         f"Your task is running in the background.\n"
         f"You'll receive a message when it completes.",
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=keyboard,
     )
 
@@ -198,7 +210,7 @@ async def rag_async_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             "Usage: `/rag_async <question>`\n\n"
             "Example:\n"
             "`/rag_async What is the main purpose of this project?`",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
     
@@ -225,7 +237,7 @@ async def rag_async_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         f"🔍 **RAG Query Submitted**\n\n"
         f"Task ID: `{task_id}`\n\n"
         f"Searching knowledge base in background...",
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=keyboard,
     )
 
@@ -255,7 +267,7 @@ async def tasks_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             "- `/agent_async <prompt>`\n"
             "- `/cli_async <prompt>`\n"
             "- `/rag_async <question>`",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
     
@@ -301,7 +313,7 @@ async def tasks_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     
     await update.message.reply_text(
         "\n".join(lines),
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=keyboard,
     )
 
@@ -322,7 +334,7 @@ async def cancel_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "Usage: `/cancel <task_id>`\n\n"
             "Example: `/cancel abc12345`\n\n"
             "Use `/tasks` to see your task IDs.",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
     
@@ -332,7 +344,7 @@ async def cancel_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     task = manager.get_task(task_id)
     
     if not task:
-        await update.message.reply_text(f"Task `{task_id}` not found.", parse_mode="Markdown")
+        await update.message.reply_text(f"Task `{task_id}` not found.", parse_mode="HTML")
         return
     
     if task.user_id != user_id:
@@ -342,16 +354,16 @@ async def cancel_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not task.is_active:
         await update.message.reply_text(
             f"Task `{task_id}` is already {task.status.value}.",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
     
     success = await manager.cancel_task(task_id)
     
     if success:
-        await update.message.reply_text(f"🚫 Task `{task_id}` cancelled.", parse_mode="Markdown")
+        await update.message.reply_text(f"🚫 Task `{task_id}` cancelled.", parse_mode="HTML")
     else:
-        await update.message.reply_text(f"Failed to cancel task `{task_id}`.", parse_mode="Markdown")
+        await update.message.reply_text(f"Failed to cancel task `{task_id}`.", parse_mode="HTML")
 
 
 async def task_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -368,7 +380,7 @@ async def task_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "**Task Status**\n\n"
             "Usage: `/task_status <task_id>`",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
     
@@ -377,7 +389,7 @@ async def task_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     task = manager.get_task(task_id)
     
     if not task:
-        await update.message.reply_text(f"Task `{task_id}` not found.", parse_mode="Markdown")
+        await update.message.reply_text(f"Task `{task_id}` not found.", parse_mode="HTML")
         return
     
     status_emoji = {
@@ -416,7 +428,7 @@ async def task_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             [InlineKeyboardButton("Cancel Task", callback_data=f"task_cancel:{task.id}")]
         ])
     
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await update.message.reply_text(text, parse_mode="HTML", reply_markup=keyboard)
 
 
 # ============================================
@@ -442,7 +454,7 @@ async def task_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         task = manager.get_task(task_id)
         
         if not task:
-            await query.edit_message_text(f"Task `{task_id}` not found.", parse_mode="Markdown")
+            await query.edit_message_text(f"Task `{task_id}` not found.", parse_mode="HTML")
             return
         
         status_emoji = {
@@ -474,14 +486,14 @@ async def task_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         
         keyboard = InlineKeyboardMarkup(buttons) if buttons else None
         
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await query.edit_message_text(text, parse_mode="HTML", reply_markup=keyboard)
     
     elif data.startswith("task_cancel:"):
         task_id = data.split(":", 1)[1]
         task = manager.get_task(task_id)
         
         if not task:
-            await query.edit_message_text(f"Task `{task_id}` not found.", parse_mode="Markdown")
+            await query.edit_message_text(f"Task `{task_id}` not found.", parse_mode="HTML")
             return
         
         if task.user_id != user_id:
@@ -491,7 +503,7 @@ async def task_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         if not task.is_active:
             await query.edit_message_text(
                 f"Task `{task_id}` is already {task.status.value}.",
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
             return
         
@@ -500,12 +512,12 @@ async def task_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         if success:
             await query.edit_message_text(
                 f"🚫 Task `{task_id}` cancelled.",
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
         else:
             await query.edit_message_text(
                 f"Failed to cancel task `{task_id}`.",
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
 
 
@@ -542,7 +554,7 @@ async def task_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     for task_type, count in stats['by_type'].items():
         text += f"  - {task_type}: {count}\n"
     
-    await update.message.reply_text(text, parse_mode="Markdown")
+    await update.message.reply_text(text, parse_mode="HTML")
 
 
 # ============================================

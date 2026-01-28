@@ -25,6 +25,18 @@ from ..utils.auth import authorized_only
 from ..utils.logger import logger
 
 
+def _escape_html(text: str) -> str:
+    """Escape HTML special characters to prevent parsing errors."""
+    if not text:
+        return ""
+    return (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
 # ============================================
 # Memory Commands
 # ============================================
@@ -1035,11 +1047,11 @@ async def agent_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         # Format response based on AgentContext result
         if result.error:
             await status_msg.edit_text(
-                f"❌ <b>Agent 執行失敗</b>\n\n{result.error}",
+                f"❌ <b>Agent 執行失敗</b>\n\n{_escape_html(result.error)}",
                 parse_mode="HTML",
             )
         elif result.final_response:
-            response = result.final_response[:4000]
+            response = _escape_html(result.final_response[:4000])
             await status_msg.edit_text(
                 f"✅ <b>Agent 完成</b>\n\n"
                 f"執行了 {result.step_count} 個步驟\n\n"
@@ -1058,7 +1070,7 @@ async def agent_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         import traceback
         logger.error(traceback.format_exc())
         await status_msg.edit_text(
-            f"❌ Agent 執行錯誤: {str(e)[:200]}",
+            f"❌ Agent 執行錯誤: {_escape_html(str(e)[:200])}",
             parse_mode="HTML",
         )
 
@@ -4070,6 +4082,346 @@ async def chatinfo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         )
 
 
+# ============================================
+# v0.4 Feature Commands
+# ============================================
+
+
+@authorized_only
+async def verbose_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /verbose command - Detailed output control.
+    
+    Usage:
+        /verbose - Show status
+        /verbose on - Enable verbose mode
+        /verbose off - Disable verbose mode
+        /verbose level <0-3> - Set verbosity level
+        /verbose tokens on|off - Toggle token display
+    """
+    from ..core.verbose import get_verbose_manager, VerbosityLevel
+    
+    user_id = str(update.effective_user.id)
+    args = context.args or []
+    manager = get_verbose_manager()
+    
+    if not args:
+        # Show status
+        config = manager.get_config(user_id)
+        status_icon = "✅" if config.enabled else "⬜"
+        level_names = ["OFF", "LOW", "MEDIUM", "HIGH"]
+        level_name = level_names[config.level.value]
+        
+        text = (
+            "🔍 <b>Verbose Mode</b>\n\n"
+            f"狀態: {status_icon} {'啟用' if config.enabled else '停用'}\n"
+            f"等級: <b>{level_name}</b> ({config.level.value}/3)\n\n"
+            "<b>選項:</b>\n"
+            f"• 顯示 Token: {'✓' if config.show_tokens else '✗'}\n"
+            f"• 顯示時間: {'✓' if config.show_timing else '✗'}\n"
+            f"• 顯示模型: {'✓' if config.show_model_info else '✗'}\n\n"
+            "<b>指令:</b>\n"
+            "<code>/verbose on</code> - 啟用\n"
+            "<code>/verbose off</code> - 停用\n"
+            "<code>/verbose level &lt;0-3&gt;</code> - 設定等級\n"
+            "<code>/verbose tokens on|off</code> - 切換 Token 顯示"
+        )
+        await update.message.reply_text(text, parse_mode="HTML")
+        return
+    
+    action = args[0].lower()
+    
+    if action == "on":
+        manager.set_enabled(user_id, True)
+        await update.message.reply_text("✅ Verbose 模式已<b>啟用</b>", parse_mode="HTML")
+    
+    elif action == "off":
+        manager.set_enabled(user_id, False)
+        await update.message.reply_text("⬜ Verbose 模式已<b>停用</b>", parse_mode="HTML")
+    
+    elif action == "level" and len(args) >= 2:
+        try:
+            level = int(args[1])
+            config = manager.set_level(user_id, level)
+            level_names = ["OFF", "LOW", "MEDIUM", "HIGH"]
+            await update.message.reply_text(
+                f"✅ Verbose 等級設為 <b>{level_names[config.level.value]}</b> ({level})",
+                parse_mode="HTML"
+            )
+        except (ValueError, IndexError):
+            await update.message.reply_text("❌ 無效等級。請使用 0-3")
+    
+    elif action == "tokens" and len(args) >= 2:
+        show = args[1].lower() in ("on", "true", "yes", "1")
+        manager.set_option(user_id, "show_tokens", show)
+        await update.message.reply_text(
+            f"✅ Token 顯示已{'啟用' if show else '停用'}",
+            parse_mode="HTML"
+        )
+    
+    else:
+        await update.message.reply_text(
+            "用法:\n"
+            "<code>/verbose on|off</code>\n"
+            "<code>/verbose level &lt;0-3&gt;</code>\n"
+            "<code>/verbose tokens on|off</code>",
+            parse_mode="HTML"
+        )
+
+
+@authorized_only
+async def think_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /think command - AI thinking mode control.
+    
+    Usage:
+        /think - Show status
+        /think off - Disable thinking
+        /think low|medium|high|xhigh - Set thinking level
+        /think show on|off - Toggle thinking display
+    """
+    from ..core.thinking import get_thinking_manager, ThinkingLevel, LEVEL_NAMES
+    
+    user_id = str(update.effective_user.id)
+    args = context.args or []
+    manager = get_thinking_manager()
+    
+    if not args:
+        # Show status
+        config = manager.get_config(user_id)
+        status_icon = "✅" if config.is_enabled else "⬜"
+        
+        text = (
+            "🧠 <b>Thinking Mode</b>\n\n"
+            f"狀態: {status_icon} {'啟用' if config.is_enabled else '停用'}\n"
+            f"等級: <b>{config.level_name}</b> ({config.level.value}/4)\n"
+            f"Token 預算: {config.budget:,}\n\n"
+            "<b>選項:</b>\n"
+            f"• 顯示思考過程: {'✓' if config.show_thinking else '✗'}\n"
+            f"• 自動調整: {'✓' if config.auto_adjust else '✗'}\n\n"
+            "<b>等級說明:</b>\n"
+            "• off - 不使用深度思考\n"
+            "• low - 輕度推理 (~1K tokens)\n"
+            "• medium - 標準推理 (~5K tokens)\n"
+            "• high - 深度推理 (~10K tokens)\n"
+            "• xhigh - 最大推理 (~25K tokens)\n\n"
+            "<b>指令:</b>\n"
+            "<code>/think &lt;level&gt;</code> - 設定等級\n"
+            "<code>/think show on|off</code> - 顯示思考過程"
+        )
+        await update.message.reply_text(text, parse_mode="HTML")
+        return
+    
+    action = args[0].lower()
+    
+    # Check if it's a level name
+    valid_levels = ["off", "low", "medium", "high", "xhigh"]
+    if action in valid_levels:
+        success, config = manager.set_level_by_name(user_id, action)
+        if success:
+            await update.message.reply_text(
+                f"✅ Thinking 等級設為 <b>{config.level_name}</b> (預算: {config.budget:,} tokens)",
+                parse_mode="HTML"
+            )
+        else:
+            await update.message.reply_text("❌ 設定失敗")
+    
+    elif action == "show" and len(args) >= 2:
+        show = args[1].lower() in ("on", "true", "yes", "1")
+        manager.set_show_thinking(user_id, show)
+        await update.message.reply_text(
+            f"✅ 思考過程顯示已{'啟用' if show else '停用'}",
+            parse_mode="HTML"
+        )
+    
+    elif action == "auto" and len(args) >= 2:
+        auto = args[1].lower() in ("on", "true", "yes", "1")
+        config = manager.get_config(user_id)
+        config.auto_adjust = auto
+        await update.message.reply_text(
+            f"✅ 自動調整已{'啟用' if auto else '停用'}",
+            parse_mode="HTML"
+        )
+    
+    else:
+        await update.message.reply_text(
+            "用法:\n"
+            "<code>/think off|low|medium|high|xhigh</code>\n"
+            "<code>/think show on|off</code>\n"
+            "<code>/think auto on|off</code>",
+            parse_mode="HTML"
+        )
+
+
+@authorized_only
+async def alias_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /alias command - Command alias management.
+    
+    Usage:
+        /alias - List aliases
+        /alias add <name> <command> - Create alias
+        /alias remove <name> - Remove alias
+        /alias clear - Clear all aliases
+    """
+    from ..core.command_alias import get_alias_manager
+    
+    user_id = str(update.effective_user.id)
+    args = context.args or []
+    manager = get_alias_manager()
+    
+    if not args:
+        # List aliases
+        all_aliases = manager.get_all_aliases(user_id)
+        user_aliases = [a for a in all_aliases if a["type"] == "user"]
+        system_aliases = [a for a in all_aliases if a["type"] == "system"]
+        
+        text = "📎 <b>指令別名</b>\n\n"
+        
+        # System aliases
+        if system_aliases:
+            text += "<b>系統別名:</b>\n"
+            for a in system_aliases[:8]:
+                text += f"• <code>/{a['name']}</code> → /{a['command']}\n"
+            if len(system_aliases) > 8:
+                text += f"  ... 還有 {len(system_aliases) - 8} 個\n"
+            text += "\n"
+        
+        # User aliases
+        if user_aliases:
+            text += f"<b>自訂別名 ({len(user_aliases)}/50):</b>\n"
+            for a in user_aliases[:10]:
+                text += f"• <code>/{a['name']}</code> → /{a['command']}\n"
+        else:
+            text += "尚未定義自訂別名。\n"
+        
+        text += (
+            "\n<b>指令:</b>\n"
+            "<code>/alias add &lt;名稱&gt; &lt;指令&gt;</code>\n"
+            "<code>/alias remove &lt;名稱&gt;</code>\n"
+            "<code>/alias clear</code>"
+        )
+        await update.message.reply_text(text, parse_mode="HTML")
+        return
+    
+    action = args[0].lower()
+    
+    if action == "add" and len(args) >= 3:
+        name = args[1]
+        command = " ".join(args[2:])
+        success, message = manager.add_alias(user_id, name, command)
+        
+        if success:
+            await update.message.reply_text(f"✅ {_escape_html(message)}", parse_mode="HTML")
+        else:
+            await update.message.reply_text(f"❌ {_escape_html(message)}", parse_mode="HTML")
+    
+    elif action == "remove" and len(args) >= 2:
+        name = args[1]
+        success, message = manager.remove_alias(user_id, name)
+        
+        if success:
+            await update.message.reply_text(f"✅ {_escape_html(message)}", parse_mode="HTML")
+        else:
+            await update.message.reply_text(f"❌ {_escape_html(message)}", parse_mode="HTML")
+    
+    elif action == "clear":
+        count = manager.clear_aliases(user_id)
+        await update.message.reply_text(f"✅ 已清除 {count} 個別名")
+    
+    else:
+        await update.message.reply_text(
+            "用法:\n"
+            "<code>/alias add &lt;名稱&gt; &lt;指令&gt;</code>\n"
+            "<code>/alias remove &lt;名稱&gt;</code>\n"
+            "<code>/alias clear</code>\n\n"
+            "範例:\n"
+            "<code>/alias add gpt model set openai gpt-4o</code>",
+            parse_mode="HTML"
+        )
+
+
+@authorized_only
+async def notify_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle /notify command - Notification settings.
+    
+    Usage:
+        /notify - Show status
+        /notify on|off - Enable/disable notifications
+        /notify sound on|off - Toggle sound
+        /notify quiet <start> <end> - Set quiet hours
+    """
+    from ..core.notifications import get_notification_manager
+    
+    user_id = str(update.effective_user.id)
+    args = context.args or []
+    manager = get_notification_manager()
+    
+    if not args:
+        # Show status
+        settings = manager.get_settings(user_id)
+        status_icon = "✅" if settings.enabled else "⬜"
+        
+        text = (
+            "🔔 <b>通知設定</b>\n\n"
+            f"狀態: {status_icon} {'啟用' if settings.enabled else '停用'}\n"
+            f"聲音: {'✓' if settings.sound_enabled else '✗'}\n"
+            f"桌面通知: {'✓' if settings.desktop_enabled else '✗'}\n"
+        )
+        
+        if settings.quiet_hours_start is not None:
+            text += f"勿擾時段: {settings.quiet_hours_start}:00 - {settings.quiet_hours_end}:00\n"
+        
+        text += (
+            "\n<b>指令:</b>\n"
+            "<code>/notify on|off</code> - 啟用/停用\n"
+            "<code>/notify sound on|off</code> - 切換聲音\n"
+            "<code>/notify quiet &lt;開始&gt; &lt;結束&gt;</code> - 設定勿擾時段"
+        )
+        await update.message.reply_text(text, parse_mode="HTML")
+        return
+    
+    action = args[0].lower()
+    
+    if action == "on":
+        manager.set_enabled(user_id, True)
+        await update.message.reply_text("✅ 通知已<b>啟用</b>", parse_mode="HTML")
+    
+    elif action == "off":
+        manager.set_enabled(user_id, False)
+        await update.message.reply_text("⬜ 通知已<b>停用</b>", parse_mode="HTML")
+    
+    elif action == "sound" and len(args) >= 2:
+        enabled = args[1].lower() in ("on", "true", "yes", "1")
+        manager.set_sound_enabled(user_id, enabled)
+        await update.message.reply_text(
+            f"✅ 通知聲音已{'啟用' if enabled else '停用'}",
+            parse_mode="HTML"
+        )
+    
+    elif action == "quiet" and len(args) >= 3:
+        try:
+            start = int(args[1])
+            end = int(args[2])
+            manager.set_quiet_hours(user_id, start, end)
+            await update.message.reply_text(
+                f"✅ 勿擾時段設為 {start}:00 - {end}:00",
+                parse_mode="HTML"
+            )
+        except ValueError:
+            await update.message.reply_text("❌ 請輸入有效的小時數 (0-23)")
+    
+    else:
+        await update.message.reply_text(
+            "用法:\n"
+            "<code>/notify on|off</code>\n"
+            "<code>/notify sound on|off</code>\n"
+            "<code>/notify quiet &lt;開始小時&gt; &lt;結束小時&gt;</code>",
+            parse_mode="HTML"
+        )
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -4171,6 +4523,15 @@ def setup_core_handlers(app) -> None:
     app.add_handler(CommandHandler("menubar", menubar_handler))
     app.add_handler(CommandHandler("control", control_handler))
     app.add_handler(CommandHandler("ctrl", control_handler))  # Alias
+    
+    # v0.4 Feature commands
+    app.add_handler(CommandHandler("verbose", verbose_handler))
+    app.add_handler(CommandHandler("v", verbose_handler))  # Alias
+    app.add_handler(CommandHandler("think", think_handler))
+    app.add_handler(CommandHandler("th", think_handler))  # Alias
+    app.add_handler(CommandHandler("alias", alias_handler))
+    app.add_handler(CommandHandler("notify", notify_handler))
+    app.add_handler(CommandHandler("notif", notify_handler))  # Alias
 
     logger.info("Core handlers configured")
 
@@ -4208,5 +4569,10 @@ __all__ = [
     "menubar_handler",
     "control_handler",
     "mode_handler",
+    # v0.4 handlers
+    "verbose_handler",
+    "think_handler",
+    "alias_handler",
+    "notify_handler",
     "setup_core_handlers",
 ]

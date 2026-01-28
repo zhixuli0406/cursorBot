@@ -255,6 +255,20 @@ class Settings(BaseSettings):
         description="Default model for GitHub Copilot (gpt-4o, claude-3.5-sonnet, etc.)",
     )
     
+    # Minimax AI Settings (China)
+    minimax_api_key: str = Field(
+        default="",
+        description="Minimax AI API key",
+    )
+    minimax_model: str = Field(
+        default="abab6.5s-chat",
+        description="Minimax model: abab6.5s-chat, abab6.5-chat, abab5.5s-chat",
+    )
+    minimax_group_id: str = Field(
+        default="",
+        description="Minimax Group ID (optional)",
+    )
+    
     # AI General Settings
     custom_prompt: str = Field(
         default="",

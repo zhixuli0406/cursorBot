@@ -72,6 +72,14 @@ async def calendar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     elif args[0] == "auth":
         # Start authentication
         await _calendar_auth(update, calendar)
+    elif args[0] == "code" and len(args) >= 2:
+        # Complete authentication with code
+        code = args[1]
+        success = await calendar.complete_auth_with_code(code)
+        if success:
+            await update.message.reply_text("✅ Google Calendar authentication successful!")
+        else:
+            await update.message.reply_text("❌ Authentication failed. Please try again.")
     elif args[0] == "add" and len(args) >= 3:
         # Add event
         title = args[1]
@@ -82,16 +90,17 @@ async def calendar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await _list_calendars(update, calendar)
     else:
         await update.message.reply_text(
-            "**Google Calendar**\n\n"
+            "<b>Google Calendar</b>\n\n"
             "Usage:\n"
-            "`/calendar` - Show today's events\n"
-            "`/calendar week` - Show this week's events\n"
-            "`/calendar list` - List calendars\n"
-            "`/calendar add <title> <time>` - Add event\n"
-            "`/calendar auth` - Authenticate\n\n"
+            "<code>/calendar</code> - Show today's events\n"
+            "<code>/calendar week</code> - Show this week's events\n"
+            "<code>/calendar list</code> - List calendars\n"
+            "<code>/calendar add &lt;title&gt; &lt;time&gt;</code> - Add event\n"
+            "<code>/calendar auth</code> - Authenticate\n"
+            "<code>/calendar code &lt;code&gt;</code> - Complete auth\n\n"
             "Example:\n"
-            "`/calendar add Meeting 2026-01-28T14:00`",
-            parse_mode="Markdown"
+            "<code>/calendar add Meeting 2026-01-28T14:00</code>",
+            parse_mode="HTML"
         )
 
 
@@ -104,16 +113,21 @@ async def _calendar_auth(update: Update, calendar) -> None:
     auth_url = calendar.get_auth_url()
     if auth_url:
         await update.message.reply_text(
-            "**Google Calendar Authentication**\n\n"
-            "Please visit the following URL to authenticate:\n\n"
-            f"{auth_url}\n\n"
-            "After authentication, run `/calendar` to verify.",
-            parse_mode="Markdown"
+            "<b>Google Calendar Authentication</b>\n\n"
+            "1. Click the link below to authenticate\n"
+            "2. After approval, you'll be redirected to localhost\n"
+            "3. Copy the <code>code</code> parameter from the URL\n"
+            "4. Run <code>/calendar code YOUR_CODE</code>\n\n"
+            f"<a href=\"{auth_url}\">Click here to authenticate</a>\n\n"
+            "<i>Note: The redirect will fail (that's expected). "
+            "Just copy the code from the URL.</i>",
+            parse_mode="HTML",
+            disable_web_page_preview=True,
         )
     else:
         await update.message.reply_text(
             "Cannot generate auth URL.\n\n"
-            "Please ensure `data/google/credentials.json` exists.\n"
+            "Please ensure data/google/credentials.json exists.\n"
             "Download from Google Cloud Console."
         )
 
@@ -284,6 +298,14 @@ async def gmail_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     elif args[0] == "auth":
         # Start authentication
         await _gmail_auth(update, gmail)
+    elif args[0] == "code" and len(args) >= 2:
+        # Complete authentication with code
+        code = args[1]
+        success = await gmail.complete_auth_with_code(code)
+        if success:
+            await update.message.reply_text("✅ Gmail authentication successful!")
+        else:
+            await update.message.reply_text("❌ Authentication failed. Please try again.")
     elif args[0] == "search" and len(args) >= 2:
         # Search emails
         query = " ".join(args[1:])
@@ -304,18 +326,19 @@ async def gmail_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await _list_labels(update, gmail)
     else:
         await update.message.reply_text(
-            "**Gmail**\n\n"
+            "<b>Gmail</b>\n\n"
             "Usage:\n"
-            "`/gmail` - Show recent emails\n"
-            "`/gmail unread` - Show unread count\n"
-            "`/gmail search <query>` - Search emails\n"
-            "`/gmail send <to> <subject> | <body>` - Send email\n"
-            "`/gmail labels` - List labels\n"
-            "`/gmail auth` - Authenticate\n\n"
+            "<code>/gmail</code> - Show recent emails\n"
+            "<code>/gmail unread</code> - Show unread count\n"
+            "<code>/gmail search &lt;query&gt;</code> - Search emails\n"
+            "<code>/gmail send &lt;to&gt; &lt;subject&gt; | &lt;body&gt;</code> - Send email\n"
+            "<code>/gmail labels</code> - List labels\n"
+            "<code>/gmail auth</code> - Authenticate\n"
+            "<code>/gmail code &lt;code&gt;</code> - Complete auth\n\n"
             "Example:\n"
-            "`/gmail search from:example@gmail.com`\n"
-            "`/gmail send user@example.com Hello | This is the body.`",
-            parse_mode="Markdown"
+            "<code>/gmail search from:example@gmail.com</code>\n"
+            "<code>/gmail send user@example.com Hello | This is the body.</code>",
+            parse_mode="HTML"
         )
 
 
@@ -328,16 +351,21 @@ async def _gmail_auth(update: Update, gmail) -> None:
     auth_url = gmail.get_auth_url()
     if auth_url:
         await update.message.reply_text(
-            "**Gmail Authentication**\n\n"
-            "Please visit the following URL to authenticate:\n\n"
-            f"{auth_url}\n\n"
-            "After authentication, run `/gmail` to verify.",
-            parse_mode="Markdown"
+            "<b>Gmail Authentication</b>\n\n"
+            "1. Click the link below to authenticate\n"
+            "2. After approval, you'll be redirected to localhost\n"
+            "3. Copy the <code>code</code> parameter from the URL\n"
+            "4. Run <code>/gmail code YOUR_CODE</code>\n\n"
+            f"<a href=\"{auth_url}\">Click here to authenticate</a>\n\n"
+            "<i>Note: The redirect will fail (that's expected). "
+            "Just copy the code from the URL.</i>",
+            parse_mode="HTML",
+            disable_web_page_preview=True,
         )
     else:
         await update.message.reply_text(
             "Cannot generate auth URL.\n\n"
-            "Please ensure `data/google/credentials.json` exists.\n"
+            "Please ensure data/google/credentials.json exists.\n"
             "Download from Google Cloud Console."
         )
 

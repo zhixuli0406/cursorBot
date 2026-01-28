@@ -1349,7 +1349,9 @@ class SkillManager:
             return True
         except Exception as e:
             logger.error(f"Skill {skill.info.name} error: {e}")
-            await update.message.reply_text(f"❌ 技能執行錯誤: {str(e)[:100]}")
+            # Escape HTML special characters to prevent parsing errors
+            safe_error = str(e)[:100].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            await update.message.reply_text(f"❌ 技能執行錯誤: {safe_error}")
             return True
 
     def list_skills(self) -> list[SkillInfo]:
