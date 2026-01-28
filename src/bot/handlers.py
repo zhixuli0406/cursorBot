@@ -710,7 +710,7 @@ async def _handle_media_task_input(
                     chat_id=str(chat_id),
                     platform="telegram",
                     prompt=full_prompt,
-                    timeout=900.0,  # 15 minutes for CLI
+                    timeout=None,  # No timeout, use CLI's own setting
                     metadata={
                         "username": username,
                         "source": "media_task",
@@ -931,7 +931,7 @@ async def _handle_async_cli_mode(
             platform="telegram",
             prompt=message_text,
             working_directory=working_dir,
-            timeout=300.0,
+            timeout=None,  # No timeout, use CLI's own setting
             metadata={
                 "username": username,
                 "source": "message",

@@ -471,7 +471,7 @@ class AsyncTaskManager:
         prompt: str,
         working_directory: str = None,
         model: str = None,
-        timeout: float = 900.0,  # 15 minutes default for CLI
+        timeout: float = None,  # None = no timeout (use CLI's own timeout setting)
         on_complete: Callable = None,
         on_progress: Callable = None,
         on_error: Callable = None,
@@ -663,7 +663,7 @@ class AsyncTaskManager:
                     prompt=prompt,
                     working_directory=working_dir,
                     model=model,
-                    timeout=int(task.timeout),  # Pass timeout to CLI
+                    timeout=int(task.timeout) if task.timeout else None,  # Pass timeout to CLI
                     on_output=on_output,
                     user_id=task.user_id,
                 )

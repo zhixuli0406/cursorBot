@@ -152,20 +152,17 @@ async def cli_async_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     prompt = " ".join(context.args)
     working_dir = os.getenv("CURSOR_WORKSPACE_PATH", os.getcwd())
     
-    # Default timeout: 15 minutes for CLI tasks
-    timeout = 900.0
-    
     # Get task manager
     manager = get_task_manager()
     
-    # Submit task
+    # Submit task (no timeout, use CLI's own setting)
     task_id = await manager.submit_cli_task(
         user_id=user_id,
         chat_id=chat_id,
         platform="telegram",
         prompt=prompt,
         working_directory=working_dir,
-        timeout=timeout,
+        timeout=None,
     )
     
     # Send confirmation

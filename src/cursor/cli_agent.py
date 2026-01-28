@@ -41,8 +41,8 @@ class CLIConfig:
     # Default model to use
     model: str = ""  # Empty = use default
     
-    # Timeout for CLI operations (seconds)
-    timeout: int = 300
+    # Timeout for CLI operations (seconds), None = no timeout
+    timeout: int | None = None
     
     # Auto-approve file changes (use with caution)
     auto_approve: bool = False
@@ -485,13 +485,16 @@ class CursorCLIAgent:
                         callback(text)
             
             # Read stdout and stderr concurrently
-            await asyncio.wait_for(
-                asyncio.gather(
-                    read_stream(proc.stdout, output_lines, on_output),
-                    read_stream(proc.stderr, error_lines),
-                ),
-                timeout=timeout,
+            gather_task = asyncio.gather(
+                read_stream(proc.stdout, output_lines, on_output),
+                read_stream(proc.stderr, error_lines),
             )
+            
+            if timeout:
+                await asyncio.wait_for(gather_task, timeout=timeout)
+            else:
+                # No timeout - wait indefinitely
+                await gather_task
             
             await proc.wait()
             
@@ -525,7 +528,7 @@ class CursorCLIAgent:
                 success=False,
                 error=f"CLI operation timed out after {timeout}s",
                 exit_code=-1,
-                duration=timeout,
+                duration=timeout or 0,
             )
         except Exception as e:
             logger.error(f"CLI error: {e}")
@@ -626,10 +629,14 @@ class CursorCLIAgent:
                 env=process_env,  # API key passed via env (not command line)
             )
             
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
-                timeout=timeout,
-            )
+            if timeout:
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(),
+                    timeout=timeout,
+                )
+            else:
+                # No timeout - wait indefinitely
+                stdout, stderr = await proc.communicate()
             
             duration = (datetime.now() - start_time).total_seconds()
             output = stdout.decode('utf-8', errors='replace')
@@ -649,7 +656,7 @@ class CursorCLIAgent:
                 success=False,
                 error=f"CLI operation timed out after {timeout}s",
                 exit_code=-1,
-                duration=timeout,
+                duration=timeout or 0,
             )
         except Exception as e:
             logger.error(f"CLI ask error: {e}")
@@ -729,10 +736,20 @@ def get_cli_agent() -> CursorCLIAgent:
         if not working_dir:
             working_dir = settings.effective_workspace_path
         
+        # Parse timeout: 0, "none", or empty = no timeout
+        timeout_str = os.getenv("CURSOR_CLI_TIMEOUT", "").strip().lower()
+        if timeout_str in ("", "0", "none", "null", "false", "disabled"):
+            cli_timeout = None
+        else:
+            try:
+                cli_timeout = int(timeout_str)
+            except ValueError:
+                cli_timeout = None
+        
         config = CLIConfig(
             working_directory=working_dir,
             model=os.getenv("CURSOR_CLI_MODEL", ""),
-            timeout=int(os.getenv("CURSOR_CLI_TIMEOUT", "300")),
+            timeout=cli_timeout,
         )
         _cli_agent = CursorCLIAgent(config)
         logger.info(f"CLI Agent initialized with working directory: {working_dir}")
