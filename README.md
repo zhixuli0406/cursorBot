@@ -178,6 +178,87 @@
 - **WebSocket Gateway** - 透過 `/ws/node` 端點即時連線
 - **跨平台同步** - Canvas、訊息、設定多裝置同步
 
+### v1.1 語音助手（Voice Assistant）
+
+CursorBot v1.1 新增了類似 Siri 的智慧語音助手功能：
+
+#### 核心功能
+- **多喚醒詞支援** - 自訂喚醒詞（「嘿 Cursor」「小助手」「ok cursor」）
+- **離線語音辨識** - 使用 Vosk/Whisper 本地辨識，無需網路
+- **自然語音合成** - 支援 Edge TTS、ElevenLabs、OpenAI TTS
+- **環境噪音過濾** - WebRTC VAD 智慧過濾背景噪音
+- **喚醒音效回饋** - 喚醒成功/失敗的音效提示
+
+#### 意圖識別與指令
+- **系統控制** - 「調高音量」「截圖」「鎖定螢幕」
+- **應用程式** - 「打開 Cursor」「關閉 Chrome」
+- **程式碼操作** - 「Git commit」「執行測試」「建置專案」
+- **網頁搜尋** - 「搜尋天氣」「打開 GitHub」
+- **提醒功能** - 「提醒我10分鐘後喝水」
+- **檔案操作** - 「新建檔案」「刪除這個」「重新命名」
+- **剪貼簿** - 「複製這個」「貼上」「剪貼簿歷史」
+- **即時翻譯** - 「翻譯成英文」「這個怎麼說」
+- **天氣查詢** - 「今天天氣如何」「明天需要帶傘嗎」
+- **日曆整合** - 「今天有什麼會議」「明天的行程」
+
+#### 情境感知
+- **時間感知** - 根據時段自動調整問候語和建議
+- **位置感知** - 識別家/辦公室環境
+- **應用感知** - 根據正在使用的應用調整回應
+- **習慣學習** - 學習用戶習慣並提供個人化建議
+
+#### 個人化學習
+- **使用模式分析** - 自動學習常用指令
+- **快捷指令** - 自訂語音快捷方式
+- **回應風格** - 友善/專業/輕鬆風格切換
+- **偏好記憶** - 記住用戶喜好設定
+
+#### 進階功能
+- **聲紋識別** - 只回應特定用戶的語音
+- **情緒語調** - 根據內容自動調整語調（開心、嚴肅、疑問）
+- **語音中斷** - 說話時可被打斷，立即回應新指令
+- **會議助手** - 會議錄音、即時轉錄、摘要生成、行動項目提取
+- **語音導航** - 「跳到第 50 行」「找函數 main」IDE 語音控制
+- **智慧家居** - HomeKit/Google Home/小米 IoT 語音控制
+- **離線 TTS** - 使用 Piper/eSpeak 本地語音合成
+- **多語言回應** - 自動偵測語言並切換回應語言
+
+#### 快速開始語音助手
+
+```bash
+# 安裝依賴
+pip install vosk edge-tts numpy
+
+# 下載 Vosk 模型（中文）
+# https://alphacephei.com/vosk/models
+# 解壓至 models/vosk-model-small-cn
+
+# 執行語音助手示範
+python examples/voice_assistant_demo.py
+
+# 純文字模式測試（無需麥克風）
+python examples/voice_assistant_demo.py --text
+```
+
+#### 環境變數設定（.env）
+```env
+# 喚醒設定
+VOICE_WAKE_ENABLED=true
+VOICE_WAKE_WORDS=hey cursor,ok cursor,小助手
+
+# 語音辨識
+VOICE_STT_ENGINE=whisper_local
+VOICE_VOSK_MODEL_PATH=models/vosk-model-small-cn
+
+# 語音合成
+VOICE_TTS_ENGINE=edge
+VOICE_TTS_VOICE=zh-TW-HsiaoChenNeural
+
+# 助手設定
+VOICE_ASSISTANT_NAME=小助手
+VOICE_RESPONSE_STYLE=friendly
+```
+
 ### v0.4 快速指令參考
 
 | 功能 | 指令 | 說明 |
@@ -374,7 +455,7 @@ CURSOR_CLI_TIMEOUT=300
 | Google Gemini | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini 2.0, 1.5 Pro 等 |
 | Anthropic | `ANTHROPIC_API_KEY` | Claude 3.5 Sonnet, Opus 等 |
 | OpenRouter | `OPENROUTER_API_KEY` | 代理多種模型（推薦） |
-| GitHub Copilot | `GITHUB_TOKEN` + `COPILOT_ENABLED=true` | GitHub Models (GPT/Claude/Llama) |
+| GitHub Copilot | `COPILOT_TOKEN` 或 `GITHUB_TOKEN` + `COPILOT_ENABLED=true` | 原生 Copilot API (需訂閱) |
 | Ollama | `OLLAMA_ENABLED=true` | 本地模型（Llama, Mistral 等） |
 | Minimax | `MINIMAX_API_KEY` | 中國市場 (abab6.5s-chat 等) |
 | 自訂端點 | `CUSTOM_API_BASE` | 相容 OpenAI API 的端點 |
@@ -483,9 +564,26 @@ ollama serve
 | `gemma3` | Google Gemma 3 |
 | `phi-4` | Microsoft Phi-4 |
 
-**方案六：GitHub Copilot / GitHub Models**
+**方案六：GitHub Copilot（原生 API）**
 
-使用 GitHub Personal Access Token 存取 GitHub Models API，一個 token 即可使用多種頂級模型。
+使用 GitHub Copilot 訂閱，透過原生 Copilot API 進行對話。
+
+**方法一：使用 Copilot Token（推薦）**
+
+如果你已經有 VS Code Copilot 擴充套件，可以直接取得 token：
+
+```env
+COPILOT_TOKEN=ghu_xxxxxxxxxxxx
+COPILOT_ENABLED=true
+COPILOT_MODEL=gpt-4o
+```
+
+取得 Copilot Token 的方式：
+1. 在 VS Code 中開啟開發者工具（Help > Toggle Developer Tools）
+2. 在 Console 中執行：`await require('vscode').authentication.getSession('github', ['copilot'])`
+3. 複製回傳的 `accessToken`
+
+**方法二：使用 GitHub Token**
 
 ```env
 GITHUB_TOKEN=ghp_xxxxxxxxxxxx
@@ -494,30 +592,28 @@ COPILOT_MODEL=gpt-4o
 ```
 
 **設定步驟：**
-1. 前往 [github.com/settings/tokens](https://github.com/settings/tokens)
-2. 建立 **Personal Access Token (classic)**
-3. 勾選以下權限：
+1. 確認你有有效的 **GitHub Copilot 訂閱**（Individual/Business/Enterprise）
+2. 前往 [github.com/settings/tokens](https://github.com/settings/tokens)
+3. 建立 **Personal Access Token (classic)**
+4. 勾選以下權限：
    - `read:user` - 讀取使用者資料
    - `user:email` - 讀取 email
-   - `models` - **必要！** GitHub Models API 存取
-4. 啟用 GitHub Models：[github.com/marketplace/models](https://github.com/marketplace/models)
+   - `copilot` - Copilot API 存取（如果可見）
 
-> ⚠️ 如果出現 401 錯誤，請確認 Token 有 `models` 權限
-> ⚠️ GPT-5 系列模型目前可能在預覽階段，建議使用 `gpt-4o` 作為穩定選擇
+> ⚠️ 必須要有有效的 GitHub Copilot 訂閱才能使用
+> ⚠️ 如果出現 401/403 錯誤，請確認你的 Copilot 訂閱狀態
 
-可用模型（GitHub Models API，使用簡單模型名稱）：
+可用模型：
 | 模型 | 說明 |
 |------|------|
-| `gpt-4o` | OpenAI GPT-4o（推薦，穩定可用） |
+| `gpt-4o` | OpenAI GPT-4o（推薦） |
 | `gpt-4o-mini` | OpenAI GPT-4o Mini |
-| `gpt-4.1` | OpenAI GPT-4.1 |
-| `gpt-4.1-mini` | OpenAI GPT-4.1 Mini |
-| `gpt-4.1-nano` | OpenAI GPT-4.1 Nano（輕量） |
-| `o1` | OpenAI o1 推理模型 |
+| `gpt-4-turbo` | OpenAI GPT-4 Turbo |
+| `gpt-4` | OpenAI GPT-4 |
+| `gpt-3.5-turbo` | OpenAI GPT-3.5 Turbo |
+| `claude-3.5-sonnet` | Anthropic Claude 3.5 Sonnet |
+| `o1-preview` | OpenAI o1 推理模型 |
 | `o1-mini` | OpenAI o1 Mini |
-| `o1-preview` | OpenAI o1 Preview |
-| `deepseek-v3-0324` | DeepSeek V3 |
-| `meta/llama-4-scout-17b-16e-instruct` | Meta Llama 4 Scout 17B |
 
 **方案七：ElevenLabs TTS（可選）**
 

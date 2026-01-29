@@ -47,3 +47,11 @@ rich>=13.0.0
 
 # v0.4 Features
 aiohttp>=3.9.0  # For MCP SSE transport and HTTP requests
+
+# v1.1 Voice Assistant Features
+vosk>=0.3.42                    # Offline speech recognition
+openai-whisper>=20231117        # Whisper local STT (optional, requires ffmpeg)
+edge-tts>=6.1.9                 # Free TTS via Microsoft Edge
+pvporcupine>=3.0.0              # Wake word detection (optional, requires API key)
+webrtcvad>=2.0.10               # Voice activity detection
+numpy>=1.24.0                   # Audio processing

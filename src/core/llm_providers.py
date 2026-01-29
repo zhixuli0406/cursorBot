@@ -1149,24 +1149,43 @@ class GLMProvider(LLMProvider):
 
 
 # ============================================
-# GitHub Copilot / GitHub Models Provider
+# GitHub Copilot Provider (Native Copilot API)
 # ============================================
 
 class CopilotProvider(LLMProvider):
     """
-    GitHub Copilot / GitHub Models provider.
+    GitHub Copilot native provider.
     
-    Uses GitHub Models API which provides access to:
-    - GPT-5, GPT-4.1, GPT-4o (OpenAI)
-    - DeepSeek V3
-    - Llama 4 (Meta)
-    - And more
+    Uses the actual GitHub Copilot API (not GitHub Models).
+    This requires a valid GitHub Copilot subscription and OAuth token.
     
-    Requires a GitHub Personal Access Token with 'models' permission.
-    API Documentation: https://docs.github.com/en/rest/models
+    Authentication Flow:
+    1. Get device code from GitHub
+    2. User authorizes the device
+    3. Exchange for access token
+    4. Use token to get Copilot token
+    5. Use Copilot token for chat completions
+    
+    Environment Variables:
+    - COPILOT_TOKEN: Pre-authenticated Copilot token (if available)
+    - GITHUB_TOKEN: GitHub OAuth token with copilot scope
+    
+    Copilot API uses OpenAI-compatible format.
     """
     
-    API_BASE = "https://models.github.ai/inference"
+    # Copilot API endpoints
+    COPILOT_CHAT_URL = "https://api.githubcopilot.com/chat/completions"
+    COPILOT_TOKEN_URL = "https://api.github.com/copilot_internal/v2/token"
+    DEVICE_CODE_URL = "https://github.com/login/device/code"
+    ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
+    
+    # GitHub Copilot OAuth Client ID (public, for VS Code)
+    COPILOT_CLIENT_ID = "Iv1.b507a08c87ecfe98"
+    
+    def __init__(self, config: ProviderConfig):
+        super().__init__(config)
+        self._copilot_token: Optional[str] = None
+        self._token_expires_at: Optional[float] = None
     
     @property
     def provider_type(self) -> ProviderType:
@@ -1175,134 +1194,199 @@ class CopilotProvider(LLMProvider):
     def is_available(self) -> bool:
         return bool(self.config.api_key) and self.config.enabled
     
-    async def fetch_models(self) -> list[str]:
-        """Fetch available models from GitHub Models."""
+    async def _get_copilot_token(self) -> Optional[str]:
+        """
+        Get a valid Copilot token.
+        
+        If COPILOT_TOKEN is set, use it directly.
+        Otherwise, exchange GitHub token for Copilot token.
+        """
+        import time
+        
+        # Check if we have a cached valid token
+        if self._copilot_token and self._token_expires_at:
+            if time.time() < self._token_expires_at - 60:  # 60s buffer
+                return self._copilot_token
+        
+        # Check for direct Copilot token
+        import os
+        copilot_token = os.getenv("COPILOT_TOKEN")
+        if copilot_token:
+            self._copilot_token = copilot_token
+            self._token_expires_at = time.time() + 3600  # Assume 1 hour
+            return copilot_token
+        
+        # Exchange GitHub token for Copilot token
+        github_token = self.config.api_key
+        if not github_token:
+            return None
+        
         import httpx
         
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.get(
-                    "https://models.github.ai/catalog/models",
+                    self.COPILOT_TOKEN_URL,
                     headers={
-                        "Authorization": f"Bearer {self.config.api_key}",
-                        "Accept": "application/vnd.github+json",
-                        "X-GitHub-Api-Version": "2022-11-28",
+                        "Authorization": f"token {github_token}",
+                        "Accept": "application/json",
+                        "Editor-Version": "vscode/1.85.0",
+                        "Editor-Plugin-Version": "copilot-chat/0.12.0",
+                        "User-Agent": "GitHubCopilotChat/0.12.0",
                     },
                 )
                 
                 if response.status_code == 200:
                     data = response.json()
-                    models = []
-                    for model in data:
-                        if isinstance(model, dict) and "id" in model:
-                            models.append(model["id"])
-                    return models
-                
+                    self._copilot_token = data.get("token")
+                    expires_at = data.get("expires_at", 0)
+                    if isinstance(expires_at, int):
+                        self._token_expires_at = expires_at
+                    else:
+                        self._token_expires_at = time.time() + 1800  # 30 min default
+                    
+                    logger.debug("Successfully obtained Copilot token")
+                    return self._copilot_token
+                else:
+                    logger.error(f"Failed to get Copilot token: {response.status_code} - {response.text}")
+                    return None
+                    
         except Exception as e:
-            logger.debug(f"Failed to fetch Copilot models: {e}")
-        
-        # Return default models if API fails
-        # GitHub Models uses simple model names (not publisher/model format)
+            logger.error(f"Error getting Copilot token: {e}")
+            return None
+    
+    async def fetch_models(self) -> list[str]:
+        """Return available Copilot models."""
+        # Copilot supports these models internally
         return [
             "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4.1",
-            "gpt-4.1-mini",
-            "gpt-4.1-nano",
-            "o1",
-            "o1-mini",
+            "gpt-4o-mini", 
+            "gpt-4-turbo",
+            "gpt-4",
+            "gpt-3.5-turbo",
+            "claude-3.5-sonnet",
             "o1-preview",
-            "deepseek-v3-0324",
-            "llama-4-scout-17b-16e-instruct",
+            "o1-mini",
         ]
     
     async def generate(self, messages: list[dict], **kwargs) -> str:
-        """Generate response using GitHub Models API."""
+        """Generate response using GitHub Copilot API."""
         import httpx
+        
+        copilot_token = await self._get_copilot_token()
+        if not copilot_token:
+            raise ValueError(
+                "無法取得 Copilot Token。請確認:\n"
+                "1. 設定 COPILOT_TOKEN 環境變數，或\n"
+                "2. 設定有 copilot 權限的 GITHUB_TOKEN\n"
+                "3. 確認你有有效的 GitHub Copilot 訂閱"
+            )
         
         model = kwargs.get("model") or self.config.model or "gpt-4o"
         
-        # Log the model being used for debugging
-        logger.debug(f"GitHub Models: using model '{model}', config model: '{self.config.model}'")
-        
-        # GitHub Models API endpoint
-        api_base = self.config.api_base or self.API_BASE
+        logger.debug(f"Copilot: using model '{model}'")
         
         payload = {
             "model": model,
             "messages": messages,
-            "temperature": kwargs.get("temperature", self.config.temperature),
-            "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+            "temperature": kwargs.get("temperature", self.config.temperature or 0.7),
+            "max_tokens": kwargs.get("max_tokens", self.config.max_tokens or 4096),
+            "stream": False,
         }
         
         # Add optional parameters
         if kwargs.get("top_p"):
             payload["top_p"] = kwargs["top_p"]
-        if kwargs.get("stream"):
-            payload["stream"] = True
         
         try:
-            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.config.timeout or 120) as client:
                 response = await client.post(
-                    f"{api_base}/chat/completions",
+                    self.COPILOT_CHAT_URL,
                     headers={
-                        "Authorization": f"Bearer {self.config.api_key}",
+                        "Authorization": f"Bearer {copilot_token}",
                         "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "Editor-Version": "vscode/1.85.0",
+                        "Editor-Plugin-Version": "copilot-chat/0.12.0",
+                        "User-Agent": "GitHubCopilotChat/0.12.0",
+                        "Openai-Intent": "conversation-panel",
                     },
                     json=payload,
                 )
                 
+                if response.status_code == 401:
+                    # Token expired, clear cache and retry once
+                    self._copilot_token = None
+                    self._token_expires_at = None
+                    copilot_token = await self._get_copilot_token()
+                    if copilot_token:
+                        response = await client.post(
+                            self.COPILOT_CHAT_URL,
+                            headers={
+                                "Authorization": f"Bearer {copilot_token}",
+                                "Content-Type": "application/json",
+                                "Accept": "application/json",
+                                "Editor-Version": "vscode/1.85.0",
+                                "Editor-Plugin-Version": "copilot-chat/0.12.0",
+                                "User-Agent": "GitHubCopilotChat/0.12.0",
+                            },
+                            json=payload,
+                        )
+                
                 if response.status_code != 200:
                     error_text = response.text
                     if response.status_code == 401:
-                        if "models" in error_text.lower():
-                            raise ValueError(
-                                "GitHub Token 缺少 'models' 權限。請前往 "
-                                "https://github.com/settings/tokens 建立新的 Token，"
-                                "並勾選 'models' 權限。"
-                            )
-                        raise ValueError(f"GitHub Token 無效或已過期: {error_text}")
-                    raise ValueError(f"GitHub Models API error: {response.status_code} - {error_text}")
+                        raise ValueError("Copilot 授權失敗。請確認你有有效的 GitHub Copilot 訂閱。")
+                    elif response.status_code == 403:
+                        raise ValueError("沒有 Copilot 存取權限。請確認你的 GitHub 帳號已啟用 Copilot。")
+                    raise ValueError(f"Copilot API error: {response.status_code} - {error_text}")
                 
                 data = response.json()
                 return data["choices"][0]["message"]["content"]
                 
         except httpx.HTTPError as e:
-            raise ValueError(f"GitHub Models HTTP error: {e}")
+            raise ValueError(f"Copilot HTTP error: {e}")
         except ValueError:
             raise
         except Exception as e:
-            raise ValueError(f"GitHub Models error: {e}")
+            raise ValueError(f"Copilot error: {e}")
     
     async def generate_stream(self, messages: list[dict], **kwargs):
-        """Generate streaming response using GitHub Models API."""
+        """Generate streaming response using GitHub Copilot API."""
         import httpx
         
+        copilot_token = await self._get_copilot_token()
+        if not copilot_token:
+            raise ValueError("無法取得 Copilot Token")
+        
         model = kwargs.get("model") or self.config.model or "gpt-4o"
-        api_base = self.config.api_base or self.API_BASE
         
         payload = {
             "model": model,
             "messages": messages,
-            "temperature": kwargs.get("temperature", self.config.temperature),
-            "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+            "temperature": kwargs.get("temperature", self.config.temperature or 0.7),
+            "max_tokens": kwargs.get("max_tokens", self.config.max_tokens or 4096),
             "stream": True,
         }
         
         try:
-            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.config.timeout or 120) as client:
                 async with client.stream(
                     "POST",
-                    f"{api_base}/chat/completions",
+                    self.COPILOT_CHAT_URL,
                     headers={
-                        "Authorization": f"Bearer {self.config.api_key}",
+                        "Authorization": f"Bearer {copilot_token}",
                         "Content-Type": "application/json",
+                        "Accept": "text/event-stream",
+                        "Editor-Version": "vscode/1.85.0",
+                        "Editor-Plugin-Version": "copilot-chat/0.12.0",
+                        "User-Agent": "GitHubCopilotChat/0.12.0",
                     },
                     json=payload,
                 ) as response:
                     if response.status_code != 200:
                         error_text = await response.aread()
-                        raise ValueError(f"GitHub Models API error: {response.status_code} - {error_text.decode()}")
+                        raise ValueError(f"Copilot API error: {response.status_code} - {error_text.decode()}")
                     
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
@@ -1321,9 +1405,98 @@ class CopilotProvider(LLMProvider):
                                 continue
                                 
         except httpx.HTTPError as e:
-            raise ValueError(f"GitHub Models HTTP error: {e}")
+            raise ValueError(f"Copilot HTTP error: {e}")
         except Exception as e:
-            raise ValueError(f"GitHub Models error: {e}")
+            raise ValueError(f"Copilot error: {e}")
+    
+    @classmethod
+    async def get_device_code(cls) -> Optional[dict]:
+        """
+        Start device authorization flow.
+        
+        Returns dict with:
+        - device_code: Code for polling
+        - user_code: Code to display to user
+        - verification_uri: URL for user to visit
+        - expires_in: Seconds until expiration
+        - interval: Polling interval in seconds
+        """
+        import httpx
+        
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(
+                    cls.DEVICE_CODE_URL,
+                    data={
+                        "client_id": cls.COPILOT_CLIENT_ID,
+                        "scope": "read:user",
+                    },
+                    headers={
+                        "Accept": "application/json",
+                    },
+                )
+                
+                if response.status_code == 200:
+                    return response.json()
+                    
+        except Exception as e:
+            logger.error(f"Error getting device code: {e}")
+        
+        return None
+    
+    @classmethod
+    async def poll_for_token(cls, device_code: str, interval: int = 5) -> Optional[str]:
+        """
+        Poll for access token after user authorizes.
+        
+        Args:
+            device_code: Device code from get_device_code()
+            interval: Polling interval in seconds
+            
+        Returns:
+            Access token if successful
+        """
+        import httpx
+        import asyncio
+        
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                for _ in range(60):  # Max 5 minutes of polling
+                    response = await client.post(
+                        cls.ACCESS_TOKEN_URL,
+                        data={
+                            "client_id": cls.COPILOT_CLIENT_ID,
+                            "device_code": device_code,
+                            "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                        },
+                        headers={
+                            "Accept": "application/json",
+                        },
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        if "access_token" in data:
+                            return data["access_token"]
+                        
+                        error = data.get("error")
+                        if error == "authorization_pending":
+                            await asyncio.sleep(interval)
+                            continue
+                        elif error == "slow_down":
+                            interval += 5
+                            await asyncio.sleep(interval)
+                            continue
+                        elif error in ("expired_token", "access_denied"):
+                            return None
+                    
+                    await asyncio.sleep(interval)
+                    
+        except Exception as e:
+            logger.error(f"Error polling for token: {e}")
+        
+        return None
 
 
 # ============================================
@@ -1720,7 +1893,7 @@ class LLMProviderManager:
         ProviderType.BEDROCK: "anthropic.claude-sonnet-4-5-20250929-v1:0",
         ProviderType.MOONSHOT: "moonshot-v1-128k",
         ProviderType.GLM: "glm-4.7-flash",
-        ProviderType.COPILOT: "gpt-4o",  # GitHub Models uses simple model names
+        ProviderType.COPILOT: "gpt-4o",  # GitHub Copilot default model
         ProviderType.MINIMAX: "abab6.5s-chat",
     }
     
@@ -1848,14 +2021,20 @@ class LLMProviderManager:
             self._providers[ProviderType.MINIMAX] = MinimaxProvider(config)
             logger.info(f"Loaded Minimax provider with model: {minimax_model}")
         
-        # GitHub Copilot / GitHub Models
-        copilot_token = getattr(settings, 'github_token', None) or os.getenv("GITHUB_TOKEN")
+        # GitHub Copilot (Native API)
+        # Priority: COPILOT_TOKEN > GITHUB_TOKEN with copilot scope
+        copilot_token = os.getenv("COPILOT_TOKEN") or getattr(settings, 'copilot_token', None)
+        github_token = getattr(settings, 'github_token', None) or os.getenv("GITHUB_TOKEN")
         copilot_enabled = getattr(settings, 'copilot_enabled', False) or os.getenv("COPILOT_ENABLED", "").lower() in ("true", "1", "yes")
-        if copilot_token and copilot_enabled:
-            copilot_model = getattr(settings, 'copilot_model', None) or os.getenv("COPILOT_MODEL", "openai/gpt-4o")
+        
+        # Use copilot_token if available, otherwise use github_token
+        copilot_api_key = copilot_token or github_token
+        
+        if copilot_api_key and copilot_enabled:
+            copilot_model = getattr(settings, 'copilot_model', None) or os.getenv("COPILOT_MODEL", "gpt-4o")
             config = ProviderConfig(
                 provider_type=ProviderType.COPILOT,
-                api_key=copilot_token,
+                api_key=copilot_api_key,
                 model=copilot_model,
                 enabled=True,
             )
@@ -1954,10 +2133,9 @@ class LLMProviderManager:
                 "mistral-large-3", "gemma3", "phi-4",
             ],
             ProviderType.COPILOT: [
-                "openai/gpt-5", "openai/gpt-5-mini", "openai/gpt-5-nano",
-                "openai/gpt-5-chat", "openai/gpt-4.1", "openai/gpt-4.1-mini",
-                "openai/gpt-4o", "openai/gpt-4o-mini",
-                "deepseek/deepseek-v3-0324", "meta/llama-4-scout-17b-16e-instruct",
+                "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4",
+                "gpt-3.5-turbo", "claude-3.5-sonnet",
+                "o1-preview", "o1-mini",
             ],
             ProviderType.CUSTOM: ["default"],
         }

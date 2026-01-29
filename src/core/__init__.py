@@ -110,6 +110,71 @@ from .voice_wake import (
     VoiceWakeManager, WakeConfig, WakeEvent, WakeWordEngine, ListeningState,
     get_voice_wake_manager,
 )
+from .voice_assistant import (
+    VoiceAssistant, VoiceAssistantConfig, AssistantState,
+    WakeEngine, STTEngine, TTSEngine, IntentCategory,
+    Utterance, Intent, AssistantResponse,
+    get_voice_assistant, reset_voice_assistant,
+)
+from .voice_commands import (
+    CommandExecutor, CommandResult, CommandStatus, CommandCategory,
+    get_command_executor,
+)
+from .voice_context import (
+    ContextEngine, FullContext, TimeContext, LocationContext,
+    ActivityContext, DeviceContext, UserContext, ConversationContext,
+    TimeOfDay, DayType, LocationType, ActivityType, DeviceType,
+    get_context_engine,
+)
+from .voice_llm import (
+    VoiceLLM, VoiceLLMConfig, LLMResponse, ResponseStyle, ResponseType,
+    IntegratedVoiceAssistant, get_voice_llm, get_integrated_assistant,
+)
+from .voice_learning import (
+    VoiceLearningEngine, UserProfile, InteractionRecord, LearnedPattern,
+    AdaptiveResponseSystem, get_learning_engine,
+)
+from .voice_slots import (
+    SlotFillingManager, SlotDefinition, SlotValue, SlotFillingResult,
+    SlotType, SlotStatus, EntityExtractor, get_slot_manager,
+)
+from .voice_integrations import (
+    FileOperationHandler, ClipboardHandler, WeatherHandler,
+    CalendarVoiceHandler, TranslationHandler, VoiceSearchHandler,
+    ConfirmationHandler, get_confirmation_handler,
+)
+from .voice_advanced import (
+    VoicePrintManager, VoicePrint, VoicePrintConfig, get_voice_print_manager,
+    EmotionTTS, EmotionTTSConfig, Emotion,
+    VoiceInterruptionHandler, InterruptionConfig, InterruptionType,
+    MeetingAssistant, MeetingNote, MeetingSummary, get_meeting_assistant,
+    VoiceNavigator, NavigationCommand, NavigationTarget, get_voice_navigator,
+    OfflineTTS, MultiLanguageResponder,
+    SmartHomeHandler, SmartDevice, SmartHomeProtocol, get_smart_home_handler,
+)
+from .voice_dialogue import (
+    DialogueManager, ContextResolver, DialogueCorrector, ConversationSummarizer,
+    MultiLanguageIntent, get_dialogue_manager,
+)
+from .voice_privacy import (
+    PrivacyManager, VocabularyManager, ConsentManager,
+    PrivacySettings, DataCategory, RetentionPeriod,
+    get_privacy_manager, get_vocabulary_manager, get_consent_manager,
+)
+from .voice_accessibility import (
+    AccessibilityManager, AccessibilitySettings, AccessibilityMode,
+    ScreenReaderBridge, VoiceNavigation, AudioFeedback, HapticFeedback,
+    get_accessibility_manager,
+)
+from .voice_offline import (
+    OfflineModeManager, NetworkMonitor, OfflineIntentRecognizer,
+    NetworkStatus, OfflineIntent, get_offline_manager, get_network_monitor,
+)
+from .voice_shortcuts import (
+    ShortcutsManager, MacOSShortcutsManager, AppleScriptRunner,
+    AndroidIntentHandler, NotificationInteraction,
+    get_shortcuts_manager,
+)
 from .remote_gateway import (
     RemoteGateway, GatewayConfig, GatewayNode, GatewayStatus,
     get_remote_gateway,
