@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件中心 - CursorBot</title>
+    <title>文件中心 - CursorBot v1.1</title>
     <meta name="description" content="CursorBot 完整文件，包含快速開始教學、API 參考、指令說明。">
     
     <!-- Security Headers -->
@@ -673,6 +673,15 @@
                     <li><a href="#platform-native">原生應用</a></li>
                 </ul>
             </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">v1.1 語音助手</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#voice-overview">語音功能概覽</a></li>
+                    <li><a href="#voice-wake">語音喚醒</a></li>
+                    <li><a href="#voice-commands">語音指令</a></li>
+                    <li><a href="#voice-config">語音設定</a></li>
+                </ul>
+            </div>
         </aside>
         
         <!-- Main Content -->
@@ -932,7 +941,7 @@ GATEWAY_PAIRING_ENABLED=true</code></pre>
 curl http://localhost:8000/health
 
 # 應該返回
-{"status": "healthy", "version": "1.0.0"}</code></pre>
+{"status": "healthy", "version": "1.1.0"}</code></pre>
                 </div>
                 
                 <h3>常用 Bot 指令</h3>
@@ -1672,23 +1681,140 @@ TELEGRAM_ALLOWED_USERS=your_user_id</code></pre>
                         <p>前往 <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Discord Developer Portal</a>，點擊 "New Application"。</p>
                     </li>
                     <li>
-                        <h4>建立 Bot</h4>
-                        <p>進入 "Bot" 頁面，點擊 "Add Bot"，啟用 "Message Content Intent"。</p>
+                        <h4>建立 Bot 並設定權限</h4>
+                        <p>進入 "Bot" 頁面，點擊 "Add Bot"。</p>
+                        
+                        <h4 style="margin-top: 1rem; color: var(--accent);">必要權限設定（Privileged Gateway Intents）</h4>
+                        <p>在 Bot 設定頁面，<strong>必須</strong>啟用以下 Intents：</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Intent</th>
+                                    <th>用途</th>
+                                    <th>必要性</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>MESSAGE CONTENT INTENT</code></td>
+                                    <td>讀取訊息內容（非指令訊息）</td>
+                                    <td><strong style="color: #ef4444;">必須</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><code>SERVER MEMBERS INTENT</code></td>
+                                    <td>存取伺服器成員清單</td>
+                                    <td>建議</td>
+                                </tr>
+                                <tr>
+                                    <td><code>PRESENCE INTENT</code></td>
+                                    <td>追蹤成員在線狀態</td>
+                                    <td>選用</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="alert alert-warning" style="margin-top: 1rem;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div class="alert-content">
+                                <p><strong>重要！</strong>若未啟用 Message Content Intent，Bot 將無法讀取非斜線指令的訊息內容。</p>
+                            </div>
+                        </div>
                     </li>
                     <li>
-                        <h4>邀請到伺服器</h4>
-                        <p>在 "OAuth2" > "URL Generator" 選擇 <code>bot</code> 和 <code>applications.commands</code> 權限。</p>
+                        <h4>設定 Bot 權限（OAuth2 Permissions）</h4>
+                        <p>在 "OAuth2" > "URL Generator" 頁面：</p>
+                        
+                        <p><strong>Scopes（範圍）：</strong></p>
+                        <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                            <li><code>bot</code> - 基本 Bot 功能</li>
+                            <li><code>applications.commands</code> - 斜線指令支援</li>
+                        </ul>
+                        
+                        <p><strong>Bot Permissions（權限）：</strong></p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>權限</th>
+                                    <th>數值</th>
+                                    <th>用途</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Read Messages/View Channels</td>
+                                    <td><code>1024</code></td>
+                                    <td>讀取頻道訊息</td>
+                                </tr>
+                                <tr>
+                                    <td>Send Messages</td>
+                                    <td><code>2048</code></td>
+                                    <td>發送訊息</td>
+                                </tr>
+                                <tr>
+                                    <td>Embed Links</td>
+                                    <td><code>16384</code></td>
+                                    <td>嵌入式訊息</td>
+                                </tr>
+                                <tr>
+                                    <td>Attach Files</td>
+                                    <td><code>32768</code></td>
+                                    <td>上傳檔案</td>
+                                </tr>
+                                <tr>
+                                    <td>Read Message History</td>
+                                    <td><code>65536</code></td>
+                                    <td>讀取歷史訊息</td>
+                                </tr>
+                                <tr>
+                                    <td>Add Reactions</td>
+                                    <td><code>64</code></td>
+                                    <td>新增表情回應</td>
+                                </tr>
+                                <tr>
+                                    <td>Use Slash Commands</td>
+                                    <td><code>2147483648</code></td>
+                                    <td>使用斜線指令</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <p style="margin-top: 1rem;"><strong>建議權限值：</strong> <code>274878024768</code></p>
+                        <p>或使用以下連結格式邀請 Bot：</p>
+                        <div class="code-block">
+                            <div class="code-header"><span class="code-lang">url</span></div>
+                            <pre><code>https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=274878024768&scope=bot%20applications.commands</code></pre>
+                        </div>
+                    </li>
+                    <li>
+                        <h4>取得 Guild ID（伺服器 ID）</h4>
+                        <p>在 Discord 中開啟「開發者模式」（使用者設定 > 進階 > 開發者模式），右鍵點擊伺服器圖示 > 複製 ID。</p>
                     </li>
                     <li>
                         <h4>設定環境變數</h4>
                         <div class="code-block">
                             <div class="code-header"><span class="code-lang">env</span></div>
-                            <pre><code>DISCORD_ENABLED=true
+                            <pre><code># Discord Bot 設定
+DISCORD_ENABLED=true
 DISCORD_BOT_TOKEN=your_bot_token
-DISCORD_ALLOWED_GUILDS=your_guild_id</code></pre>
+
+# 限制 Bot 只能在特定伺服器使用（選用）
+DISCORD_ALLOWED_GUILDS=guild_id_1,guild_id_2
+
+# 限制 Bot 只能由特定使用者使用（選用）
+DISCORD_ALLOWED_USERS=user_id_1,user_id_2</code></pre>
                         </div>
                     </li>
                 </ol>
+                
+                <div class="alert alert-info" style="margin-top: 1.5rem;">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="alert-content">
+                        <p><strong>常見問題：</strong>如果 Bot 無法回應訊息，請確認：<br>
+                        1. Message Content Intent 已啟用<br>
+                        2. Bot 有權限讀取和發送該頻道的訊息<br>
+                        3. 環境變數設定正確</p>
+                    </div>
+                </div>
             </section>
             
             <!-- Platform LINE -->
@@ -1765,6 +1891,261 @@ swift run</code></pre>
                     <i class="fas fa-info-circle"></i>
                     <div class="alert-content">
                         <p>原生應用透過 WebSocket 連接到 <code>/ws/node</code> 端點，請確保已設定 <code>GATEWAY_TOKEN</code>。</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Voice Overview -->
+            <section id="voice-overview">
+                <h2>v1.1 語音功能概覽</h2>
+                <p>CursorBot v1.1 帶來完整的語音助手功能，讓您可以像使用 Siri 一樣與 AI 對話。</p>
+                
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-microphone-alt"></i> 核心功能</div>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td><strong>語音喚醒</strong></td>
+                                <td>自訂喚醒詞（如「Hey Cursor」）、聲紋識別、離線喚醒</td>
+                            </tr>
+                            <tr>
+                                <td><strong>語音辨識</strong></td>
+                                <td>Whisper、Vosk（離線）、Google Speech API</td>
+                            </tr>
+                            <tr>
+                                <td><strong>語音合成</strong></td>
+                                <td>Edge TTS、ElevenLabs、Piper（離線）、情緒語調</td>
+                            </tr>
+                            <tr>
+                                <td><strong>意圖識別</strong></td>
+                                <td>上下文理解、代詞指代、多語言混合指令</td>
+                            </tr>
+                            <tr>
+                                <td><strong>智慧家居</strong></td>
+                                <td>HomeKit、Google Home、小米 IoT 整合</td>
+                            </tr>
+                            <tr>
+                                <td><strong>會議助手</strong></td>
+                                <td>錄音、即時轉錄、摘要、行動項目</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Voice Wake -->
+            <section id="voice-wake">
+                <h2>語音喚醒</h2>
+                <p>支援多種喚醒引擎和自訂喚醒詞。</p>
+                
+                <h3>支援的喚醒引擎</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>引擎</th>
+                            <th>離線</th>
+                            <th>說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Vosk</td>
+                            <td>✅</td>
+                            <td>開源離線語音辨識，免費使用</td>
+                        </tr>
+                        <tr>
+                            <td>Porcupine</td>
+                            <td>✅</td>
+                            <td>Picovoice 引擎，高精度但需 API Key</td>
+                        </tr>
+                        <tr>
+                            <td>Whisper</td>
+                            <td>✅</td>
+                            <td>OpenAI 開源模型，可本地運行</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3>預設喚醒詞</h3>
+                <ul style="margin-left: 1.5rem;">
+                    <li><code>hey cursor</code> - 英文喚醒</li>
+                    <li><code>嘿 cursor</code> - 中文喚醒</li>
+                    <li><code>小助手</code> - 中文別名</li>
+                </ul>
+            </section>
+            
+            <!-- Voice Commands -->
+            <section id="voice-commands">
+                <h2>語音指令</h2>
+                
+                <div class="command-group">
+                    <h4><i class="fas fa-cog"></i> 系統控制</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>語音指令</th>
+                                <th>動作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>「打開設定」</td>
+                                <td>開啟系統設定</td>
+                            </tr>
+                            <tr>
+                                <td>「調高音量」/「音量大一點」</td>
+                                <td>增加系統音量</td>
+                            </tr>
+                            <tr>
+                                <td>「調低亮度」</td>
+                                <td>降低螢幕亮度</td>
+                            </tr>
+                            <tr>
+                                <td>「截圖」</td>
+                                <td>螢幕截圖</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="command-group">
+                    <h4><i class="fas fa-folder"></i> 檔案操作</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>語音指令</th>
+                                <th>動作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>「新建檔案 test.py」</td>
+                                <td>建立新檔案</td>
+                            </tr>
+                            <tr>
+                                <td>「刪除這個」</td>
+                                <td>刪除上次提到的檔案</td>
+                            </tr>
+                            <tr>
+                                <td>「重新命名為 main.py」</td>
+                                <td>重新命名檔案</td>
+                            </tr>
+                            <tr>
+                                <td>「列出目錄」</td>
+                                <td>顯示當前目錄內容</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="command-group">
+                    <h4><i class="fas fa-home"></i> 智慧家居</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>語音指令</th>
+                                <th>動作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>「打開客廳的燈」</td>
+                                <td>開啟指定燈光</td>
+                            </tr>
+                            <tr>
+                                <td>「把空調調到 26 度」</td>
+                                <td>設定空調溫度</td>
+                            </tr>
+                            <tr>
+                                <td>「關閉所有燈」</td>
+                                <td>關閉所有燈光設備</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="command-group">
+                    <h4><i class="fas fa-calendar"></i> 日曆與提醒</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>語音指令</th>
+                                <th>動作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>「今天有什麼會議」</td>
+                                <td>查詢今日行程</td>
+                            </tr>
+                            <tr>
+                                <td>「提醒我明天下午 3 點開會」</td>
+                                <td>新增提醒</td>
+                            </tr>
+                            <tr>
+                                <td>「新增行程：週五晚餐」</td>
+                                <td>新增日曆事件</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Voice Config -->
+            <section id="voice-config">
+                <h2>語音設定</h2>
+                <p>在 <code>.env</code> 檔案中設定語音功能：</p>
+                
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">env</span></div>
+                    <pre><code># 語音喚醒
+VOICE_WAKE_ENABLED=true
+VOICE_WAKE_ENGINE=vosk           # vosk, porcupine
+VOICE_WAKE_WORDS=hey cursor,嘿cursor,小助手
+VOICE_WAKE_SENSITIVITY=0.5
+
+# 語音辨識 (STT)
+VOICE_STT_ENGINE=whisper         # whisper, vosk, openai
+VOICE_WHISPER_MODEL=base         # tiny, base, small, medium, large
+VOICE_STT_LANGUAGE=zh-TW
+
+# 語音合成 (TTS)
+VOICE_TTS_ENABLED=true
+VOICE_TTS_ENGINE=edge            # edge, elevenlabs, piper
+VOICE_TTS_VOICE=zh-TW-HsiaoChenNeural
+VOICE_TTS_SPEED=1.0
+
+# 音訊處理
+VOICE_VAD_ENABLED=true           # 語音活動偵測
+VOICE_NOISE_REDUCTION=true       # 噪音抑制
+
+# 離線模式
+VOICE_OFFLINE_FALLBACK=true      # 自動切換離線模式
+
+# Porcupine（需要 API Key）
+PORCUPINE_ACCESS_KEY=your_key</code></pre>
+                </div>
+                
+                <h3>安裝語音依賴</h3>
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">bash</span></div>
+                    <pre><code># 安裝 Python 依賴
+pip install vosk openai-whisper edge-tts pvporcupine webrtcvad numpy
+
+# 下載 Vosk 模型（離線語音辨識）
+# 中文模型
+wget https://alphacephei.com/vosk/models/vosk-model-cn-0.22.zip
+unzip vosk-model-cn-0.22.zip -d models/
+
+# 英文模型
+wget https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip
+unzip vosk-model-en-us-0.22.zip -d models/</code></pre>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="alert-content">
+                        <p><strong>提示：</strong>若要使用離線語音辨識，需下載對應語言的 Vosk 模型，並在環境變數中設定 <code>VOICE_VOSK_MODEL_PATH</code>。</p>
                     </div>
                 </div>
             </section>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CursorBot v1.0 - AI 程式設計助手</title>
+    <title>CursorBot v1.1 - AI 語音助手</title>
     <meta name="description" content="多平台 AI 程式設計助手，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams 及原生應用。整合 GPT、Claude、Gemini 等 AI 模型。">
     <meta name="keywords" content="AI, 程式設計, 助手, Telegram, Discord, ChatGPT, Claude, Cursor, Bot">
     
@@ -1040,12 +1040,12 @@
         <div class="hero-content">
             <div class="version-badge">
                 <span class="dot"></span>
-                v1.0.0 正式發布
+                v1.1.0 語音助手版
             </div>
-            <h1>你的 AI 程式設計助手<br>隨時隨地</h1>
+            <h1>你的 AI 語音助手<br>隨時聽候差遣</h1>
             <p class="hero-subtitle">
-                多平台 AI 助手，整合 GPT、Claude、Gemini 等模型。
-                透過 Telegram、Discord、原生應用等遠端控制 Cursor IDE。
+                多平台 AI 語音助手，說「Hey Cursor」即可喚醒。
+                整合 GPT、Claude、Gemini，支援語音辨識、自然對話、智慧家居控制。
             </p>
             <div class="hero-buttons">
                 <a href="#quickstart" class="btn btn-primary">
@@ -1067,12 +1067,12 @@
                     <div class="stat-label">AI 提供者</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-value">50+</div>
-                    <div class="stat-label">指令數量</div>
+                    <div class="stat-value">100+</div>
+                    <div class="stat-label">語音指令</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-value">100%</div>
-                    <div class="stat-label">開放原始碼</div>
+                    <div class="stat-value">5</div>
+                    <div class="stat-label">喚醒詞</div>
                 </div>
             </div>
         </div>
@@ -1228,51 +1228,51 @@
             </div>
             <div class="features-grid">
                 <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-microphone-alt"></i></div>
+                    <h3 class="feature-title">語音喚醒 & 自然對話</h3>
+                    <p class="feature-desc">
+                        說「Hey Cursor」或自訂喚醒詞啟動助手。支援離線喚醒（Vosk/Porcupine）、
+                        聲紋識別、多語言對話和情緒語調回應。
+                    </p>
+                </div>
+                <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-brain"></i></div>
-                    <h3 class="feature-title">多 AI 模型支援</h3>
+                    <h3 class="feature-title">智慧意圖識別</h3>
                     <p class="feature-desc">
-                        無縫切換 GPT-5、Claude 4.5、Gemini 3 等模型。
-                        自動故障轉移確保您始終有 AI 助手可用。
+                        理解代詞指代（「它」「這個」）、多輪對話上下文、
+                        槽位填充補全缺失資訊、支援中英日混合語音指令。
                     </p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-microphone"></i></div>
-                    <h3 class="feature-title">語音喚醒 & 對話模式</h3>
+                    <div class="feature-icon"><i class="fas fa-home"></i></div>
+                    <h3 class="feature-title">智慧家居控制</h3>
                     <p class="feature-desc">
-                        說「Hey Cursor」喚醒您的助手。自然的語音對話，
-                        支援語音辨識和文字轉語音。
+                        整合 HomeKit、Google Home、小米 IoT。
+                        語音控制燈光、空調、插座等智慧設備。
                     </p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-palette"></i></div>
-                    <h3 class="feature-title">Live Canvas 即時畫布</h3>
+                    <div class="feature-icon"><i class="fas fa-users-cog"></i></div>
+                    <h3 class="feature-title">會議助手</h3>
                     <p class="feature-desc">
-                        即時視覺化工作區，支援圖表、程式碼和豐富內容。
-                        在互動式畫布環境中與 AI 協作。
+                        會議錄音、即時轉錄、自動摘要生成、
+                        行動項目提取。讓會議更有效率。
                     </p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-bolt"></i></div>
-                    <h3 class="feature-title">非同步執行</h3>
+                    <div class="feature-icon"><i class="fas fa-universal-access"></i></div>
+                    <h3 class="feature-title">無障礙支援</h3>
                     <p class="feature-desc">
-                        所有任務在背景執行，完成時自動通知。
-                        不再等待長時間運行的操作。
+                        螢幕閱讀器整合（VoiceOver/NVDA）、純語音導航、
+                        音效/觸覺回饋、為視障用戶優化。
                     </p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-plug"></i></div>
-                    <h3 class="feature-title">MCP 整合</h3>
+                    <div class="feature-icon"><i class="fas fa-wifi-slash"></i></div>
+                    <h3 class="feature-title">離線能力</h3>
                     <p class="feature-desc">
-                        支援 Model Context Protocol。連接外部工具、
-                        資料庫和服務到您的 AI 助手。
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-code-branch"></i></div>
-                    <h3 class="feature-title">Agent Loop & RAG</h3>
-                    <p class="feature-desc">
-                        自主代理執行與工具使用。檢索增強生成（RAG）
-                        從您的程式碼庫提供上下文感知回應。
+                        離線語音辨識（Vosk）、離線 TTS（Piper/eSpeak）、
+                        本地意圖識別、網路斷線自動切換離線模式。
                     </p>
                 </div>
             </div>

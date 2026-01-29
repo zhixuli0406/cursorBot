@@ -5,6 +5,91 @@ All notable changes to CursorBot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-29
+
+### Added - Voice Assistant
+- **Voice Wake System** (`src/core/voice_assistant.py`)
+  - Multi-wake word support (hey cursor, 嘿cursor, 小助手)
+  - Vosk/Porcupine offline wake detection
+  - Voiceprint recognition (`VoicePrintManager`)
+  - Wake sound effects
+  - Environment noise filtering (WebRTC VAD)
+
+- **Natural Language Processing** (`src/core/voice_dialogue.py`)
+  - Context understanding (pronoun resolution: 它/這個/那個)
+  - Dialogue correction ("不對，我是說...")
+  - Conversation summarization
+  - Multi-language intent (Chinese/English/Japanese mixed)
+
+- **Voice Commands** (`src/core/voice_commands.py`, `src/core/voice_integrations.py`)
+  - System control (volume, brightness, screenshot)
+  - File operations (create, delete, rename, move, copy)
+  - Clipboard integration
+  - Smart home control (HomeKit, Google Home, Xiaomi IoT)
+  - Calendar integration
+  - Real-time translation
+  - Voice search (file, code, web)
+
+- **Smart Response** (`src/core/voice_llm.py`, `src/core/voice_advanced.py`)
+  - Emotion-aware TTS
+  - Voice interruption handling
+  - Multi-language response
+  - Response length control
+
+- **Meeting Assistant** (`src/core/voice_advanced.py`)
+  - Meeting recording
+  - Real-time transcription
+  - Summary generation
+  - Action item extraction
+
+- **Accessibility** (`src/core/voice_accessibility.py`)
+  - Screen reader integration (VoiceOver/NVDA/Orca)
+  - Voice-only navigation
+  - Audio/Haptic feedback
+  - Adjustable speech settings
+
+- **Offline Capabilities** (`src/core/voice_offline.py`)
+  - Offline STT (Vosk)
+  - Offline TTS (Piper/eSpeak)
+  - Offline intent recognition
+  - Auto online/offline switching
+
+- **Privacy & Personalization** (`src/core/voice_privacy.py`)
+  - Personal vocabulary management
+  - Privacy controls (data collection, retention)
+  - Consent management (GDPR)
+
+- **System Integration** (`src/core/voice_shortcuts.py`)
+  - macOS Shortcuts integration
+  - iOS Shortcuts support
+  - Android Intents
+  - System notification interaction
+
+### Changed
+- Updated landing page to v1.1
+- Enhanced Discord Bot setup documentation with required permissions
+- Updated `env.example` with voice assistant settings
+
+---
+
+## [1.0.0] - 2026-01-28
+
+### Added
+- **Live Canvas (A2UI)** - Agent-driven visual workspace
+- **Native Applications**
+  - macOS App (SwiftUI)
+  - iOS Node (SwiftUI)
+  - Android Node (Kotlin/Compose)
+- **Multi-Gateway** support
+- **Gateway WebSocket** endpoint (`/ws/node`)
+- Landing page deployment
+
+### Changed
+- Production-ready release
+- Complete documentation
+
+---
+
 ## [Unreleased]
 
 ### Added

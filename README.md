@@ -1,13 +1,13 @@
 # CursorBot
 
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](TODO.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](docs/FEATURE_ROADMAP.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-多平台 AI 編程助手，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 等平台。整合 Cursor CLI、多種 AI 模型、Agent Loop、SkillsMP 技能市集等功能。
+多平台 AI 語音助手，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 及原生應用。說「Hey Cursor」即可喚醒，整合 GPT、Claude、Gemini 等 AI 模型，支援語音辨識、自然對話、智慧家居控制、會議助手等功能。
 
 靈感來自 [cursor-telegram-bot](https://github.com/Hormold/cursor-telegram-bot) 和 [ClawdBot](https://clawd.bot/)。
 
-> 📋 **開發進度**: 查看 [TODO.md](TODO.md) 了解完整的功能清單與開發進度。
+> 📋 **功能路線圖**: 查看 [docs/FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md) 了解完整的功能清單與開發進度。
 
 ## 特點
 
@@ -2216,12 +2216,14 @@ Pre-built packages not available
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.1.0 | 2026-01-29 | 語音助手、喚醒詞、聲紋識別、智慧家居、會議助手、無障礙支援 |
+| v1.0.0 | 2026-01-28 | 正式版本、Live Canvas、原生應用、Multi-Gateway |
 | v0.4.0 | 2026-01-27 | MCP、Workflow、Analytics、進階功能 |
 | v0.3.0 | - | CLI 整合、Session 管理、RAG |
 | v0.2.0 | - | 多平台支援、Agent Loop |
 | v0.1.0 | - | 基礎 Telegram Bot |
 
-> 📋 完整開發進度請查看 [TODO.md](TODO.md)
+> 📋 完整開發進度請查看 [docs/FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md)
 
 ## 授權
 
