@@ -204,22 +204,27 @@ async def handle_help_quickstart(query) -> None:
 async def handle_help_commands(query) -> None:
     """Show commands help."""
     await query.message.edit_text(
-        "<b>📖 指令說明</b>\n\n"
+        "<b>📖 CursorBot v1.1 指令說明</b>\n\n"
         "<b>基本指令:</b>\n"
         "/start - 歡迎訊息\n"
         "/help - 顯示幫助\n"
         "/status - 系統狀態\n"
-        "/stats - 使用統計\n\n"
+        "/mode - 切換模式\n\n"
+        "<b>🎤 語音助手:</b>\n"
+        "/voice - 語音設定\n"
+        "/meeting - 會議助手\n"
+        "/smarthome - 智慧家居\n\n"
         "<b>任務管理:</b>\n"
-        "/ask - 發送問題\n"
         "/tasks - 我的任務\n"
-        "/result - 查看結果\n\n"
+        "/agent - AI Agent\n"
+        "/cancel - 取消任務\n\n"
         "<b>記憶與技能:</b>\n"
         "/memory - 記憶管理\n"
         "/skills - 可用技能\n"
-        "/remind - 設定提醒\n\n"
+        "/rag - RAG 查詢\n\n"
         "<b>💡 提示:</b>\n"
-        "直接發送訊息也可以建立任務！",
+        "直接發送訊息或語音即可！\n"
+        "說「Hey Cursor」喚醒語音助手",
         parse_mode="HTML",
         reply_markup=get_help_keyboard(),
     )

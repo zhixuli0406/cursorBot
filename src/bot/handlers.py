@@ -188,31 +188,30 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     # Escape user's first name for HTML
     user_name_safe = _escape_html(user.first_name or "用戶")
 
-    welcome_text = f"""👋 <b>歡迎使用 CursorBot v0.4!</b>
+    welcome_text = f"""👋 <b>歡迎使用 CursorBot v1.1 語音助手版!</b>
 
 您好, {user_name_safe}!
 
 <b>📡 狀態:</b> {status_text}
 
 <b>🚀 快速開始:</b>
-直接發送訊息即可！背景執行，完成自動推送
+直接發送訊息或語音即可！背景執行，完成自動推送
 
-<b>⚡ 兩種模式:</b>
-• <b>CLI</b> - Cursor CLI 處理
-• <b>Agent</b> - AI Agent 處理
+<b>⚡ 對話模式:</b>
+• <b>CLI</b> - Cursor CLI 程式碼處理
+• <b>Agent</b> - AI Agent 多步驟推理
+
+<b>🎤 v1.1 語音助手:</b>
+• 語音喚醒 - 說「Hey Cursor」即可啟動
+• 語音指令 - 系統控制、檔案操作、智慧家居
+• 會議助手 - 錄音、轉錄、摘要
+• 離線模式 - 無網路也能使用
 
 <b>📋 常用指令:</b>
 /help - 完整指令說明
 /mode - 切換模式
-/tasks - 查看任務
+/voice - 語音助手設定
 /status - 系統狀態
-
-<b>🆕 v0.4 新功能:</b>
-• /verbose - 詳細輸出模式
-• /think - AI 思考深度控制
-• /canvas - 視覺化工作區
-• /pair - 設備配對
-• /gateways - 多閘道管理
 
 點擊下方按鈕或直接發送訊息開始！
 """
@@ -247,7 +246,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     status_info = " | ".join(status_parts)
 
-    help_text = f"""<b>📖 CursorBot v0.4 指令說明</b>
+    help_text = f"""<b>📖 CursorBot v1.1 指令說明</b>
 {status_info}
 
 <b>🔹 基礎</b>
@@ -278,38 +277,42 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /file [read|list] /run &lt;cmd&gt;
 /workspace /cd &lt;name&gt;
 
-<b>🌐 其他</b>
-/browser /translate /tts
-/session /export /review
-
-<b>🆕 v0.4 新功能</b>
+<b>🎤 v1.1 語音助手</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-/verbose [on|off|level] - 詳細輸出模式
-/think [off|low|medium|high|xhigh] - AI 思考深度
-/elevated [on|off] - 權限提升模式
-/alias [add|remove] - 指令別名
-/notify [on|off|quiet] - 通知設定
+/voice - 語音助手狀態
+/voice wake [on|off] - 語音喚醒
+/voice stt [engine] - 語音辨識引擎
+/voice tts [engine] - 語音合成引擎
+/meeting [start|stop|notes] - 會議助手
+/smarthome [devices|control] - 智慧家居
 
-<b>🎨 進階功能</b>
+<b>🔧 進階功能</b>
 /canvas [new|list|add] - 視覺化工作區
 /gateways [list|add|strategy] - 多閘道管理
 /pair [qr] - 設備配對
 /devices - 已配對設備
 /lang [set|list] - 多語系設定
-/classify - 郵件分類
+/offline [on|off|status] - 離線模式
 
-<b>🔧 系統</b>
+<b>⚙️ 系統設定</b>
+/verbose [on|off|level] - 詳細輸出
+/think [off|low|medium|high] - AI 思考深度
+/notify [on|off|quiet] - 通知設定
+/privacy - 隱私設定
+/accessibility - 無障礙設定
+
+<b>🔧 其他</b>
 /mcp /workflow /analytics
-/health /review /docs
+/health /review /docs /export
 
-<i>💡 直接發送訊息即可對話</i>
+<i>💡 直接發送訊息或語音即可對話</i>
 <b>💡 快速提示</b>
 ━━━━━━━━━━━━━━━━━━━━━━
-• /climodel set sonnet-4.5 切換 CLI 模型
-• /think high 啟用深度思考模式
-• /verbose on 顯示詳細資訊
-• /canvas new 建立視覺工作區
-• /pair 配對新設備
+• 說「Hey Cursor」喚醒語音助手
+• /voice wake on 啟用語音喚醒
+• /meeting start 開始會議錄音
+• /smarthome devices 查看智慧設備
+• /offline on 啟用離線模式
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 

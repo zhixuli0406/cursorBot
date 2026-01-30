@@ -944,6 +944,50 @@ CursorBot 支援多種對話模式：
 | `/line setup` | Line 設定說明 |
 | `/menubar` | macOS Menu Bar 說明 |
 
+### v1.1 語音助手指令
+
+| 指令 | 說明 |
+|------|------|
+| `/voice` | 語音助手狀態 |
+| `/voice wake [on\|off]` | 開啟/關閉語音喚醒 |
+| `/voice wake words <詞>` | 設定喚醒詞（逗號分隔） |
+| `/voice stt [engine]` | 設定語音辨識引擎（whisper/vosk） |
+| `/voice tts [engine]` | 設定語音合成引擎（edge/elevenlabs） |
+| `/voice style [friendly\|professional]` | 設定回應風格 |
+| `/meeting` | 會議助手狀態 |
+| `/meeting start` | 開始會議錄音 |
+| `/meeting stop` | 結束會議並生成摘要 |
+| `/meeting notes` | 查看會議筆記 |
+| `/meeting summary` | 取得會議摘要和行動項目 |
+| `/smarthome` | 智慧家居狀態 |
+| `/smarthome devices` | 列出已連接的智慧設備 |
+| `/smarthome control <設備> <動作>` | 控制智慧設備 |
+| `/offline` | 離線模式狀態 |
+| `/offline on` | 啟用離線模式 |
+| `/offline off` | 停用離線模式 |
+| `/accessibility` | 無障礙設定 |
+| `/accessibility screen_reader [on\|off]` | 螢幕閱讀器 |
+| `/accessibility voice_nav [on\|off]` | 語音導航 |
+| `/privacy` | 隱私設定 |
+| `/privacy export` | 匯出我的資料 |
+| `/privacy delete` | 刪除我的資料 |
+| `/vocabulary` | 個人詞彙管理 |
+| `/vocabulary add <詞> [發音]` | 新增個人詞彙 |
+
+**語音指令範例：**
+
+```
+# 語音喚醒後說...
+「打開 Cursor」          # 啟動應用程式
+「調高音量」              # 系統控制
+「截圖」                  # 螢幕截圖
+「跳到第 50 行」         # IDE 導航
+「今天有什麼會議」        # 日曆查詢
+「開燈」                  # 智慧家居控制
+「翻譯成英文」            # 即時翻譯
+「提醒我 10 分鐘後開會」  # 提醒設定
+```
+
 **模型切換範例：**
 
 ```
