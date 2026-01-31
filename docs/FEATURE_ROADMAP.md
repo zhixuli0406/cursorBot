@@ -859,6 +859,31 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 | 槽位填充 | `src/core/voice_slots.py` | 多輪對話補充、實體抽取、對話狀態管理 |
 | 擴展整合 | `src/core/voice_integrations.py` | 檔案操作、剪貼簿、天氣、日曆、翻譯、搜尋 |
 | 進階功能 | `src/core/voice_advanced.py` | 聲紋識別、情緒 TTS、會議助手、語音導航、智慧家居 |
+| 個人秘書 | `src/core/secretary.py` | 每日簡報、待辦管理、訂票助手、秘書人設 |
+
+#### v1.1 個人秘書功能
+
+| 狀態 | 項目 | 說明 |
+|:----:|------|------|
+| ✅ | 每日簡報 | 自動發送今日行程、待辦事項、關懷訊息 |
+| ✅ | 待辦事項管理 | 新增/完成/刪除待辦，支援優先級設定 |
+| ✅ | 行程整合 | Google Calendar + Apple Calendar 整合 |
+| ✅ | 訂票助手 | 機票/火車票/飯店預訂協助 |
+| ✅ | 秘書人設 | 可自訂名稱，女秘書親切對話風格 |
+| ✅ | 時間感知 | 根據時段自動調整問候語與關懷訊息 |
+
+**秘書指令：**
+```
+/briefing         - 今日簡報
+/todo add <任務>  - 新增待辦
+/todo done <編號> - 完成待辦
+/book flight      - 機票預訂協助
+/book train       - 火車票預訂
+/book hotel       - 飯店預訂
+/secretary        - 秘書設定
+/secretary name   - 設定您的稱呼
+/secretary rename - 修改秘書名稱
+```
 
 ### 未來版本 (v1.x Post-Release)
 

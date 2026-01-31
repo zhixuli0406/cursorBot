@@ -3,13 +3,37 @@
 [![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](docs/FEATURE_ROADMAP.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-多平台 AI 語音助手，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 及原生應用。說「Hey Cursor」即可喚醒，整合 GPT、Claude、Gemini 等 AI 模型，支援語音辨識、自然對話、智慧家居控制、會議助手等功能。
+您的專屬 AI 秘書，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 及原生應用。具備每日簡報、待辦事項管理、行程安排、訂票協助等秘書功能，以及語音喚醒、自然對話、智慧家居控制等 AI 助手功能。整合 GPT、Claude、Gemini 等 AI 模型。
 
 靈感來自 [cursor-telegram-bot](https://github.com/Hormold/cursor-telegram-bot) 和 [ClawdBot](https://clawd.bot/)。
 
 > 📋 **功能路線圖**: 查看 [docs/FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md) 了解完整的功能清單與開發進度。
 
 ## 特點
+
+### 👩‍💼 個人秘書功能
+- **秘書模式** - 用自然語言與秘書聊天和下指令
+- **每日簡報** - 每天早上自動發送今日行程、待辦事項、關心提醒
+- **待辦事項管理** - 新增、完成、刪除待辦，支援優先級設定
+- **行程管理** - 整合 Google Calendar 與 Apple Calendar
+- **訂票助手** - 協助訂機票、火車票、飯店預訂
+- **個人化人設** - 可自訂秘書名稱，親切的女秘書對話風格
+- **智慧提醒** - 根據時間自動發送貼心關懷訊息
+
+```
+/mode assistant   # 切換秘書模式（推薦）
+/briefing         # 今日簡報
+/todo add 開會    # 新增待辦
+/todo done 1      # 完成第一項
+/book flight      # 機票預訂協助
+/secretary name   # 設定您的稱呼
+```
+
+**秘書模式自然語言範例：**
+- 「幫我記明天要開會」→ 自動新增待辦
+- 「今天有什麼行程」→ 顯示今日行程
+- 「訂機票去東京」→ 啟動訂票助手
+- 「待辦清單」→ 列出所有待辦
 
 ### 多平台支援
 - **Telegram** - 完整的 Telegram Bot 支援

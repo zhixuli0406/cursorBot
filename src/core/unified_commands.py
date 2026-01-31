@@ -136,6 +136,12 @@ COMMANDS: dict[str, CommandDefinition] = {
     "calendar": CommandDefinition("calendar", "日曆管理", CommandCategory.CALENDAR, aliases=["cal"]),
     "reminder": CommandDefinition("reminder", "每日行程提醒", CommandCategory.CALENDAR),
     "gmail": CommandDefinition("gmail", "Gmail 郵件管理", CommandCategory.INTEGRATION),
+    
+    # Secretary Commands
+    "secretary": CommandDefinition("secretary", "秘書設定", CommandCategory.BASIC, aliases=["sec"]),
+    "briefing": CommandDefinition("briefing", "每日簡報", CommandCategory.BASIC, aliases=["daily"]),
+    "todo": CommandDefinition("todo", "待辦事項管理", CommandCategory.BASIC, aliases=["task"]),
+    "book": CommandDefinition("book", "訂票助手", CommandCategory.INTEGRATION, aliases=["booking"]),
     "tasks": CommandDefinition("tasks", "任務列表", CommandCategory.BASIC),
     "cancel": CommandDefinition("cancel", "取消任務", CommandCategory.BASIC),
     
@@ -166,6 +172,16 @@ async def handle_start(ctx: CommandContext) -> CommandResult:
     """Handle /start command."""
     from ..utils.config import settings
     from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from .secretary import get_secretary, SecretaryPersona
+    
+    # Get secretary and preferences
+    secretary = get_secretary()
+    prefs = secretary.get_preferences(ctx.user_id)
+    
+    # Set user name if not set
+    if not prefs.name and ctx.user_name:
+        secretary.set_user_name(ctx.user_id, ctx.user_name)
+        prefs = secretary.get_preferences(ctx.user_id)
     
     # Build status
     status_items = []
@@ -176,32 +192,33 @@ async def handle_start(ctx: CommandContext) -> CommandResult:
         status_items.append(f"CLI ({cli_model})")
     
     status = " | ".join(status_items) if status_items else "基本模式"
+    greeting = SecretaryPersona.greeting(prefs.name or ctx.user_name)
     
-    message = f"""👋 歡迎使用 CursorBot v1.1 語音助手版!
+    message = f"""{greeting}
 
-您好, {ctx.user_name}!
+我是您的專屬秘書 {prefs.secretary_name}！✨
 
 📡 狀態: {status}
 📱 平台: {ctx.platform}
 
-🚀 快速開始:
-直接發送訊息或語音即可！背景執行，完成自動推送
+👩‍💼 **秘書服務：**
+• /briefing - 今日簡報（行程 + 待辦）
+• /todo add <任務> - 新增待辦事項
+• /book - 訂票助手（機票、火車、飯店）
+• /calendar - 查看行程
+• /reminder on - 啟用每日提醒
 
-⚡ 對話模式:
-• CLI - Cursor CLI 程式碼處理
-• Agent - AI Agent 多步驟推理
+⚡ **AI 助手：**
+• 直接發送訊息即可對話
+• /mode cli - 切換程式碼模式
+• /mode agent - 切換 AI 助手模式
 
-🎤 v1.1 語音助手:
-• 語音喚醒 - 說「Hey Cursor」即可啟動
-• 語音指令 - 系統控制、檔案操作、智慧家居
-• 會議助手 - 錄音、轉錄、摘要
-• 離線模式 - 無網路也能使用
+🎤 **語音控制：**
+• 說「Hey Cursor」喚醒語音助手
 
-📋 常用指令:
-/help - 完整指令說明
-/mode - 切換模式
-/voice - 語音助手設定
-/status - 系統狀態
+📋 更多指令請輸入 /help
+
+—— {prefs.secretary_name}，隨時為您服務！💕
 """
     
     return CommandResult(success=True, message=message)
@@ -211,60 +228,39 @@ async def handle_help(ctx: CommandContext) -> CommandResult:
     """Handle /help command."""
     message = """📖 CursorBot v1.1 指令說明
 
+👩‍💼 個人秘書
+━━━━━━━━━━━━━━━━━━━━━━
+/mode assistant - 切換秘書模式（推薦）
+/briefing - 今日簡報
+/todo [add|done|list] - 待辦事項
+/book [flight|train|hotel] - 訂票助手
+/secretary - 秘書設定
+/reminder [on|off|time] - 每日提醒
+
+📅 日曆 & 郵件
+/calendar [week|list|add]
+/gmail [search|unread]
+
 🔹 基礎
 /start /help /status /doctor
 
-⚡ 模式 (皆為異步)
-/mode [cli|agent|auto]
-/tasks /cancel <id>
-
-🤖 AI 模型
-/model [list|set|reset]
-/climodel [list|set|reset]
-
-🤖 Agent
-/agent <任務>
-/skills /skills_search /skills_install
+⚡ 對話模式
+/mode assistant - 秘書模式
+/mode cli - 程式碼模式
+/mode agent - AI Agent 模式
 
 🧠 記憶 & RAG
 /memory [add|get|del|clear]
 /rag <問題> /index <檔案>
 /clear /new /compact
 
-📅 日曆 & 郵件
-/calendar [week|list|add]
-/gmail [search|unread]
+🎤 語音助手
+/voice - 語音設定
+/meeting - 會議助手
+/smarthome - 智慧家居
 
-📁 檔案 & 工作區
-/file [read|list] /run <cmd>
-/workspace /cd <name>
-
-🎤 v1.1 語音助手
-━━━━━━━━━━━━━━━━━━━━━━
-/voice - 語音助手狀態
-/voice wake [on|off] - 語音喚醒
-/voice stt [engine] - 語音辨識引擎
-/voice tts [engine] - 語音合成引擎
-/meeting [start|stop|notes] - 會議助手
-/smarthome [devices|control] - 智慧家居
-/offline [on|off|status] - 離線模式
-
-⚙️ 進階功能
-/canvas [new|list|add] - 視覺化工作區
-/gateways [list|add|strategy] - 多閘道管理
-/pair [qr] - 設備配對
-/devices - 已配對設備
-/lang [set|list] - 多語系設定
-
-🔧 系統設定
-/verbose [on|off] - 詳細輸出
-/think [off|low|medium|high] - AI 思考深度
-/notify [on|off] - 通知設定
-/privacy - 隱私設定
-/accessibility - 無障礙設定
-
-💡 直接發送訊息或語音即可對話
-💡 說「Hey Cursor」喚醒語音助手
+💡 秘書模式下可用自然語言聊天
+💡 「幫我記開會」「今天有什麼行程」
 """
     
     return CommandResult(success=True, message=message)
@@ -1411,6 +1407,213 @@ async def handle_translate(ctx: CommandContext) -> CommandResult:
 
 
 # ============================================
+# Secretary Command Handlers
+# ============================================
+
+async def handle_secretary(ctx: CommandContext) -> CommandResult:
+    """Handle /secretary command - secretary settings."""
+    from .secretary import get_secretary
+    
+    secretary = get_secretary()
+    prefs = secretary.get_preferences(ctx.user_id)
+    
+    if ctx.args:
+        action = ctx.args[0].lower()
+        
+        if action == "name" and len(ctx.args) > 1:
+            # Set user's name
+            name = " ".join(ctx.args[1:])
+            secretary.set_user_name(ctx.user_id, name)
+            return CommandResult(
+                success=True,
+                message=f"好的～以後我就稱呼您為「{name}」囉！✨\n\n—— {prefs.secretary_name}"
+            )
+        
+        elif action == "rename" and len(ctx.args) > 1:
+            # Set secretary's name
+            new_name = " ".join(ctx.args[1:])
+            secretary.set_secretary_name(ctx.user_id, new_name)
+            return CommandResult(
+                success=True,
+                message=f"好的！從現在起我就叫「{new_name}」了～ 請多指教！💕\n\n—— {new_name}"
+            )
+    
+    message = f"""👩‍💼 **個人秘書設定**
+
+秘書名稱：{prefs.secretary_name}
+您的稱呼：{prefs.name or '（未設定）'}
+每日簡報：{'✅ 已啟用' if prefs.briefing_enabled else '❌ 已停用'}
+簡報時間：{prefs.wake_time.strftime('%H:%M')}
+
+**設定指令：**
+• /secretary name <名字> - 設定您的稱呼
+• /secretary rename <名字> - 修改秘書名稱
+• /briefing - 查看今日簡報
+• /todo - 管理待辦事項
+• /book - 訂票助手
+
+—— {prefs.secretary_name}，隨時為您服務！💕
+"""
+    return CommandResult(success=True, message=message)
+
+
+async def handle_briefing(ctx: CommandContext) -> CommandResult:
+    """Handle /briefing command - daily briefing."""
+    from .secretary import get_secretary
+    
+    secretary = get_secretary()
+    briefing = await secretary.daily_briefing(ctx.user_id)
+    
+    return CommandResult(success=True, message=briefing)
+
+
+async def handle_todo(ctx: CommandContext) -> CommandResult:
+    """Handle /todo command - task management."""
+    from .secretary import get_secretary, TaskPriority
+    from datetime import datetime
+    
+    secretary = get_secretary()
+    prefs = secretary.get_preferences(ctx.user_id)
+    
+    if ctx.args:
+        action = ctx.args[0].lower()
+        
+        if action == "add" and len(ctx.args) > 1:
+            # Add new task
+            title = " ".join(ctx.args[1:])
+            
+            # Parse priority if specified
+            priority = TaskPriority.MEDIUM
+            if title.startswith("!"):
+                priority = TaskPriority.HIGH
+                title = title[1:].strip()
+            elif title.startswith("~"):
+                priority = TaskPriority.LOW
+                title = title[1:].strip()
+            
+            task = secretary.add_task(
+                user_id=ctx.user_id,
+                title=title,
+                priority=priority,
+            )
+            
+            return CommandResult(
+                success=True,
+                message=secretary.task_added_response(ctx.user_id, task)
+            )
+        
+        elif action == "done" and len(ctx.args) > 1:
+            # Complete task
+            task_id = ctx.args[1]
+            tasks = secretary.get_tasks(ctx.user_id)
+            
+            # Try to match by index or ID
+            target_task = None
+            try:
+                idx = int(task_id) - 1
+                if 0 <= idx < len(tasks):
+                    target_task = tasks[idx]
+            except ValueError:
+                for t in tasks:
+                    if t.id == task_id:
+                        target_task = t
+                        break
+            
+            if target_task and secretary.complete_task(ctx.user_id, target_task.id):
+                return CommandResult(
+                    success=True,
+                    message=f"✅ 太棒了！「{target_task.title}」已完成！\n\n繼續加油喔～💪\n\n—— {prefs.secretary_name}"
+                )
+            return CommandResult(success=False, message="❌ 找不到這個任務")
+        
+        elif action == "delete" and len(ctx.args) > 1:
+            task_id = ctx.args[1]
+            tasks = secretary.get_tasks(ctx.user_id, include_completed=True)
+            
+            target_task = None
+            try:
+                idx = int(task_id) - 1
+                if 0 <= idx < len(tasks):
+                    target_task = tasks[idx]
+            except ValueError:
+                for t in tasks:
+                    if t.id == task_id:
+                        target_task = t
+                        break
+            
+            if target_task and secretary.delete_task(ctx.user_id, target_task.id):
+                return CommandResult(
+                    success=True,
+                    message=f"🗑️ 已刪除任務「{target_task.title}」\n\n—— {prefs.secretary_name}"
+                )
+            return CommandResult(success=False, message="❌ 找不到這個任務")
+        
+        elif action == "clear":
+            tasks = secretary.get_tasks(ctx.user_id, include_completed=True)
+            completed = [t for t in tasks if t.completed]
+            for t in completed:
+                secretary.delete_task(ctx.user_id, t.id)
+            return CommandResult(
+                success=True,
+                message=f"🧹 已清理 {len(completed)} 個已完成的任務～\n\n—— {prefs.secretary_name}"
+            )
+        
+        elif action == "list":
+            return CommandResult(
+                success=True,
+                message=secretary.task_list_response(ctx.user_id)
+            )
+    
+    # Default: show task list
+    return CommandResult(
+        success=True,
+        message=secretary.task_list_response(ctx.user_id)
+    )
+
+
+async def handle_book(ctx: CommandContext) -> CommandResult:
+    """Handle /book command - booking assistant."""
+    from .secretary import get_secretary
+    
+    secretary = get_secretary()
+    prefs = secretary.get_preferences(ctx.user_id)
+    
+    if ctx.args:
+        booking_type = ctx.args[0].lower()
+        
+        type_map = {
+            "flight": "flight", "機票": "flight", "飛機": "flight", "plane": "flight",
+            "train": "train", "火車": "train", "高鐵": "train", "台鐵": "train",
+            "hotel": "hotel", "飯店": "hotel", "酒店": "hotel", "住宿": "hotel",
+            "restaurant": "restaurant", "餐廳": "restaurant", "訂位": "restaurant",
+        }
+        
+        if booking_type in type_map:
+            return CommandResult(
+                success=True,
+                message=secretary.booking_response(ctx.user_id, type_map[booking_type])
+            )
+    
+    message = f"""🎫 **訂票助手**
+
+{prefs.name or '主人'}，請問要預訂什麼呢？
+
+**可用服務：**
+• /book flight - ✈️ 機票預訂
+• /book train - 🚄 火車票預訂
+• /book hotel - 🏨 飯店預訂
+• /book restaurant - 🍽️ 餐廳訂位
+
+或者直接告訴我您的需求，例如：
+「幫我訂明天台北到高雄的高鐵票」
+「我要訂 2/14 的東京機票」
+
+—— {prefs.secretary_name}，隨時為您服務！✨
+"""
+    return CommandResult(success=True, message=message)
+
+
+# ============================================
 # Command Router
 # ============================================
 
@@ -1466,6 +1669,16 @@ COMMAND_HANDLERS: dict[str, Callable] = {
     "reminder": handle_reminder,
     "tts": handle_tts,
     "translate": handle_translate,
+    
+    # Secretary commands
+    "secretary": handle_secretary,
+    "sec": handle_secretary,  # Alias
+    "briefing": handle_briefing,
+    "daily": handle_briefing,  # Alias
+    "todo": handle_todo,
+    "task": handle_todo,  # Alias
+    "book": handle_book,
+    "booking": handle_book,  # Alias
 }
 
 

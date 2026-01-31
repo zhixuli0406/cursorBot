@@ -309,20 +309,27 @@ class CalendarReminderService:
         events: list[CalendarEventSummary],
         settings: ReminderSettings
     ) -> str:
-        """Build the reminder message."""
+        """Build the reminder message with secretary persona."""
+        from .secretary import get_secretary, SecretaryPersona
+        
+        secretary = get_secretary()
+        prefs = secretary.get_preferences(settings.user_id)
+        persona = SecretaryPersona
+        
         now = datetime.now()
         weekdays = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"]
         weekday = weekdays[now.weekday()]
-        date_str = now.strftime("%Y/%m/%d")
+        date_str = now.strftime("%Y年%m月%d日")
         
         lines = [
-            f"🌅 **早安！今日行程提醒**",
-            f"📅 {date_str} {weekday}",
+            persona.greeting(prefs.name),
+            "",
+            f"📅 今天是 {date_str} {weekday}",
             "",
         ]
         
         if events:
-            lines.append(f"📋 今日共有 **{len(events)}** 個行程：")
+            lines.append(f"📋 {persona.calendar_reminder(len(events))}")
             lines.append("")
             
             for event in events:
@@ -330,20 +337,29 @@ class CalendarReminderService:
             
             lines.append("")
         else:
-            lines.append("✨ 今日沒有排定的行程")
+            lines.append(f"✨ {persona.calendar_reminder(0)}")
             lines.append("")
         
-        # Add summary if enabled
-        if settings.include_summary and events:
-            lines.append("💡 **快速摘要：**")
-            if len(events) == 1:
-                lines.append(f"今天有 1 個行程：{events[0].title}")
-            else:
-                first_event = events[0]
-                lines.append(f"第一個行程在 {first_event.start_time}：{first_event.title}")
+        # Get tasks
+        tasks = secretary.get_today_tasks(settings.user_id)
+        all_tasks = secretary.get_tasks(settings.user_id)
         
-        lines.append("")
-        lines.append("祝您今天順利！🍀")
+        if all_tasks:
+            lines.append(f"✅ {persona.task_reminder(len(all_tasks))}")
+            if tasks:
+                lines.append("今天到期的任務：")
+                for task in tasks[:3]:
+                    lines.append(f"  • {task.title}")
+            lines.append("")
+        
+        # Add care message (randomly)
+        import random
+        if random.random() < 0.5:
+            lines.append(f"💕 {persona.care_message()}")
+            lines.append("")
+        
+        # Sign off with secretary name
+        lines.append(f"—— {prefs.secretary_name} {persona.sign_off()}")
         
         return "\n".join(lines)
     

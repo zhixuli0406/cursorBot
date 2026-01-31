@@ -179,6 +179,11 @@ from .calendar_reminder import (
     CalendarReminderService, ReminderSettings, ReminderPlatform,
     CalendarEventSummary, get_reminder_service,
 )
+from .secretary import (
+    PersonalSecretary, SecretaryPersona, Task, TaskPriority,
+    UserPreferences, AssistantIntent, AssistantNLU, AssistantMode,
+    get_secretary, get_assistant_mode,
+)
 from .remote_gateway import (
     RemoteGateway, GatewayConfig, GatewayNode, GatewayStatus,
     get_remote_gateway,

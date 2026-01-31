@@ -282,21 +282,66 @@ class AppleCalendarManager:
     
     def _parse_applescript_date(self, date_str: str) -> datetime:
         """Parse AppleScript date string."""
-        # AppleScript returns dates like "Saturday, January 28, 2026 at 10:00:00 AM"
-        # Try multiple formats
+        import re
+        
+        date_str = date_str.strip()
+        
+        # Try Chinese format first: "2026年2月1日 星期日 凌晨12:00:00"
+        chinese_match = re.match(
+            r'(\d{4})年(\d{1,2})月(\d{1,2})日\s*(?:星期.?)?\s*(凌晨|上午|中午|下午|晚上)?(\d{1,2}):(\d{2}):?(\d{2})?',
+            date_str
+        )
+        if chinese_match:
+            year = int(chinese_match.group(1))
+            month = int(chinese_match.group(2))
+            day = int(chinese_match.group(3))
+            period = chinese_match.group(4) or ""
+            hour = int(chinese_match.group(5))
+            minute = int(chinese_match.group(6))
+            second = int(chinese_match.group(7)) if chinese_match.group(7) else 0
+            
+            # Adjust hour based on Chinese time period
+            if period in ("下午", "晚上") and hour < 12:
+                hour += 12
+            elif period == "凌晨" and hour == 12:
+                hour = 0
+            elif period == "上午" and hour == 12:
+                hour = 0
+            
+            try:
+                return datetime(year, month, day, hour, minute, second)
+            except ValueError:
+                pass
+        
+        # Try English formats
         formats = [
             "%A, %B %d, %Y at %I:%M:%S %p",
             "%A, %B %d, %Y %I:%M:%S %p",
             "%Y-%m-%d %H:%M:%S",
             "%m/%d/%Y %I:%M:%S %p",
             "%d/%m/%Y %H:%M:%S",
+            "%Y/%m/%d %H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S",
         ]
         
         for fmt in formats:
             try:
-                return datetime.strptime(date_str.strip(), fmt)
+                return datetime.strptime(date_str, fmt)
             except ValueError:
                 continue
+        
+        # Try to extract just date if time parsing fails
+        date_only_match = re.match(r'(\d{4})年(\d{1,2})月(\d{1,2})日', date_str)
+        if date_only_match:
+            try:
+                return datetime(
+                    int(date_only_match.group(1)),
+                    int(date_only_match.group(2)),
+                    int(date_only_match.group(3)),
+                    0, 0, 0
+                )
+            except ValueError:
+                pass
         
         # Fallback: try to extract date components
         logger.warning(f"Could not parse date: {date_str}, using now")

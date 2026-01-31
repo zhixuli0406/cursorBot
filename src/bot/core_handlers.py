@@ -3809,29 +3809,36 @@ async def control_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /mode command.
-    Switch between Agent and Cursor CLI (both use async execution).
+    Switch between Assistant, Agent and Cursor CLI (both use async execution).
     
     Usage:
         /mode - Show current mode
+        /mode assistant - Personal secretary mode (natural language)
         /mode auto - Auto select best mode (CLI -> Agent)
         /mode cli - Use Cursor CLI for chat
         /mode agent - Use Agent Loop for chat
     """
     from .handlers import get_user_chat_mode, set_user_chat_mode, get_best_available_mode
     from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from ..core.secretary import get_secretary
     
     user_id = update.effective_user.id
     args = context.args or []
     
     current_mode = get_user_chat_mode(user_id)
     
+    # Get secretary info
+    secretary = get_secretary()
+    prefs = secretary.get_preferences(str(user_id))
+    
     if not args:
         # Show current mode and options
-        mode_icons = {"auto": "🔄", "cli": "⌨️", "agent": "🤖"}
+        mode_icons = {"auto": "🔄", "cli": "⌨️", "agent": "🤖", "assistant": "👩‍💼"}
         mode_names = {
             "auto": "自動選擇",
             "cli": "Cursor CLI",
             "agent": "Agent Loop",
+            "assistant": f"秘書模式 ({prefs.secretary_name})",
         }
         mode_icon = mode_icons.get(current_mode, "🔄")
         mode_name = mode_names.get(current_mode, "自動選擇")
@@ -3859,50 +3866,60 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 ━━━━━━━━━━━━━━━━━━━━━━
 {mode_icon} <b>{mode_name}</b>{effective_mode}
 
-🚀 <b>所有模式皆為異步執行</b>
-   任務背景處理，完成後自動推送結果
-
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>可用模式</b>
 ━━━━━━━━━━━━━━━━━━━━━━
+👩‍💼 <b>秘書模式</b> (<code>/mode assistant</code>) ✅ 推薦
+   專屬秘書 {prefs.secretary_name} 為您服務
+   用自然語言聊天和下指令
+   「幫我記開會」「今天有什麼行程」
+
 🔄 <b>自動選擇</b> (<code>/mode auto</code>)
    自動選擇最佳可用模式
    優先順序: CLI → Agent
 
 ⌨️ <b>Cursor CLI</b> (<code>/mode cli</code>) {f'✅' if cli_available else '⚠️'}
-   使用官方 Cursor CLI (agent 指令)
-   直接與 Cursor AI 互動
-   支援檔案編輯、程式碼生成
+   程式碼生成、檔案編輯
    {f'({cli_info})' if cli_available else '未安裝'}
 
 🤖 <b>Agent Loop</b> (<code>/mode agent</code>) ✅
-   使用內建 AI Agent 處理對話
-   支援多種 AI 模型 (OpenAI/Claude/Gemini/GLM)
-   可執行複雜任務、使用技能和工具
+   AI Agent 多步驟推理
+   執行複雜任務、使用工具
 
 ━━━━━━━━━━━━━━━━━━━━━━
 <b>切換指令</b>
 ━━━━━━━━━━━━━━━━━━━━━━
+<code>/mode assistant</code> - 秘書模式 👩‍💼
 <code>/mode auto</code> - 自動選擇
 <code>/mode cli</code> - Cursor CLI 模式
 <code>/mode agent</code> - Agent Loop 模式
 
-━━━━━━━━━━━━━━━━━━━━━━
-<b>任務管理</b>
-━━━━━━━━━━━━━━━━━━━━━━
-<code>/tasks</code> - 查看所有任務
-<code>/cancel &lt;task_id&gt;</code> - 取消任務
-
 直接發送訊息即可使用選定模式。
 """
         await update.message.reply_text(text, parse_mode="HTML")
+    
+    elif args[0].lower() in ["assistant", "secretary", "秘書"]:
+        set_user_chat_mode(user_id, "assistant")
+        
+        await update.message.reply_text(
+            f"👩‍💼 <b>已切換到秘書模式</b>\n\n"
+            f"您的專屬秘書 <b>{prefs.secretary_name}</b> 為您服務！\n\n"
+            "💬 現在可以用自然語言與我互動：\n"
+            "• 「幫我記明天要開會」\n"
+            "• 「今天有什麼行程」\n"
+            "• 「訂機票去東京」\n"
+            "• 「待辦清單」\n\n"
+            "或是直接跟我聊天也可以喔～✨\n\n"
+            f"—— {prefs.secretary_name}",
+            parse_mode="HTML"
+        )
     
     elif args[0].lower() == "auto":
         set_user_chat_mode(user_id, "auto")
         
         # Get best mode
         best = get_best_available_mode()
-        mode_names = {"cli": "Cursor CLI", "agent": "Agent Loop"}
+        mode_names = {"cli": "Cursor CLI", "agent": "Agent Loop", "assistant": "秘書模式"}
         
         await update.message.reply_text(
             "🔄 <b>已切換到自動選擇模式</b>\n\n"
@@ -3973,10 +3990,11 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text(
             "⚡ <b>Mode 指令</b>\n\n"
             "<code>/mode</code> - 查看目前模式\n"
+            "<code>/mode assistant</code> - 👩‍💼 秘書模式（推薦）\n"
             "<code>/mode auto</code> - 自動選擇\n"
             "<code>/mode cli</code> - Cursor CLI 模式\n"
             "<code>/mode agent</code> - Agent Loop 模式\n\n"
-            "🚀 所有模式皆為異步執行",
+            "💡 秘書模式可用自然語言互動",
             parse_mode="HTML"
         )
 

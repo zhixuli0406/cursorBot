@@ -24,17 +24,28 @@ from ..utils.logger import logger
 # This ensures all modules use the same workspace state
 from .handlers_extended import get_cursor_agent
 
-# User chat mode settings (cli vs agent)
-# Key: user_id, Value: "cli" or "agent"
+# User chat mode settings (cli vs agent vs assistant)
+# Key: user_id, Value: "cli", "agent", "assistant", or "auto"
 _user_chat_modes: dict[int, str] = {}
 
 # Default chat mode (auto = use priority: cli -> agent)
-DEFAULT_CHAT_MODE = "auto"  # "auto", "cli", or "agent"
+DEFAULT_CHAT_MODE = "auto"  # "auto", "cli", "agent", or "assistant"
+
+# Valid chat modes
+VALID_CHAT_MODES = ["auto", "cli", "agent", "assistant"]
 
 
 def get_user_chat_mode(user_id: int) -> str:
     """Get user's chat mode preference."""
     return _user_chat_modes.get(user_id, DEFAULT_CHAT_MODE)
+
+
+def set_user_chat_mode(user_id: int, mode: str) -> bool:
+    """Set user's chat mode preference."""
+    if mode not in VALID_CHAT_MODES:
+        return False
+    _user_chat_modes[user_id] = mode
+    return True
 
 
 async def store_conversation_to_rag(
@@ -139,12 +150,23 @@ def get_best_available_mode() -> str:
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /start command.
-    Welcome message and basic instructions.
+    Welcome message and basic instructions with secretary persona.
     """
     from .keyboards import get_welcome_keyboard
+    from ..core.secretary import get_secretary, SecretaryPersona
 
     user = update.effective_user
     logger.info(f"User {user.id} ({user.username}) started the bot")
+
+    # Get or create secretary preferences
+    secretary = get_secretary()
+    prefs = secretary.get_preferences(str(user.id))
+    
+    # Set user name if not set
+    user_name = user.first_name or "用戶"
+    if not prefs.name:
+        secretary.set_user_name(str(user.id), user_name)
+        prefs = secretary.get_preferences(str(user.id))
 
     # Check status
     status_items = []
@@ -185,35 +207,38 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     
     status_text = " | ".join(status_items) if status_items else "⚠️ 請設定 API Key"
     
-    # Escape user's first name for HTML
-    user_name_safe = _escape_html(user.first_name or "用戶")
+    # Escape user's name for HTML
+    user_name_safe = _escape_html(prefs.name or user_name)
+    secretary_name_safe = _escape_html(prefs.secretary_name)
+    
+    # Get time-based greeting
+    greeting = SecretaryPersona.greeting(prefs.name or user_name)
+    greeting_safe = _escape_html(greeting)
 
-    welcome_text = f"""👋 <b>歡迎使用 CursorBot v1.1 語音助手版!</b>
+    welcome_text = f"""{greeting_safe}
 
-您好, {user_name_safe}!
+我是您的專屬秘書 <b>{secretary_name_safe}</b>！✨
 
 <b>📡 狀態:</b> {status_text}
 
-<b>🚀 快速開始:</b>
-直接發送訊息或語音即可！背景執行，完成自動推送
+<b>👩‍💼 秘書服務：</b>
+• /briefing - 今日簡報（行程 + 待辦）
+• /todo add &lt;任務&gt; - 新增待辦事項
+• /book - 訂票助手（機票、火車、飯店）
+• /calendar - 查看行程
+• /reminder on - 啟用每日提醒
 
-<b>⚡ 對話模式:</b>
-• <b>CLI</b> - Cursor CLI 程式碼處理
-• <b>Agent</b> - AI Agent 多步驟推理
+<b>⚡ AI 助手：</b>
+• 直接發送訊息即可對話
+• /mode cli - 切換程式碼模式
+• /mode agent - 切換 AI 助手模式
 
-<b>🎤 v1.1 語音助手:</b>
-• 語音喚醒 - 說「Hey Cursor」即可啟動
-• 語音指令 - 系統控制、檔案操作、智慧家居
-• 會議助手 - 錄音、轉錄、摘要
-• 離線模式 - 無網路也能使用
+<b>🎤 語音控制：</b>
+• 說「Hey Cursor」喚醒語音助手
 
-<b>📋 常用指令:</b>
-/help - 完整指令說明
-/mode - 切換模式
-/voice - 語音助手設定
-/status - 系統狀態
+📋 更多指令請輸入 /help
 
-點擊下方按鈕或直接發送訊息開始！
+—— {secretary_name_safe}，隨時為您服務！💕
 """
     await update.message.reply_text(
         welcome_text,
@@ -226,8 +251,15 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /help command.
-    Display detailed help information.
+    Display detailed help information with secretary persona.
     """
+    from ..core.secretary import get_secretary
+    
+    user = update.effective_user
+    secretary = get_secretary()
+    prefs = secretary.get_preferences(str(user.id))
+    secretary_name_safe = _escape_html(prefs.secretary_name)
+    
     # Check status
     status_parts = []
     
@@ -249,71 +281,38 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     help_text = f"""<b>📖 CursorBot v1.1 指令說明</b>
 {status_info}
 
-<b>🔹 基礎</b>
-/start /help /status /doctor
+<b>👩‍💼 個人秘書</b>
+━━━━━━━━━━━━━━━━━━━━━━
+/mode assistant - 切換秘書模式 👈
+/briefing - 今日簡報
+/todo [add|done|list] - 待辦事項
+/book [flight|train|hotel] - 訂票助手
+/secretary - 秘書設定
 
-<b>⚡ 模式</b> (皆為異步)
-/mode [cli|agent|auto]
-/tasks /cancel &lt;id&gt;
+<b>📅 日曆 &amp; 郵件</b>
+/calendar [week|list|add]
+/reminder [on|off] - 每日提醒
+/gmail [search|unread]
 
-<b>🤖 AI 模型</b>
-/model [list|set|reset]
-/climodel [list|set|reset]
-
-<b>🤖 Agent</b>
-/agent &lt;任務&gt;
-/skills /skills_search /skills_install
+<b>⚡ 對話模式</b>
+/mode assistant - 秘書模式（推薦）
+/mode cli - 程式碼模式
+/mode agent - AI Agent 模式
 
 <b>🧠 記憶 &amp; RAG</b>
 /memory [add|get|del|clear]
 /rag &lt;問題&gt; /index &lt;檔案&gt;
-/clear /new /compact
 
-<b>📅 日曆 &amp; 提醒</b>
-/calendar [week|list|add]
-/reminder [on|off|time] - 每日行程提醒
-/gmail [search|unread]
+<b>🎤 語音助手</b>
+/voice - 語音設定
+/meeting - 會議助手
 
-<b>📁 檔案 &amp; 工作區</b>
-/file [read|list] /run &lt;cmd&gt;
-/workspace /cd &lt;name&gt;
+<b>💡 秘書模式可用自然語言：</b>
+• 「幫我記開會」
+• 「今天有什麼行程」
+• 「訂機票去東京」
 
-<b>🎤 v1.1 語音助手</b>
-━━━━━━━━━━━━━━━━━━━━━━
-/voice - 語音助手狀態
-/voice wake [on|off] - 語音喚醒
-/voice stt [engine] - 語音辨識引擎
-/voice tts [engine] - 語音合成引擎
-/meeting [start|stop|notes] - 會議助手
-/smarthome [devices|control] - 智慧家居
-
-<b>🔧 進階功能</b>
-/canvas [new|list|add] - 視覺化工作區
-/gateways [list|add|strategy] - 多閘道管理
-/pair [qr] - 設備配對
-/devices - 已配對設備
-/lang [set|list] - 多語系設定
-/offline [on|off|status] - 離線模式
-
-<b>⚙️ 系統設定</b>
-/verbose [on|off|level] - 詳細輸出
-/think [off|low|medium|high] - AI 思考深度
-/notify [on|off|quiet] - 通知設定
-/privacy - 隱私設定
-/accessibility - 無障礙設定
-
-<b>🔧 其他</b>
-/mcp /workflow /analytics
-/health /review /docs /export
-
-<i>💡 直接發送訊息或語音即可對話</i>
-<b>💡 快速提示</b>
-━━━━━━━━━━━━━━━━━━━━━━
-• 說「Hey Cursor」喚醒語音助手
-• /voice wake on 啟用語音喚醒
-• /meeting start 開始會議錄音
-• /smarthome devices 查看智慧設備
-• /offline on 啟用離線模式
+—— {secretary_name_safe}
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 
@@ -829,8 +828,11 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if chat_mode == "auto":
         chat_mode = get_best_available_mode()
     
-    # All modes use async execution (non-blocking)
-    if chat_mode == "cli":
+    # Route based on mode
+    if chat_mode == "assistant":
+        # Use Assistant Mode (personal secretary)
+        await _handle_assistant_mode(update, message_text, user_id, username, chat_id)
+    elif chat_mode == "cli":
         # Use Cursor CLI mode (async)
         from ..cursor.cli_agent import is_cli_available
         if is_cli_available():
@@ -841,6 +843,45 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         # Use Agent Loop mode (async)
         await _handle_async_agent_mode(update, message_text, user_id, username, chat_id)
+
+
+async def _handle_assistant_mode(
+    update: Update,
+    message_text: str,
+    user_id: int,
+    username: str,
+    chat_id: int,
+) -> None:
+    """
+    Handle message using Assistant Mode (personal secretary).
+    
+    Uses natural language understanding to process commands
+    and respond with a friendly secretary persona.
+    """
+    from ..core.secretary import get_assistant_mode
+    
+    try:
+        assistant = get_assistant_mode()
+        
+        # Process message with assistant
+        response = await assistant.process_message(str(user_id), message_text)
+        
+        # Send response
+        await update.message.reply_text(response)
+        
+    except Exception as e:
+        logger.error(f"Assistant mode error: {e}")
+        
+        # Friendly error response
+        from ..core.secretary import get_secretary
+        secretary = get_secretary()
+        prefs = secretary.get_preferences(str(user_id))
+        
+        await update.message.reply_text(
+            f"抱歉，我遇到了一點問題呢～\n"
+            f"請稍後再試，或使用 /help 查看可用指令。\n\n"
+            f"—— {prefs.secretary_name}"
+        )
 
 
 async def _handle_async_agent_mode(
@@ -1247,6 +1288,10 @@ def setup_handlers(app: Application) -> None:
     # Setup v0.4 advanced feature handlers (Gateway, Pairing, Canvas, i18n, etc.)
     from .v04_advanced_handlers import register_v04_advanced_handlers
     register_v04_advanced_handlers(app)
+    
+    # Setup personal assistant handlers (Todo, Reminder, Book, Secretary)
+    from .assistant_handlers import setup_assistant_handlers
+    setup_assistant_handlers(app)
 
     logger.info("Bot handlers configured successfully")
 
