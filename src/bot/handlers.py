@@ -269,8 +269,9 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /rag &lt;問題&gt; /index &lt;檔案&gt;
 /clear /new /compact
 
-<b>📅 日曆 &amp; 郵件</b>
+<b>📅 日曆 &amp; 提醒</b>
 /calendar [week|list|add]
+/reminder [on|off|time] - 每日行程提醒
 /gmail [search|unread]
 
 <b>📁 檔案 &amp; 工作區</b>

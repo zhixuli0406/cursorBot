@@ -134,6 +134,7 @@ COMMANDS: dict[str, CommandDefinition] = {
     
     # Calendar & Integration Commands
     "calendar": CommandDefinition("calendar", "日曆管理", CommandCategory.CALENDAR, aliases=["cal"]),
+    "reminder": CommandDefinition("reminder", "每日行程提醒", CommandCategory.CALENDAR),
     "gmail": CommandDefinition("gmail", "Gmail 郵件管理", CommandCategory.INTEGRATION),
     "tasks": CommandDefinition("tasks", "任務列表", CommandCategory.BASIC),
     "cancel": CommandDefinition("cancel", "取消任務", CommandCategory.BASIC),
@@ -1274,6 +1275,87 @@ async def handle_calendar(ctx: CommandContext) -> CommandResult:
     return CommandResult(success=True, message=message)
 
 
+async def handle_reminder(ctx: CommandContext) -> CommandResult:
+    """Handle /reminder command - daily calendar reminder."""
+    from .calendar_reminder import get_reminder_service
+    
+    service = get_reminder_service()
+    
+    if ctx.args:
+        action = ctx.args[0].lower()
+        
+        if action == "on":
+            # Enable reminder with default time 07:00
+            reminder_time = ctx.args[1] if len(ctx.args) > 1 else "07:00"
+            settings = service.enable_reminder(
+                user_id=ctx.user_id,
+                platform=ctx.platform,
+                chat_id=ctx.user_id,  # Default to user_id as chat_id
+                reminder_time=reminder_time,
+            )
+            return CommandResult(
+                success=True,
+                message=f"✅ **行程提醒已啟用**\n\n每日 {reminder_time} 將發送當日行程提醒\n\n使用 /reminder time HH:MM 可修改時間"
+            )
+        
+        elif action == "off":
+            if service.disable_reminder(ctx.user_id, ctx.platform):
+                return CommandResult(success=True, message="✅ 行程提醒已關閉")
+            return CommandResult(success=False, message="❌ 尚未啟用行程提醒")
+        
+        elif action == "time" and len(ctx.args) > 1:
+            new_time = ctx.args[1]
+            # Validate time format
+            try:
+                hour, minute = map(int, new_time.split(":"))
+                if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                    raise ValueError()
+            except (ValueError, IndexError):
+                return CommandResult(success=False, message="❌ 時間格式錯誤，請使用 HH:MM 格式 (例如 07:00)")
+            
+            if service.update_reminder_time(ctx.user_id, ctx.platform, new_time):
+                return CommandResult(success=True, message=f"✅ 提醒時間已更新為 {new_time}")
+            
+            # If no settings exist, create new one
+            service.enable_reminder(
+                user_id=ctx.user_id,
+                platform=ctx.platform,
+                chat_id=ctx.user_id,
+                reminder_time=new_time,
+            )
+            return CommandResult(success=True, message=f"✅ 行程提醒已啟用，時間設為 {new_time}")
+        
+        elif action == "weekend":
+            if len(ctx.args) > 1:
+                enabled = ctx.args[1].lower() in ("on", "true", "1")
+                settings = service.get_settings(ctx.user_id, ctx.platform)
+                if settings:
+                    settings.quiet_weekends = not enabled  # quiet_weekends is opposite
+                    return CommandResult(
+                        success=True,
+                        message=f"✅ 週末提醒: {'已啟用' if enabled else '已關閉'}"
+                    )
+            return CommandResult(success=False, message="❌ 用法: /reminder weekend [on|off]")
+        
+        elif action == "test":
+            result = await service.send_test_reminder(ctx.user_id, ctx.platform)
+            if result:
+                return CommandResult(success=True, message="✅ 測試提醒已發送")
+            return CommandResult(success=False, message="❌ 發送失敗，請先啟用提醒 (/reminder on)")
+        
+        elif action == "status":
+            return CommandResult(
+                success=True,
+                message=service.get_status_message(ctx.user_id, ctx.platform)
+            )
+    
+    # Default: show status
+    return CommandResult(
+        success=True,
+        message=service.get_status_message(ctx.user_id, ctx.platform)
+    )
+
+
 async def handle_tasks(ctx: CommandContext) -> CommandResult:
     """Handle /tasks command - task list."""
     return CommandResult(
@@ -1381,6 +1463,7 @@ COMMAND_HANDLERS: dict[str, Callable] = {
     # Calendar & Integration commands
     "calendar": handle_calendar,
     "cal": handle_calendar,  # Alias
+    "reminder": handle_reminder,
     "tts": handle_tts,
     "translate": handle_translate,
 }

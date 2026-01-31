@@ -175,6 +175,10 @@ from .voice_shortcuts import (
     AndroidIntentHandler, NotificationInteraction,
     get_shortcuts_manager,
 )
+from .calendar_reminder import (
+    CalendarReminderService, ReminderSettings, ReminderPlatform,
+    CalendarEventSummary, get_reminder_service,
+)
 from .remote_gateway import (
     RemoteGateway, GatewayConfig, GatewayNode, GatewayStatus,
     get_remote_gateway,

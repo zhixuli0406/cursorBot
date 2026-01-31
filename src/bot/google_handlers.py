@@ -37,71 +37,346 @@ from ..utils.auth import is_authorized
 async def calendar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /calendar command.
+    Supports both Apple Calendar (macOS) and Google Calendar.
     
     Usage:
         /calendar - Show today's events
         /calendar week - Show this week's events
+        /calendar list - List all calendars
         /calendar add <title> <time> - Add event
-        /calendar auth - Start authentication
+        /calendar auth - Start Google authentication
     """
+    import html
+    import platform
+    
     user_id = str(update.effective_user.id)
     
     if not is_authorized(user_id):
         await update.message.reply_text("You are not authorized to use this bot.")
         return
     
-    if not CALENDAR_AVAILABLE:
-        await update.message.reply_text(
-            "Google API client is not installed.\n\n"
-            "Install with:\n"
-            "`pip install google-api-python-client google-auth-oauthlib`",
-            parse_mode="Markdown"
-        )
-        return
-    
-    calendar = get_calendar_manager()
     args = context.args or []
+    
+    # Check for Apple Calendar on macOS
+    apple_calendar = None
+    if platform.system() == "Darwin":
+        try:
+            from ..core.apple_calendar import get_apple_calendar
+            apple_calendar = get_apple_calendar()
+            if not apple_calendar.is_available():
+                apple_calendar = None
+        except Exception:
+            apple_calendar = None
+    
+    # Get Google Calendar if available
+    google_calendar = None
+    if CALENDAR_AVAILABLE:
+        google_calendar = get_calendar_manager()
     
     # Handle subcommands
     if not args:
-        # Show today's events
-        await _show_today_events(update, calendar)
+        # Show today's events from all sources
+        await _show_today_events_combined(update, apple_calendar, google_calendar)
     elif args[0] == "week":
-        # Show this week's events
-        await _show_week_events(update, calendar)
+        # Show this week's events from all sources
+        await _show_week_events_combined(update, apple_calendar, google_calendar)
     elif args[0] == "auth":
-        # Start authentication
-        await _calendar_auth(update, calendar)
-    elif args[0] == "code" and len(args) >= 2:
-        # Complete authentication with code
-        code = args[1]
-        success = await calendar.complete_auth_with_code(code)
-        if success:
-            await update.message.reply_text("✅ Google Calendar authentication successful!")
+        # Start Google Calendar authentication
+        if google_calendar:
+            await _calendar_auth(update, google_calendar)
         else:
-            await update.message.reply_text("❌ Authentication failed. Please try again.")
+            await update.message.reply_text("Google Calendar API 未安裝")
+    elif args[0] == "code" and len(args) >= 2:
+        # Complete Google authentication with code
+        if google_calendar:
+            code = args[1]
+            success = await google_calendar.complete_auth_with_code(code)
+            if success:
+                await update.message.reply_text("✅ Google Calendar 認證成功!")
+            else:
+                await update.message.reply_text("❌ 認證失敗，請重試。")
+        else:
+            await update.message.reply_text("Google Calendar API 未安裝")
     elif args[0] == "add" and len(args) >= 3:
-        # Add event
+        # Add event (prefer Apple Calendar on macOS)
         title = args[1]
         time_str = " ".join(args[2:])
-        await _add_event(update, calendar, title, time_str)
+        await _add_event_combined(update, apple_calendar, google_calendar, title, time_str)
     elif args[0] == "list":
-        # List calendars
-        await _list_calendars(update, calendar)
+        # List calendars from all sources
+        await _list_calendars_combined(update, apple_calendar, google_calendar)
     else:
+        sources = []
+        if apple_calendar:
+            sources.append("Apple Calendar")
+        if google_calendar:
+            sources.append("Google Calendar")
+        source_text = " + ".join(sources) if sources else "未設定"
+        
         await update.message.reply_text(
-            "<b>Google Calendar</b>\n\n"
-            "Usage:\n"
-            "<code>/calendar</code> - Show today's events\n"
-            "<code>/calendar week</code> - Show this week's events\n"
-            "<code>/calendar list</code> - List calendars\n"
-            "<code>/calendar add &lt;title&gt; &lt;time&gt;</code> - Add event\n"
-            "<code>/calendar auth</code> - Authenticate\n"
-            "<code>/calendar code &lt;code&gt;</code> - Complete auth\n\n"
-            "Example:\n"
-            "<code>/calendar add Meeting 2026-01-28T14:00</code>",
+            f"<b>📅 日曆管理</b>\n\n"
+            f"來源: {source_text}\n\n"
+            "<b>指令:</b>\n"
+            "<code>/calendar</code> - 今日行程\n"
+            "<code>/calendar week</code> - 本週行程\n"
+            "<code>/calendar list</code> - 列出所有日曆\n"
+            "<code>/calendar add &lt;標題&gt; &lt;時間&gt;</code> - 新增行程\n"
+            "<code>/calendar auth</code> - Google 認證\n\n"
+            "<b>範例:</b>\n"
+            "<code>/calendar add 開會 2026-01-28T14:00</code>",
             parse_mode="HTML"
         )
+
+
+async def _show_today_events_combined(update: Update, apple_calendar, google_calendar) -> None:
+    """Show today's events from all calendar sources."""
+    import html
+    
+    all_events = []
+    sources = []
+    
+    # Get Apple Calendar events
+    if apple_calendar:
+        try:
+            apple_events = apple_calendar.get_events_today()
+            for event in apple_events:
+                all_events.append({
+                    "time": event.start_time,
+                    "title": event.title,
+                    "location": event.location,
+                    "source": "Apple",
+                })
+            sources.append("Apple Calendar")
+        except Exception as e:
+            logger.warning(f"Failed to get Apple Calendar events: {e}")
+    
+    # Get Google Calendar events
+    if google_calendar and google_calendar.is_authenticated:
+        try:
+            google_events = await google_calendar.get_events_today()
+            for event in google_events:
+                all_events.append({
+                    "time": event.start,
+                    "title": event.title,
+                    "location": event.location,
+                    "source": "Google",
+                })
+            sources.append("Google Calendar")
+        except Exception as e:
+            logger.warning(f"Failed to get Google Calendar events: {e}")
+    
+    if not sources:
+        await update.message.reply_text(
+            "未設定日曆來源。\n\n"
+            "• macOS 用戶可直接使用 Apple Calendar\n"
+            "• 使用 /calendar auth 設定 Google Calendar"
+        )
+        return
+    
+    if not all_events:
+        await update.message.reply_text(f"📅 今日沒有行程\n\n來源: {', '.join(sources)}")
+        return
+    
+    # Sort by time
+    all_events.sort(key=lambda e: e["time"] if e["time"] else "00:00")
+    
+    text = f"<b>📅 今日行程</b>\n<i>來源: {', '.join(sources)}</i>\n\n"
+    for event in all_events:
+        time_obj = event["time"]
+        if hasattr(time_obj, 'strftime'):
+            time_str = time_obj.strftime("%H:%M")
+        else:
+            time_str = str(time_obj) if time_obj else "整天"
+        title = html.escape(event["title"])
+        text += f"• <code>{time_str}</code> - {title}\n"
+        if event["location"]:
+            location = html.escape(event["location"])
+            text += f"  📍 {location}\n"
+    
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def _show_week_events_combined(update: Update, apple_calendar, google_calendar) -> None:
+    """Show this week's events from all calendar sources."""
+    import html
+    
+    all_events = []
+    sources = []
+    
+    # Get Apple Calendar events
+    if apple_calendar:
+        try:
+            apple_events = apple_calendar.get_events_week()
+            for event in apple_events:
+                all_events.append({
+                    "date": event.start_time.date() if event.start_time else None,
+                    "time": event.start_time,
+                    "title": event.title,
+                    "source": "Apple",
+                })
+            sources.append("Apple Calendar")
+        except Exception as e:
+            logger.warning(f"Failed to get Apple Calendar events: {e}")
+    
+    # Get Google Calendar events
+    if google_calendar and google_calendar.is_authenticated:
+        try:
+            google_events = await google_calendar.get_events_week()
+            for event in google_events:
+                all_events.append({
+                    "date": event.start.date() if event.start else None,
+                    "time": event.start,
+                    "title": event.title,
+                    "source": "Google",
+                })
+            sources.append("Google Calendar")
+        except Exception as e:
+            logger.warning(f"Failed to get Google Calendar events: {e}")
+    
+    if not sources:
+        await update.message.reply_text(
+            "未設定日曆來源。\n\n"
+            "• macOS 用戶可直接使用 Apple Calendar\n"
+            "• 使用 /calendar auth 設定 Google Calendar"
+        )
+        return
+    
+    if not all_events:
+        await update.message.reply_text(f"📅 本週沒有行程\n\n來源: {', '.join(sources)}")
+        return
+    
+    # Sort by date and time
+    all_events.sort(key=lambda e: (e["date"] or "", e["time"] or ""))
+    
+    text = f"<b>📅 本週行程</b>\n<i>來源: {', '.join(sources)}</i>\n"
+    current_date = None
+    
+    for event in all_events:
+        if event["date"] != current_date:
+            current_date = event["date"]
+            if current_date:
+                day_name = event["time"].strftime("%m/%d (%a)") if event["time"] else str(current_date)
+                text += f"\n<b>{day_name}</b>\n"
+        
+        time_obj = event["time"]
+        if hasattr(time_obj, 'strftime'):
+            time_str = time_obj.strftime("%H:%M")
+        else:
+            time_str = "整天"
+        title = html.escape(event["title"])
+        text += f"• <code>{time_str}</code> - {title}\n"
+    
+    # Truncate if too long
+    if len(text) > 4000:
+        text = text[:4000] + "\n\n...(truncated)"
+    
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def _list_calendars_combined(update: Update, apple_calendar, google_calendar) -> None:
+    """List calendars from all sources."""
+    import html
+    
+    text = "<b>📅 日曆列表</b>\n"
+    has_calendars = False
+    
+    # List Apple Calendars
+    if apple_calendar:
+        try:
+            apple_cals = apple_calendar.list_calendars()
+            if apple_cals:
+                has_calendars = True
+                text += "\n<b>🍎 Apple Calendar</b>\n"
+                for cal in apple_cals:
+                    cal_name = html.escape(cal.name)
+                    text += f"• {cal_name}\n"
+        except Exception as e:
+            logger.warning(f"Failed to list Apple calendars: {e}")
+    
+    # List Google Calendars
+    if google_calendar:
+        if google_calendar.is_authenticated:
+            try:
+                google_cals = await google_calendar.list_calendars()
+                if google_cals:
+                    has_calendars = True
+                    text += "\n<b>📧 Google Calendar</b>\n"
+                    for cal in google_cals:
+                        cal_name = html.escape(cal.name)
+                        primary = " ⭐" if cal.primary else ""
+                        text += f"• {cal_name}{primary}\n"
+            except Exception as e:
+                logger.warning(f"Failed to list Google calendars: {e}")
+        else:
+            text += "\n<b>📧 Google Calendar</b>\n"
+            text += "<i>未認證，使用 /calendar auth 設定</i>\n"
+    
+    if not has_calendars:
+        text += "\n沒有找到日曆。\n"
+        text += "\n• macOS 會自動使用 Apple Calendar\n"
+        text += "• 使用 /calendar auth 連接 Google Calendar"
+    
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def _add_event_combined(update: Update, apple_calendar, google_calendar, title: str, time_str: str) -> None:
+    """Add event to calendar (prefers Apple Calendar on macOS)."""
+    import html
+    from datetime import datetime, timedelta
+    
+    try:
+        start = datetime.fromisoformat(time_str)
+        end = start + timedelta(hours=1)  # Default 1 hour duration
+    except ValueError:
+        await update.message.reply_text(
+            "❌ 時間格式錯誤\n\n"
+            "請使用 ISO 格式: YYYY-MM-DDTHH:MM\n"
+            "例如: 2026-01-28T14:00"
+        )
+        return
+    
+    # Prefer Apple Calendar on macOS
+    if apple_calendar:
+        try:
+            event_id = apple_calendar.create_event(
+                title=title,
+                start_time=start,
+                end_time=end,
+            )
+            if event_id:
+                title_escaped = html.escape(title)
+                await update.message.reply_text(
+                    f"<b>✅ 行程已建立</b>\n\n"
+                    f"標題: {title_escaped}\n"
+                    f"時間: {start.strftime('%Y-%m-%d %H:%M')}\n"
+                    f"來源: Apple Calendar",
+                    parse_mode="HTML"
+                )
+                return
+        except Exception as e:
+            logger.warning(f"Failed to create Apple Calendar event: {e}")
+    
+    # Fallback to Google Calendar
+    if google_calendar and google_calendar.is_authenticated:
+        try:
+            event = await google_calendar.create_event(
+                title=title,
+                start=time_str,
+            )
+            if event:
+                title_escaped = html.escape(event.title)
+                await update.message.reply_text(
+                    f"<b>✅ 行程已建立</b>\n\n"
+                    f"標題: {title_escaped}\n"
+                    f"時間: {event.start.strftime('%Y-%m-%d %H:%M')}\n"
+                    f"來源: Google Calendar",
+                    parse_mode="HTML"
+                )
+                return
+        except Exception as e:
+            logger.warning(f"Failed to create Google Calendar event: {e}")
+    
+    await update.message.reply_text("❌ 建立行程失敗，請確認日曆來源已設定")
 
 
 async def _calendar_auth(update: Update, calendar) -> None:
@@ -132,128 +407,8 @@ async def _calendar_auth(update: Update, calendar) -> None:
         )
 
 
-async def _show_today_events(update: Update, calendar) -> None:
-    """Show today's calendar events."""
-    if not calendar.is_authenticated:
-        success = await calendar.authenticate()
-        if not success:
-            await update.message.reply_text(
-                "Not authenticated. Run `/calendar auth` first.",
-                parse_mode="Markdown"
-            )
-            return
-    
-    events = await calendar.get_events_today()
-    
-    if not events:
-        await update.message.reply_text("No events scheduled for today.")
-        return
-    
-    text = "**Today's Events**\n\n"
-    for event in events:
-        time_str = event.start.strftime("%H:%M") if event.start else "All day"
-        text += f"• `{time_str}` - {event.title}\n"
-        if event.location:
-            text += f"  Location: {event.location}\n"
-    
-    await update.message.reply_text(text, parse_mode="Markdown")
 
 
-async def _show_week_events(update: Update, calendar) -> None:
-    """Show this week's calendar events."""
-    if not calendar.is_authenticated:
-        success = await calendar.authenticate()
-        if not success:
-            await update.message.reply_text(
-                "Not authenticated. Run `/calendar auth` first.",
-                parse_mode="Markdown"
-            )
-            return
-    
-    events = await calendar.get_events_week()
-    
-    if not events:
-        await update.message.reply_text("No events scheduled for this week.")
-        return
-    
-    text = "**This Week's Events**\n\n"
-    current_date = None
-    
-    for event in events:
-        event_date = event.start.strftime("%Y-%m-%d") if event.start else None
-        
-        if event_date != current_date:
-            current_date = event_date
-            day_name = event.start.strftime("%A, %b %d") if event.start else "Unknown"
-            text += f"\n**{day_name}**\n"
-        
-        time_str = event.start.strftime("%H:%M") if event.start else "All day"
-        text += f"• `{time_str}` - {event.title}\n"
-    
-    # Truncate if too long
-    if len(text) > 4000:
-        text = text[:4000] + "\n\n...(truncated)"
-    
-    await update.message.reply_text(text, parse_mode="Markdown")
-
-
-async def _list_calendars(update: Update, calendar) -> None:
-    """List available calendars."""
-    if not calendar.is_authenticated:
-        success = await calendar.authenticate()
-        if not success:
-            await update.message.reply_text(
-                "Not authenticated. Run `/calendar auth` first.",
-                parse_mode="Markdown"
-            )
-            return
-    
-    calendars = await calendar.list_calendars()
-    
-    if not calendars:
-        await update.message.reply_text("No calendars found.")
-        return
-    
-    text = "**Your Calendars**\n\n"
-    for cal in calendars:
-        primary = " (Primary)" if cal.primary else ""
-        text += f"• {cal.name}{primary}\n"
-        if cal.description:
-            text += f"  _{cal.description}_\n"
-    
-    await update.message.reply_text(text, parse_mode="Markdown")
-
-
-async def _add_event(update: Update, calendar, title: str, time_str: str) -> None:
-    """Add a calendar event."""
-    if not calendar.is_authenticated:
-        success = await calendar.authenticate()
-        if not success:
-            await update.message.reply_text(
-                "Not authenticated. Run `/calendar auth` first.",
-                parse_mode="Markdown"
-            )
-            return
-    
-    try:
-        event = await calendar.create_event(
-            title=title,
-            start=time_str,
-        )
-        
-        if event:
-            await update.message.reply_text(
-                f"**Event Created**\n\n"
-                f"Title: {event.title}\n"
-                f"Time: {event.start.strftime('%Y-%m-%d %H:%M')}\n"
-                f"[Open in Calendar]({event.link})",
-                parse_mode="Markdown"
-            )
-        else:
-            await update.message.reply_text("Failed to create event.")
-            
-    except Exception as e:
-        await update.message.reply_text(f"Error: {str(e)}")
 
 
 # ============================================

@@ -126,14 +126,14 @@ class AppleCalendarManager:
             self._available = False
             return False
     
-    def _run_applescript(self, script: str) -> Optional[str]:
+    def _run_applescript(self, script: str, timeout: int = 30) -> Optional[str]:
         """Run AppleScript and return result."""
         try:
             result = subprocess.run(
                 ["osascript", "-e", script],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=timeout,
             )
             
             if result.returncode != 0:
@@ -142,7 +142,7 @@ class AppleCalendarManager:
             
             return result.stdout.strip()
         except subprocess.TimeoutExpired:
-            logger.error("AppleScript timeout")
+            logger.error(f"AppleScript timeout after {timeout}s")
             return None
         except Exception as e:
             logger.error(f"AppleScript execution error: {e}")
@@ -153,29 +153,21 @@ class AppleCalendarManager:
         if not self.is_available():
             return []
         
-        script = '''
-        tell application "Calendar"
-            set calList to {}
-            repeat with cal in calendars
-                set calName to name of cal
-                set calId to uid of cal
-                set end of calList to calName & "|" & calId
-            end repeat
-            return calList as string
-        end tell
-        '''
+        # Simple and fast: just get calendar names
+        script = 'tell application "Calendar" to return name of calendars'
         
-        result = self._run_applescript(script)
+        result = self._run_applescript(script, timeout=15)
         if not result:
             return []
         
         calendars = []
-        for item in result.split(", "):
-            if "|" in item:
-                parts = item.split("|")
+        # Result is comma-separated list of names
+        for name in result.split(", "):
+            name = name.strip()
+            if name:
                 calendars.append(CalendarInfo(
-                    name=parts[0],
-                    id=parts[1] if len(parts) > 1 else parts[0],
+                    name=name,
+                    id=name,  # Use name as ID for simplicity
                 ))
         
         return calendars
@@ -207,42 +199,59 @@ class AppleCalendarManager:
         start_str = start_date.strftime("%Y-%m-%d")
         end_str = end_date.strftime("%Y-%m-%d")
         
-        # Build calendar filter
+        # Build calendar filter - skip subscription calendars (holidays, birthdays)
+        # These are typically read-only and slow to query
         cal_filter = ""
         if calendar_name:
             cal_filter = f'whose name is "{calendar_name}"'
         
+        # Use a simpler, faster script
         script = f'''
         tell application "Calendar"
             set eventList to {{}}
             set startDate to date "{start_str}"
             set endDate to date "{end_str}"
             
+            -- Skip subscription calendars (holidays, birthdays) for performance
+            set skipPatterns to {{"節日", "節假日", "假日", "生日", "Siri", "提醒事項"}}
+            
             repeat with cal in (calendars {cal_filter})
                 set calName to name of cal
-                repeat with evt in (events of cal whose start date >= startDate and start date < endDate)
-                    try
-                        set evtId to uid of evt
-                        set evtTitle to summary of evt
-                        set evtStart to start date of evt
-                        set evtEnd to end date of evt
-                        set evtLoc to ""
-                        try
-                            set evtLoc to location of evt
-                        end try
-                        set evtAllDay to allday event of evt
-                        
-                        set evtInfo to evtId & "|||" & evtTitle & "|||" & (evtStart as string) & "|||" & (evtEnd as string) & "|||" & calName & "|||" & evtLoc & "|||" & evtAllDay
-                        set end of eventList to evtInfo
-                    end try
+                set shouldSkip to false
+                
+                repeat with skipPattern in skipPatterns
+                    if calName contains skipPattern then
+                        set shouldSkip to true
+                        exit repeat
+                    end if
                 end repeat
+                
+                if not shouldSkip then
+                    try
+                        repeat with evt in (events of cal whose start date >= startDate and start date < endDate)
+                            try
+                                set evtTitle to summary of evt
+                                set evtStart to start date of evt
+                                set evtLoc to ""
+                                try
+                                    set evtLoc to location of evt
+                                end try
+                                set evtAllDay to allday event of evt
+                                
+                                set evtInfo to evtTitle & "|||" & (evtStart as string) & "|||" & calName & "|||" & evtLoc & "|||" & evtAllDay
+                                set end of eventList to evtInfo
+                            end try
+                        end repeat
+                    end try
+                end if
             end repeat
             
             return eventList as string
         end tell
         '''
         
-        result = self._run_applescript(script)
+        # Give more time for event queries
+        result = self._run_applescript(script, timeout=60)
         if not result:
             return []
         
@@ -250,20 +259,19 @@ class AppleCalendarManager:
         for item in result.split(", "):
             if "|||" in item:
                 parts = item.split("|||")
-                if len(parts) >= 5:
+                if len(parts) >= 3:
                     try:
                         # Parse dates (AppleScript format varies)
-                        start_time = self._parse_applescript_date(parts[2])
-                        end_time = self._parse_applescript_date(parts[3])
+                        start_time = self._parse_applescript_date(parts[1])
                         
                         events.append(CalendarEvent(
-                            id=parts[0],
-                            title=parts[1],
+                            id=f"{parts[0]}_{start_time.isoformat()}",  # Generate ID
+                            title=parts[0],
                             start_time=start_time,
-                            end_time=end_time,
-                            calendar_name=parts[4],
-                            location=parts[5] if len(parts) > 5 else "",
-                            all_day=parts[6].lower() == "true" if len(parts) > 6 else False,
+                            end_time=start_time + timedelta(hours=1),  # Default 1 hour
+                            calendar_name=parts[2] if len(parts) > 2 else "",
+                            location=parts[3] if len(parts) > 3 else "",
+                            all_day=parts[4].lower() == "true" if len(parts) > 4 else False,
                         ))
                     except Exception as e:
                         logger.warning(f"Failed to parse event: {e}")

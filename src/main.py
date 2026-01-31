@@ -101,6 +101,52 @@ class CursorBotApp:
             logger.error(f"API server error: {e}")
             raise
 
+    async def _start_reminder_service(self) -> None:
+        """Start the calendar reminder service."""
+        try:
+            from .core.calendar_reminder import get_reminder_service, ReminderPlatform
+            
+            reminder_service = get_reminder_service()
+            
+            # Register Telegram send handler
+            async def telegram_send_handler(chat_id: str, message: str) -> None:
+                if self.telegram_bot and self.telegram_bot.application:
+                    try:
+                        await self.telegram_bot.application.bot.send_message(
+                            chat_id=int(chat_id),
+                            text=message,
+                            parse_mode="Markdown",
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send Telegram reminder: {e}")
+            
+            reminder_service.register_send_handler(
+                ReminderPlatform.TELEGRAM,
+                telegram_send_handler
+            )
+            
+            # Register Discord send handler
+            async def discord_send_handler(chat_id: str, message: str) -> None:
+                if self.discord_channel and self.discord_channel.client:
+                    try:
+                        channel = self.discord_channel.client.get_channel(int(chat_id))
+                        if channel:
+                            await channel.send(message)
+                    except Exception as e:
+                        logger.error(f"Failed to send Discord reminder: {e}")
+            
+            reminder_service.register_send_handler(
+                ReminderPlatform.DISCORD,
+                discord_send_handler
+            )
+            
+            # Start the reminder service
+            await reminder_service.start()
+            logger.info("Calendar reminder service started")
+            
+        except Exception as e:
+            logger.warning(f"Failed to start reminder service: {e}")
+
     async def run(self) -> None:
         """
         Run all services concurrently.
@@ -120,6 +166,9 @@ class CursorBotApp:
             task_queue = get_task_queue()
             await task_queue.start()
             logger.info("Task queue started")
+
+            # Initialize and start calendar reminder service
+            await self._start_reminder_service()
 
             # Start services concurrently
             tasks = []
@@ -179,6 +228,14 @@ class CursorBotApp:
     async def shutdown(self) -> None:
         """Gracefully shutdown all services."""
         logger.info("Shutting down CursorBot...")
+
+        # Stop reminder service
+        try:
+            from .core.calendar_reminder import get_reminder_service
+            reminder_service = get_reminder_service()
+            await reminder_service.stop()
+        except Exception as e:
+            logger.debug(f"Error stopping reminder service: {e}")
 
         # Stop task queue
         task_queue = get_task_queue()

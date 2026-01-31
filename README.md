@@ -1056,6 +1056,33 @@ Cursor CLI 支援多種 AI 模型，可以根據需求切換：
 /agent 解釋什麼是 RAG
 ```
 
+### 每日行程提醒
+
+每天早上自動發送當日行程提醒，支援所有平台。
+
+| 指令 | 說明 |
+|------|------|
+| `/reminder` | 查看提醒設定 |
+| `/reminder on` | 啟用每日提醒（預設 07:00） |
+| `/reminder off` | 關閉提醒 |
+| `/reminder time HH:MM` | 設定提醒時間 |
+| `/reminder weekend [on\|off]` | 週末提醒設定 |
+| `/reminder test` | 發送測試提醒 |
+
+**功能特色：**
+- 每日自動發送當天行程
+- 自訂提醒時間（預設早上 7:00）
+- 支援 Google Calendar 和 Apple Calendar
+- 可設定週末不發送
+- 包含行程摘要
+
+**使用範例：**
+```
+/reminder on              # 啟用提醒
+/reminder time 06:30      # 改為 6:30 發送
+/reminder weekend off     # 週末不發送
+```
+
 ### Google Calendar 整合
 
 與 Google 日曆無縫整合，查看和管理你的行程。
