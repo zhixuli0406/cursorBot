@@ -212,8 +212,9 @@ class AppleCalendarManager:
             set startDate to date "{start_str}"
             set endDate to date "{end_str}"
             
-            -- Skip subscription calendars (holidays, birthdays) for performance
-            set skipPatterns to {{"節日", "節假日", "假日", "生日", "Siri", "提醒事項"}}
+                -- Skip subscription calendars (holidays, birthdays) for performance
+                -- Only skip very specific system calendars
+                set skipPatterns to {{"中華民國節假日", "台灣節假日", "Taiwan Holidays", "Chinese Holidays", "Siri Suggestions", "Siri 建議"}}
             
             repeat with cal in (calendars {cal_filter})
                 set calName to name of cal
@@ -253,7 +254,10 @@ class AppleCalendarManager:
         # Give more time for event queries
         result = self._run_applescript(script, timeout=60)
         if not result:
+            logger.debug("Apple Calendar returned no events")
             return []
+        
+        logger.debug(f"Apple Calendar raw result length: {len(result)}")
         
         events = []
         for item in result.split(", "):
@@ -278,6 +282,11 @@ class AppleCalendarManager:
         
         # Sort by start time
         events.sort(key=lambda e: e.start_time)
+        
+        logger.info(f"Apple Calendar found {len(events)} events for range {start_str} to {end_str}")
+        for evt in events[:5]:  # Log first 5 events
+            logger.debug(f"  - {evt.start_time.strftime('%m/%d %H:%M')} {evt.title}")
+        
         return events
     
     def _parse_applescript_date(self, date_str: str) -> datetime:

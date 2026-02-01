@@ -1226,11 +1226,17 @@ class AssistantMode:
             from .llm_providers import get_llm_manager
             manager = get_llm_manager()
             
-            # Get current context (tasks, calendar) - pass user text to get relevant scope
-            context = await self._build_context(user_id, text)
+            # Get context and RAG in parallel for better performance
+            import time as time_module
+            parallel_start = time_module.time()
             
-            # Get RAG context (relevant past conversations)
-            rag_context = await self._get_rag_context(user_id, text)
+            context_task = asyncio.create_task(self._build_context(user_id, text))
+            rag_task = asyncio.create_task(self._get_rag_context(user_id, text))
+            
+            context, rag_context = await asyncio.gather(context_task, rag_task)
+            
+            parallel_elapsed = time_module.time() - parallel_start
+            logger.info(f"Context + RAG parallel fetch took {parallel_elapsed:.2f}s")
             
             # Combine contexts
             full_context = context
@@ -1321,6 +1327,9 @@ class AssistantMode:
     
     async def _build_context(self, user_id: str, user_query: str = "") -> str:
         """Build context string for LLM based on user query."""
+        import time as time_module
+        start_time = time_module.time()
+        
         lines = []
         query_lower = user_query.lower()
         
@@ -1342,6 +1351,8 @@ class AssistantMode:
             calendar_scope = "month"
             scope_label = "本月"
         
+        logger.debug(f"Building context with scope: {calendar_scope}")
+        
         # Tasks
         tasks = self.secretary.get_tasks(user_id)
         pending_tasks = [t for t in tasks if not t.completed]
@@ -1356,7 +1367,11 @@ class AssistantMode:
             lines.append("📋 待辦事項：無待辦")
         
         # Calendar events - get appropriate scope
+        cal_start = time_module.time()
         events = await self.secretary._get_calendar_events(user_id, scope=calendar_scope)
+        cal_elapsed = time_module.time() - cal_start
+        logger.info(f"Calendar query took {cal_elapsed:.2f}s, found {len(events)} events")
+        
         if events:
             lines.append(f"\n📅 {scope_label}行程（{len(events)} 項）：")
             for event in events[:10]:  # Show more for week view
@@ -1372,6 +1387,9 @@ class AssistantMode:
         now = datetime.now()
         weekday_names = ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
         lines.insert(0, f"📆 今天是 {now.strftime('%Y年%m月%d日')} {weekday_names[now.weekday()]}\n")
+        
+        total_elapsed = time_module.time() - start_time
+        logger.debug(f"Context build took {total_elapsed:.2f}s")
         
         return "\n".join(lines)
     
