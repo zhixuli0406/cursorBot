@@ -15,6 +15,7 @@ pydantic-settings==2.3.4
 
 # Database (optional, for persistence)
 aiosqlite==0.20.0
+asyncpg>=0.29.0                 # PostgreSQL async driver for pgvector RAG
 
 # Logging
 loguru==0.7.2

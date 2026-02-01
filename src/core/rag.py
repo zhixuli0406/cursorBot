@@ -959,6 +959,165 @@ class InMemoryVectorStore(VectorStore):
         return dot_product / (magnitude_a * magnitude_b)
 
 
+class PgVectorStore(VectorStore):
+    """PostgreSQL + pgvector store for production-grade vector storage."""
+    
+    def __init__(
+        self,
+        host: str = None,
+        port: int = None,
+        database: str = None,
+        user: str = None,
+        password: str = None,
+        table_name: str = "conversations",
+        schema: str = "cursorbot",
+    ):
+        self.host = host or os.getenv("POSTGRES_HOST", "localhost")
+        self.port = port or int(os.getenv("POSTGRES_PORT", "5432"))
+        self.database = database or os.getenv("POSTGRES_DB", "cursorbot")
+        self.user = user or os.getenv("POSTGRES_USER", "cursorbot")
+        self.password = password or os.getenv("POSTGRES_PASSWORD", "cursorbot_secret")
+        self.table_name = table_name
+        self.schema = schema
+        self._pool = None
+    
+    async def _get_pool(self):
+        """Lazy initialization of connection pool."""
+        if self._pool is None:
+            try:
+                import asyncpg
+                
+                self._pool = await asyncpg.create_pool(
+                    host=self.host,
+                    port=self.port,
+                    database=self.database,
+                    user=self.user,
+                    password=self.password,
+                    min_size=2,
+                    max_size=10,
+                )
+                logger.info(f"PostgreSQL connection pool created: {self.host}:{self.port}/{self.database}")
+            except ImportError:
+                raise ImportError("asyncpg not installed. Run: pip install asyncpg")
+            except Exception as e:
+                logger.error(f"Failed to connect to PostgreSQL: {e}")
+                raise
+        return self._pool
+    
+    async def add(self, documents: list[Document]) -> None:
+        """Add documents to PostgreSQL with pgvector."""
+        pool = await self._get_pool()
+        
+        async with pool.acquire() as conn:
+            for doc in documents:
+                if doc.embedding is None:
+                    raise ValueError(f"Document {doc.id} has no embedding")
+                
+                # Convert embedding to pgvector format
+                embedding_str = "[" + ",".join(map(str, doc.embedding)) + "]"
+                metadata_json = json.dumps(doc.metadata, ensure_ascii=False)
+                
+                await conn.execute(
+                    f"""
+                    INSERT INTO {self.schema}.{self.table_name} 
+                    (user_id, session_id, role, content, embedding, metadata)
+                    VALUES ($1, $2, $3, $4, $5::vector, $6::jsonb)
+                    ON CONFLICT DO NOTHING
+                    """,
+                    doc.metadata.get("user_id", "unknown"),
+                    doc.metadata.get("session_id"),
+                    doc.metadata.get("role", "user"),
+                    doc.content,
+                    embedding_str,
+                    metadata_json,
+                )
+    
+    async def search(self, query_embedding: list[float], top_k: int = 5, user_id: str = None) -> list[SearchResult]:
+        """Search for similar documents using cosine similarity."""
+        pool = await self._get_pool()
+        
+        embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
+        
+        async with pool.acquire() as conn:
+            # Build query with optional user filter
+            user_filter = f"AND user_id = '{user_id}'" if user_id else ""
+            
+            rows = await conn.fetch(
+                f"""
+                SELECT id, user_id, session_id, role, content, metadata,
+                       1 - (embedding <=> $1::vector) as similarity
+                FROM {self.schema}.{self.table_name}
+                WHERE embedding IS NOT NULL {user_filter}
+                ORDER BY embedding <=> $1::vector
+                LIMIT $2
+                """,
+                embedding_str,
+                top_k,
+            )
+            
+            results = []
+            for i, row in enumerate(rows):
+                metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+                metadata.update({
+                    "user_id": row["user_id"],
+                    "session_id": row["session_id"],
+                    "role": row["role"],
+                    "db_id": row["id"],
+                })
+                
+                doc = Document(
+                    id=str(row["id"]),
+                    content=row["content"],
+                    metadata=metadata,
+                )
+                results.append(SearchResult(
+                    document=doc,
+                    score=float(row["similarity"]),
+                    rank=i + 1,
+                ))
+            
+            return results
+    
+    async def delete(self, document_ids: list[str]) -> None:
+        """Delete documents by ID."""
+        pool = await self._get_pool()
+        
+        async with pool.acquire() as conn:
+            await conn.execute(
+                f"DELETE FROM {self.schema}.{self.table_name} WHERE id = ANY($1::int[])",
+                [int(id) for id in document_ids],
+            )
+    
+    async def clear(self) -> None:
+        """Clear all documents."""
+        pool = await self._get_pool()
+        
+        async with pool.acquire() as conn:
+            await conn.execute(f"TRUNCATE {self.schema}.{self.table_name}")
+        logger.info(f"Cleared table {self.schema}.{self.table_name}")
+    
+    def count(self) -> int:
+        """Get document count (synchronous for interface compatibility)."""
+        # Note: This is a simplified sync version; use async in production
+        return 0  # Placeholder; use count_async for actual count
+    
+    async def count_async(self) -> int:
+        """Get document count asynchronously."""
+        pool = await self._get_pool()
+        
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                f"SELECT COUNT(*) as count FROM {self.schema}.{self.table_name}"
+            )
+            return row["count"]
+    
+    async def close(self):
+        """Close the connection pool."""
+        if self._pool:
+            await self._pool.close()
+            self._pool = None
+
+
 class ChromaVectorStore(VectorStore):
     """ChromaDB vector store for persistent storage."""
     
@@ -1664,6 +1823,7 @@ __all__ = [
     # Vector stores
     "VectorStore",
     "InMemoryVectorStore",
+    "PgVectorStore",
     "ChromaVectorStore",
     # Manager
     "RAGManager",

@@ -82,6 +82,118 @@ class Task:
 
 
 @dataclass
+class PersonaTemplate:
+    """Template for a secretary persona."""
+    id: str                    # Unique identifier
+    name: str                  # Display name
+    description: str           # Short description
+    tone: str                  # Speaking tone/style
+    emoji_style: str           # Emoji usage style
+    greeting_style: str        # How to greet
+    care_level: str            # How caring (low/medium/high)
+    formality: str             # Formality level (casual/normal/formal)
+    signature: str             # Signature at end of messages
+    
+    # Custom prompts
+    system_prompt_addon: str = ""  # Additional system prompt
+    
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "tone": self.tone,
+            "emoji_style": self.emoji_style,
+            "greeting_style": self.greeting_style,
+            "care_level": self.care_level,
+            "formality": self.formality,
+            "signature": self.signature,
+            "system_prompt_addon": self.system_prompt_addon,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "PersonaTemplate":
+        return cls(**data)
+
+
+# Pre-defined persona templates
+PRESET_PERSONAS: dict[str, PersonaTemplate] = {
+    "gentle": PersonaTemplate(
+        id="gentle",
+        name="小雅",
+        description="溫柔體貼的女秘書",
+        tone="溫柔親切、體貼細心",
+        emoji_style="適度使用可愛表情（✨💕📅✈️）",
+        greeting_style="親切問候，關心對方狀態",
+        care_level="high",
+        formality="casual",
+        signature="—— 小雅 💕",
+        system_prompt_addon="說話要溫柔體貼，像個貼心的閨蜜一樣關心用戶。",
+    ),
+    "professional": PersonaTemplate(
+        id="professional",
+        name="雅琳",
+        description="專業幹練的商務秘書",
+        tone="專業得體、簡潔有力",
+        emoji_style="少量使用專業表情（📋✅📊）",
+        greeting_style="禮貌專業，直奔主題",
+        care_level="medium",
+        formality="formal",
+        signature="—— 雅琳",
+        system_prompt_addon="說話要專業幹練，像個經驗豐富的商務秘書，高效處理事務。",
+    ),
+    "cheerful": PersonaTemplate(
+        id="cheerful",
+        name="小晴",
+        description="活潑開朗的元氣秘書",
+        tone="活潑開朗、充滿活力",
+        emoji_style="豐富使用表情（🎉✨🌟💪🔥）",
+        greeting_style="熱情洋溢，充滿能量",
+        care_level="high",
+        formality="casual",
+        signature="—— 小晴 ✨",
+        system_prompt_addon="說話要活潑開朗，像個元氣滿滿的小太陽，給用戶帶來正能量！",
+    ),
+    "cool": PersonaTemplate(
+        id="cool",
+        name="冰凝",
+        description="冷酷高效的執行秘書",
+        tone="冷靜理性、一針見血",
+        emoji_style="極少使用表情",
+        greeting_style="簡潔直接，不廢話",
+        care_level="low",
+        formality="normal",
+        signature="—— 冰凝",
+        system_prompt_addon="說話要冷靜理性，不拖泥帶水，直接給出最有效的建議和行動。",
+    ),
+    "cute": PersonaTemplate(
+        id="cute",
+        name="萌萌",
+        description="可愛軟萌的小助手",
+        tone="軟萌可愛、撒嬌賣萌",
+        emoji_style="大量使用可愛表情（🥺💕✨🌸😊）",
+        greeting_style="撒嬌式問候，軟萌可愛",
+        care_level="high",
+        formality="casual",
+        signature="—— 萌萌 (◕ᴗ◕✿)",
+        system_prompt_addon="說話要軟萌可愛，可以適當撒嬌，用可愛的語氣讓用戶開心！偶爾用「～」結尾。",
+    ),
+    "butler": PersonaTemplate(
+        id="butler",
+        name="賽巴斯",
+        description="優雅紳士的男管家",
+        tone="優雅紳士、從容不迫",
+        emoji_style="適度使用優雅表情（🎩☕📜）",
+        greeting_style="尊敬有禮，稱呼主人",
+        care_level="medium",
+        formality="formal",
+        signature="—— 賽巴斯，您忠實的管家",
+        system_prompt_addon="說話要優雅紳士，像個經典的英式管家，用「主人」稱呼用戶，保持從容優雅。",
+    ),
+}
+
+
+@dataclass
 class UserPreferences:
     """User's secretary preferences."""
     user_id: str
@@ -90,6 +202,34 @@ class UserPreferences:
     briefing_enabled: bool = True
     secretary_name: str = "小雅"  # Secretary's name
     language: str = "zh-TW"
+    persona_id: str = "gentle"  # Current persona template ID
+    custom_personas: dict = field(default_factory=dict)  # User's custom personas
+    
+    def get_current_persona(self) -> PersonaTemplate:
+        """Get the current active persona."""
+        # Check custom personas first
+        if self.persona_id in self.custom_personas:
+            return PersonaTemplate.from_dict(self.custom_personas[self.persona_id])
+        # Then check presets
+        if self.persona_id in PRESET_PERSONAS:
+            persona = PRESET_PERSONAS[self.persona_id]
+            # Override name if user has customized it
+            if self.secretary_name != persona.name:
+                return PersonaTemplate(
+                    id=persona.id,
+                    name=self.secretary_name,
+                    description=persona.description,
+                    tone=persona.tone,
+                    emoji_style=persona.emoji_style,
+                    greeting_style=persona.greeting_style,
+                    care_level=persona.care_level,
+                    formality=persona.formality,
+                    signature=f"—— {self.secretary_name}",
+                    system_prompt_addon=persona.system_prompt_addon,
+                )
+            return persona
+        # Default to gentle
+        return PRESET_PERSONAS["gentle"]
     
     def to_dict(self) -> dict:
         return {
@@ -99,6 +239,8 @@ class UserPreferences:
             "briefing_enabled": self.briefing_enabled,
             "secretary_name": self.secretary_name,
             "language": self.language,
+            "persona_id": self.persona_id,
+            "custom_personas": self.custom_personas,
         }
     
     @classmethod
@@ -112,6 +254,8 @@ class UserPreferences:
             briefing_enabled=data.get("briefing_enabled", True),
             secretary_name=data.get("secretary_name", "小雅"),
             language=data.get("language", "zh-TW"),
+            persona_id=data.get("persona_id", "gentle"),
+            custom_personas=data.get("custom_personas", {}),
         )
 
 
@@ -336,6 +480,97 @@ class PersonalSecretary:
         self._save_data()
     
     # ============================================
+    # Persona Management
+    # ============================================
+    
+    def get_available_personas(self, user_id: str) -> list[PersonaTemplate]:
+        """Get all available personas (preset + custom)."""
+        prefs = self.get_preferences(user_id)
+        personas = list(PRESET_PERSONAS.values())
+        
+        # Add custom personas
+        for persona_data in prefs.custom_personas.values():
+            personas.append(PersonaTemplate.from_dict(persona_data))
+        
+        return personas
+    
+    def set_persona(self, user_id: str, persona_id: str) -> bool:
+        """Set the active persona for user."""
+        prefs = self.get_preferences(user_id)
+        
+        # Check if persona exists
+        if persona_id not in PRESET_PERSONAS and persona_id not in prefs.custom_personas:
+            return False
+        
+        prefs.persona_id = persona_id
+        
+        # Update secretary name to match persona
+        if persona_id in PRESET_PERSONAS:
+            prefs.secretary_name = PRESET_PERSONAS[persona_id].name
+        elif persona_id in prefs.custom_personas:
+            prefs.secretary_name = prefs.custom_personas[persona_id]["name"]
+        
+        self._save_data()
+        return True
+    
+    def add_custom_persona(
+        self,
+        user_id: str,
+        persona_id: str,
+        name: str,
+        description: str,
+        tone: str,
+        emoji_style: str = "適度使用表情",
+        greeting_style: str = "親切問候",
+        care_level: str = "medium",
+        formality: str = "normal",
+        signature: str = None,
+        system_prompt_addon: str = "",
+    ) -> PersonaTemplate:
+        """Add a custom persona for user."""
+        prefs = self.get_preferences(user_id)
+        
+        persona = PersonaTemplate(
+            id=persona_id,
+            name=name,
+            description=description,
+            tone=tone,
+            emoji_style=emoji_style,
+            greeting_style=greeting_style,
+            care_level=care_level,
+            formality=formality,
+            signature=signature or f"—— {name}",
+            system_prompt_addon=system_prompt_addon,
+        )
+        
+        prefs.custom_personas[persona_id] = persona.to_dict()
+        self._save_data()
+        
+        return persona
+    
+    def delete_custom_persona(self, user_id: str, persona_id: str) -> bool:
+        """Delete a custom persona."""
+        prefs = self.get_preferences(user_id)
+        
+        if persona_id not in prefs.custom_personas:
+            return False
+        
+        del prefs.custom_personas[persona_id]
+        
+        # If current persona was deleted, switch to default
+        if prefs.persona_id == persona_id:
+            prefs.persona_id = "gentle"
+            prefs.secretary_name = PRESET_PERSONAS["gentle"].name
+        
+        self._save_data()
+        return True
+    
+    def get_current_persona(self, user_id: str) -> PersonaTemplate:
+        """Get the current active persona."""
+        prefs = self.get_preferences(user_id)
+        return prefs.get_current_persona()
+    
+    # ============================================
     # Task Management
     # ============================================
     
@@ -459,9 +694,46 @@ class PersonalSecretary:
         
         return "\n".join(lines)
     
-    async def _get_calendar_events(self, user_id: str) -> list[dict]:
-        """Get today's calendar events."""
+    async def _get_calendar_events(self, user_id: str, scope: str = "today") -> list[dict]:
+        """
+        Get calendar events for specified scope.
+        
+        Args:
+            user_id: User identifier
+            scope: "today", "week", "next_week", or "month"
+        
+        Returns:
+            List of event dicts with date, time, title, location
+        """
         events = []
+        
+        # Calculate date range based on scope
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        if scope == "today":
+            start_date = today
+            end_date = today + timedelta(days=1)
+        elif scope == "week":
+            # This week (Monday to Sunday)
+            days_since_monday = today.weekday()
+            start_date = today - timedelta(days=days_since_monday)
+            end_date = start_date + timedelta(days=7)
+        elif scope == "next_week":
+            # Next week (next Monday to next Sunday)
+            days_since_monday = today.weekday()
+            next_monday = today + timedelta(days=(7 - days_since_monday))
+            start_date = next_monday
+            end_date = next_monday + timedelta(days=7)
+        elif scope == "month":
+            # This month
+            start_date = today.replace(day=1)
+            if today.month == 12:
+                end_date = today.replace(year=today.year + 1, month=1, day=1)
+            else:
+                end_date = today.replace(month=today.month + 1, day=1)
+        else:
+            start_date = today
+            end_date = today + timedelta(days=1)
         
         # Try Apple Calendar
         try:
@@ -470,13 +742,18 @@ class PersonalSecretary:
                 from .apple_calendar import get_apple_calendar
                 apple_cal = get_apple_calendar()
                 if apple_cal.is_available():
-                    apple_events = apple_cal.get_events_today()
+                    apple_events = apple_cal.get_events(start_date, end_date)
+                    
                     for event in apple_events:
+                        date_str = event.start_time.strftime("%m/%d") if event.start_time else ""
+                        weekday = ['一', '二', '三', '四', '五', '六', '日'][event.start_time.weekday()] if event.start_time else ""
                         time_str = event.start_time.strftime("%H:%M") if event.start_time else "整天"
                         events.append({
+                            "date": f"{date_str}({weekday})",
                             "time": time_str,
                             "title": event.title,
-                            "location": event.location,
+                            "location": event.location or "",
+                            "start": event.start_time,
                         })
         except Exception as e:
             logger.debug(f"Apple Calendar not available: {e}")
@@ -487,19 +764,34 @@ class PersonalSecretary:
             if GOOGLE_API_AVAILABLE:
                 google_cal = get_calendar_manager()
                 if google_cal.is_authenticated:
-                    google_events = await google_cal.get_events_today()
+                    google_events = await google_cal.get_events(
+                        calendar_id="primary",
+                        start_time=start_date,
+                        end_time=end_date,
+                        max_results=50,
+                    )
+                    
                     for event in google_events:
+                        date_str = event.start.strftime("%m/%d") if event.start else ""
+                        weekday = ['一', '二', '三', '四', '五', '六', '日'][event.start.weekday()] if event.start else ""
                         time_str = event.start.strftime("%H:%M") if event.start else "整天"
                         events.append({
+                            "date": f"{date_str}({weekday})",
                             "time": time_str,
                             "title": event.title,
                             "location": event.location or "",
+                            "start": event.start,
                         })
         except Exception as e:
             logger.debug(f"Google Calendar not available: {e}")
         
-        # Sort by time
-        events.sort(key=lambda e: e["time"])
+        # Sort by start time
+        events.sort(key=lambda e: e.get("start") or datetime.min)
+        
+        # Remove internal start field
+        for e in events:
+            e.pop("start", None)
+        
         return events
     
     # ============================================
@@ -818,17 +1110,449 @@ class AssistantNLU:
 class AssistantMode:
     """
     Assistant Mode handler for natural conversation.
+    Uses LLM for intelligent responses with secretary persona.
+    Maintains conversation history with RAG for context continuity
+    and continuous learning.
     """
+    
+    # Max conversation history to keep per user (in-memory)
+    MAX_HISTORY = 10
     
     def __init__(self, secretary: "PersonalSecretary"):
         self.secretary = secretary
         self.nlu = AssistantNLU()
+        # In-memory conversation history (backup)
+        self._conversation_history: dict[str, list[dict]] = {}
+        # RAG instance (lazy loaded)
+        self._rag = None
+        self._rag_enabled = True
+    
+    async def _get_rag(self):
+        """Lazy load ConversationRAG."""
+        if self._rag is None and self._rag_enabled:
+            try:
+                from .conversation_rag import get_conversation_rag
+                self._rag = get_conversation_rag()
+                await self._rag.initialize()
+                logger.info("ConversationRAG initialized for AssistantMode")
+            except Exception as e:
+                logger.warning(f"Failed to initialize ConversationRAG: {e}")
+                self._rag_enabled = False
+        return self._rag
+    
+    def _get_history(self, user_id: str) -> list[dict]:
+        """Get conversation history for user (in-memory)."""
+        if user_id not in self._conversation_history:
+            self._conversation_history[user_id] = []
+        return self._conversation_history[user_id]
+    
+    def _add_to_history(self, user_id: str, role: str, content: str) -> None:
+        """Add message to in-memory conversation history."""
+        history = self._get_history(user_id)
+        history.append({"role": role, "content": content})
+        
+        # Keep only last MAX_HISTORY messages
+        if len(history) > self.MAX_HISTORY * 2:  # *2 for user+assistant pairs
+            self._conversation_history[user_id] = history[-self.MAX_HISTORY * 2:]
+    
+    async def _store_to_rag(self, user_id: str, role: str, content: str) -> None:
+        """Store message to RAG for long-term memory."""
+        rag = await self._get_rag()
+        if rag:
+            try:
+                await rag.store_message(
+                    user_id=user_id,
+                    role=role,
+                    content=content,
+                    metadata={"source": "assistant_mode"}
+                )
+            except Exception as e:
+                logger.error(f"Failed to store message to RAG: {e}")
+    
+    async def _get_rag_context(self, user_id: str, query: str) -> str:
+        """Get relevant context from RAG."""
+        rag = await self._get_rag()
+        if not rag:
+            return ""
+        
+        try:
+            context = await rag.get_relevant_context(
+                user_id=user_id,
+                query=query,
+                max_messages=5,
+                include_patterns=True,
+            )
+            return context.summary
+        except Exception as e:
+            logger.error(f"Failed to get RAG context: {e}")
+            return ""
+    
+    def clear_history(self, user_id: str) -> None:
+        """Clear conversation history for user."""
+        if user_id in self._conversation_history:
+            self._conversation_history[user_id] = []
     
     async def process_message(self, user_id: str, text: str) -> str:
-        """Process a message in assistant mode."""
+        """
+        Process a message in assistant mode using LLM with conversation history.
+        
+        Uses RAG for:
+        1. Storing all messages for long-term memory
+        2. Retrieving relevant past conversations for context
+        3. Learning user preferences and patterns
+        """
         prefs = self.secretary.get_preferences(user_id)
         
-        # Recognize intent
+        # Store user message to RAG (async, don't block)
+        asyncio.create_task(self._store_to_rag(user_id, "user", text))
+        
+        # Add user message to in-memory history
+        self._add_to_history(user_id, "user", text)
+        
+        # Process with LLM (includes conversation history + RAG context)
+        response = await self._process_with_llm(user_id, text, prefs)
+        
+        # Store assistant response to RAG
+        asyncio.create_task(self._store_to_rag(user_id, "assistant", response))
+        
+        # Add assistant response to in-memory history
+        self._add_to_history(user_id, "assistant", response)
+        
+        return response
+    
+    async def _process_with_llm(self, user_id: str, text: str, prefs: UserPreferences) -> str:
+        """Process message with LLM for intelligent response."""
+        try:
+            from .llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            
+            # Get current context (tasks, calendar) - pass user text to get relevant scope
+            context = await self._build_context(user_id, text)
+            
+            # Get RAG context (relevant past conversations)
+            rag_context = await self._get_rag_context(user_id, text)
+            
+            # Combine contexts
+            full_context = context
+            if rag_context:
+                full_context += f"\n\n## 相關歷史對話\n{rag_context}"
+            
+            # Get current persona template
+            persona = prefs.get_current_persona()
+            
+            # Create secretary persona prompt based on template
+            system_prompt = f"""你是一位名叫「{persona.name}」的專屬 AI 助手。
+
+## 你的人設：{persona.description}
+
+## 你的性格特點
+- 說話風格：{persona.tone}
+- 表情使用：{persona.emoji_style}
+- 問候方式：{persona.greeting_style}
+- 關心程度：{"非常關心用戶" if persona.care_level == "high" else "適度關心" if persona.care_level == "medium" else "簡潔直接"}
+- 正式程度：{"正式禮貌" if persona.formality == "formal" else "輕鬆自然" if persona.formality == "casual" else "適中"}
+- 使用繁體中文回覆
+
+## 用戶資訊
+- 用戶名稱：{prefs.name or '主人'}
+- 當前時間：{datetime.now().strftime('%Y年%m月%d日 %H:%M')}
+
+## 用戶當前狀態
+{full_context}
+
+## 你的能力
+1. **待辦管理**：新增、查詢、完成待辦事項
+2. **行程管理**：查詢、新增日曆行程
+3. **訂票協助**：提供機票、火車票、飯店預訂的建議和資訊
+4. **日常對話**：回答問題、聊天、提供建議
+5. **資訊查詢**：天氣、航班、旅遊資訊等
+
+## 回應規則
+1. 理解用戶的實際需求，提供有用的回應
+2. 如果需要更多資訊，禮貌地詢問
+3. 提供具體、可行的建議
+4. 回覆結尾署名「{persona.signature}」
+5. 保持簡潔但完整（3-8句話）
+
+## 特別指示
+- 如果用戶詢問機票/旅遊，提供實用的建議（最佳訂票時機、推薦航空公司、大致價格範圍等）
+- 如果用戶想新增待辦，確認內容後幫他記錄（系統會自動執行）
+- 如果用戶想新增行程到日曆，確認時間和標題後告訴用戶已加入（系統會自動加入日曆）
+- 如果用戶問行程，查看他的日曆並回報
+- 這是連續對話，請記住之前的對話內容，保持上下文連貫
+- 如果用戶提到「剛才」「之前」「上面」等，請回顧對話歷史來理解
+- 如果有相關歷史對話，請參考過去的對話來理解用戶的需求和偏好
+
+## 執行動作
+當用戶請求以下動作時，請在回覆中明確說明已執行：
+- 「幫我記...」「提醒我...」→ 會自動新增待辦事項
+- 「加入行事曆」「新增行程」「安排...」→ 會自動加入日曆
+請在回覆中確認動作已完成，並說明事件/任務的具體內容
+{f"- {persona.system_prompt_addon}" if persona.system_prompt_addon else ""}"""
+
+            # Build messages with conversation history
+            messages = [
+                {"role": "system", "content": system_prompt},
+            ]
+            
+            # Add conversation history (excluding current message which was just added)
+            history = self._get_history(user_id)
+            # Don't include the last message (current user message) since we'll add it below
+            for msg in history[:-1]:
+                messages.append(msg)
+            
+            # Add current user message
+            messages.append({"role": "user", "content": text})
+            
+            logger.info(f"Assistant mode: sending {len(messages)} messages to LLM (including {len(history)-1} history)")
+            
+            response = await manager.generate(messages)
+            
+            if response:
+                # Check if we need to perform any actions
+                await self._check_and_execute_actions(user_id, text, response)
+                return response
+                
+        except Exception as e:
+            logger.error(f"LLM processing failed: {e}")
+        
+        # Fallback to keyword-based handling
+        return await self._fallback_handler(user_id, text)
+    
+    async def _build_context(self, user_id: str, user_query: str = "") -> str:
+        """Build context string for LLM based on user query."""
+        lines = []
+        query_lower = user_query.lower()
+        
+        # Determine calendar scope based on user query
+        calendar_scope = "today"
+        scope_label = "今日"
+        
+        this_week_keywords = ["這週", "本週", "這星期", "本星期", "這禮拜"]
+        next_week_keywords = ["下週", "下星期", "下禮拜", "next week"]
+        month_keywords = ["這個月", "本月", "這月", "month"]
+        
+        if any(kw in query_lower for kw in next_week_keywords):
+            calendar_scope = "next_week"
+            scope_label = "下週"
+        elif any(kw in query_lower for kw in this_week_keywords):
+            calendar_scope = "week"
+            scope_label = "本週"
+        elif any(kw in query_lower for kw in month_keywords):
+            calendar_scope = "month"
+            scope_label = "本月"
+        
+        # Tasks
+        tasks = self.secretary.get_tasks(user_id)
+        pending_tasks = [t for t in tasks if not t.completed]
+        if pending_tasks:
+            lines.append(f"📋 待辦事項（{len(pending_tasks)} 項未完成）：")
+            for i, task in enumerate(pending_tasks[:5], 1):
+                due_info = ""
+                if task.due_date:
+                    due_info = f" (截止: {task.due_date.strftime('%m/%d')})"
+                lines.append(f"  {i}. ⬜ {task.title}{due_info}")
+        else:
+            lines.append("📋 待辦事項：無待辦")
+        
+        # Calendar events - get appropriate scope
+        events = await self.secretary._get_calendar_events(user_id, scope=calendar_scope)
+        if events:
+            lines.append(f"\n📅 {scope_label}行程（{len(events)} 項）：")
+            for event in events[:10]:  # Show more for week view
+                date_str = event.get('date', '')
+                time_str = event.get('time', '')
+                location = event.get('location', '')
+                loc_info = f" @ {location}" if location else ""
+                lines.append(f"  • {date_str} {time_str} - {event.get('title', '')}{loc_info}")
+        else:
+            lines.append(f"\n📅 {scope_label}行程：無排程")
+        
+        # Add current date info
+        now = datetime.now()
+        weekday_names = ['週一', '週二', '週三', '週四', '週五', '週六', '週日']
+        lines.insert(0, f"📆 今天是 {now.strftime('%Y年%m月%d日')} {weekday_names[now.weekday()]}\n")
+        
+        return "\n".join(lines)
+    
+    async def _check_and_execute_actions(self, user_id: str, user_text: str, llm_response: str) -> None:
+        """Check if any actions need to be executed based on conversation."""
+        text_lower = user_text.lower()
+        response_lower = llm_response.lower()
+        
+        # Check if user wants to add a task
+        task_keywords = ["幫我記", "新增待辦", "加一個任務", "記一下", "別忘了", "記得", "提醒我"]
+        if any(kw in text_lower for kw in task_keywords):
+            # Extract task from user text
+            task_text = user_text
+            for prefix in task_keywords:
+                task_text = task_text.replace(prefix, "").strip()
+            
+            if task_text and len(task_text) > 1:
+                self.secretary.add_task(user_id, task_text)
+                logger.info(f"Auto-added task for user {user_id}: {task_text}")
+        
+        # Check if this looks like an event/schedule
+        # Keywords in user message
+        event_keywords = ["加入行事曆", "新增行程", "加到日曆", "安排", "排個", "約", "預約", "行程加入"]
+        
+        # Patterns that suggest an event (date + activity)
+        event_patterns = [
+            "尾牙", "聚餐", "開會", "會議", "約會", "面試", "出差", "旅行",
+            "生日", "派對", "宴會", "活動", "表演", "演唱會", "展覽",
+            "看醫生", "看診", "體檢", "健檢", "牙醫", "回診",
+            "上課", "培訓", "講座", "研討會", "工作坊",
+            "入席", "報到", "集合", "出發",
+        ]
+        
+        # Date patterns (check if message contains date-like info)
+        import re
+        date_pattern = re.compile(r'(\d{1,2}[/\-\.月]\d{1,2}|\d{1,2}號|\d{1,2}日|明天|後天|下週|週[一二三四五六日]|星期[一二三四五六日天])')
+        has_date = bool(date_pattern.search(user_text))
+        
+        # Time patterns
+        time_pattern = re.compile(r'(\d{1,2}[:\：點時]\d{0,2}|早上|上午|中午|下午|晚上|凌晨)')
+        has_time = bool(time_pattern.search(user_text))
+        
+        # Check if assistant's response mentions recording/adding
+        response_confirms = any(kw in response_lower for kw in ["記錄", "記下", "安排", "加入", "新增"])
+        
+        # Trigger event addition if:
+        # 1. User explicitly asks to add event, OR
+        # 2. Message has date + time + event-like content, OR
+        # 3. Message has date + event pattern and assistant confirms
+        should_add_event = (
+            any(kw in text_lower for kw in event_keywords) or
+            (has_date and has_time and any(p in text_lower for p in event_patterns)) or
+            (has_date and any(p in text_lower for p in event_patterns) and response_confirms)
+        )
+        
+        if should_add_event:
+            logger.info(f"Detected event intent for user {user_id}: {user_text[:50]}...")
+            await self._try_add_calendar_event(user_id, user_text, llm_response)
+    
+    async def _try_add_calendar_event(self, user_id: str, user_text: str, llm_response: str) -> bool:
+        """Try to extract event details and add to calendar."""
+        logger.info(f"Attempting to add calendar event for user {user_id}")
+        
+        try:
+            # Use LLM to extract event details
+            from .llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            
+            extract_prompt = f"""從以下對話中提取日曆事件資訊，以 JSON 格式回傳：
+{{
+    "title": "事件標題",
+    "date": "YYYY-MM-DD 格式的日期",
+    "time": "HH:MM 格式的時間（24小時制）",
+    "duration_hours": 1,
+    "location": "地點（如果有）",
+    "has_valid_event": true/false
+}}
+
+用戶說：{user_text}
+AI 回覆：{llm_response}
+
+今天是 {datetime.now().strftime('%Y-%m-%d')}（{['週一','週二','週三','週四','週五','週六','週日'][datetime.now().weekday()]}）
+
+如果無法確定具體時間或事件不清楚，將 has_valid_event 設為 false。
+只回傳 JSON，不要其他文字。"""
+            
+            messages = [{"role": "user", "content": extract_prompt}]
+            result = await manager.generate(messages)
+            
+            if not result:
+                logger.warning("Failed to extract event details from LLM")
+                return False
+            
+            # Parse JSON
+            import json
+            import re
+            
+            # Try to extract JSON from response
+            json_match = re.search(r'\{[^{}]*\}', result, re.DOTALL)
+            if not json_match:
+                logger.warning(f"No JSON found in LLM response: {result}")
+                return False
+            
+            event_data = json.loads(json_match.group())
+            
+            if not event_data.get("has_valid_event", False):
+                logger.info("LLM determined no valid event to add")
+                return False
+            
+            title = event_data.get("title", "")
+            date_str = event_data.get("date", "")
+            time_str = event_data.get("time", "09:00")
+            duration = event_data.get("duration_hours", 1)
+            location = event_data.get("location", "")
+            
+            logger.info(f"Extracted event: title={title}, date={date_str}, time={time_str}, location={location}")
+            
+            if not title or not date_str:
+                logger.warning("Missing title or date for event")
+                return False
+            
+            # Build datetime
+            start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            end_dt = start_dt + timedelta(hours=duration)
+            
+            logger.info(f"Event datetime: {start_dt} - {end_dt}")
+            
+            # Try Google Calendar first
+            try:
+                from .google_calendar import get_google_calendar_manager
+                gcal = get_google_calendar_manager()
+                
+                if gcal and gcal.is_authenticated:
+                    event = await gcal.create_event(
+                        title=title,
+                        start=start_dt.isoformat(),
+                        end=end_dt.isoformat(),
+                        location=location,
+                    )
+                    
+                    if event:
+                        logger.info(f"Added Google Calendar event for user {user_id}: {title} at {start_dt}")
+                        return True
+            except Exception as e:
+                logger.debug(f"Google Calendar failed: {e}")
+            
+            # Try Apple Calendar
+            try:
+                from .apple_calendar import get_apple_calendar_manager
+                apple = get_apple_calendar_manager()
+                
+                if apple and apple.is_available():
+                    event_id = apple.create_event(
+                        title=title,
+                        start_time=start_dt,
+                        end_time=end_dt,
+                        location=location,
+                    )
+                    
+                    if event_id:
+                        logger.info(f"Added Apple Calendar event for user {user_id}: {title} at {start_dt}")
+                        return True
+            except Exception as e:
+                logger.debug(f"Apple Calendar failed: {e}")
+            
+            # Fallback: add as a task with date
+            self.secretary.add_task(
+                user_id,
+                f"📅 {title}" + (f" @ {location}" if location else ""),
+                due_date=start_dt,
+            )
+            logger.info(f"Added event as task for user {user_id}: {title}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to add calendar event: {e}")
+            return False
+    
+    async def _fallback_handler(self, user_id: str, text: str) -> str:
+        """Fallback handler when LLM is not available."""
+        prefs = self.secretary.get_preferences(user_id)
         result = self.nlu.recognize_intent(text)
         
         # Handle based on intent
@@ -846,9 +1570,7 @@ class AssistantMode:
         }
         
         handler = handlers.get(result.intent, self._handle_unknown)
-        response = await handler(user_id, result)
-        
-        return response
+        return await handler(user_id, result)
     
     async def _handle_greeting(self, user_id: str, result: IntentResult) -> str:
         """Handle greeting."""
@@ -972,11 +1694,13 @@ class AssistantMode:
 回覆要簡潔，不要太長（2-4句話）。
 結尾要署名「—— {prefs.secretary_name}」。"""
             
-            response = await manager.generate(
-                prompt=result.original_text,
-                system_prompt=system_prompt,
-                user_id=user_id,
-            )
+            # Build messages in OpenAI format
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": result.original_text},
+            ]
+            
+            response = await manager.generate(messages)
             
             if response:
                 return response

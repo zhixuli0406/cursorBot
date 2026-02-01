@@ -735,24 +735,24 @@ async def secretary_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 def setup_assistant_handlers(app) -> None:
     """Register personal assistant handlers."""
-    # Todo
-    app.add_handler(CommandHandler("todo", todo_command))
-    app.add_handler(CommandHandler("todos", todo_command))
-    app.add_handler(CommandHandler("task", todo_command))
-    app.add_handler(CommandHandler("tasks", todo_command))
+    # Todo - handled by unified_commands.py / core/secretary.py
+    # app.add_handler(CommandHandler("todo", todo_command))
+    # app.add_handler(CommandHandler("todos", todo_command))
+    # app.add_handler(CommandHandler("task", todo_command))
+    # app.add_handler(CommandHandler("tasks", todo_command))
     
-    # Reminder
-    app.add_handler(CommandHandler("reminder", reminder_command))
-    app.add_handler(CommandHandler("remind", reminder_command))
+    # Reminder - handled by unified_commands.py / core/calendar_reminder.py
+    # app.add_handler(CommandHandler("reminder", reminder_command))
+    # app.add_handler(CommandHandler("remind", reminder_command))
     
-    # Booking
-    app.add_handler(CommandHandler("book", book_command))
-    app.add_handler(CommandHandler("booking", book_command))
-    app.add_handler(CallbackQueryHandler(book_callback, pattern="^book:"))
+    # Booking - handled by unified_commands.py / core/secretary.py
+    # app.add_handler(CommandHandler("book", book_command))
+    # app.add_handler(CommandHandler("booking", book_command))
+    # app.add_handler(CallbackQueryHandler(book_callback, pattern="^book:"))
     
-    # Secretary
-    app.add_handler(CommandHandler("secretary", secretary_command))
-    app.add_handler(CommandHandler("assistant", secretary_command))
+    # Secretary - handled by unified_commands.py / core/secretary.py
+    # app.add_handler(CommandHandler("secretary", secretary_command))
+    # app.add_handler(CommandHandler("assistant", secretary_command))
     
     logger.info("Personal assistant handlers registered")
 

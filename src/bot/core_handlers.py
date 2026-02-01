@@ -520,6 +520,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "auto": "🔄 自動選擇",
         "cli": "⌨️ Cursor CLI",
         "agent": "🤖 Agent Loop",
+        "assistant": "👩‍💼 秘書模式",
         "cursor": "💻 Background Agent",
     }
     
@@ -3818,9 +3819,13 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         /mode cli - Use Cursor CLI for chat
         /mode agent - Use Agent Loop for chat
     """
+    from . import handlers as handlers_module
     from .handlers import get_user_chat_mode, set_user_chat_mode, get_best_available_mode
     from ..cursor.cli_agent import is_cli_available, get_cli_agent
     from ..core.secretary import get_secretary
+    
+    logger.info(f"mode_handler called with args: {context.args}")
+    logger.info(f"Current _user_chat_modes before change: {handlers_module._user_chat_modes}")
     
     user_id = update.effective_user.id
     args = context.args or []
@@ -3899,7 +3904,9 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text(text, parse_mode="HTML")
     
     elif args[0].lower() in ["assistant", "secretary", "秘書"]:
-        set_user_chat_mode(user_id, "assistant")
+        result = set_user_chat_mode(user_id, "assistant")
+        logger.info(f"set_user_chat_mode({user_id}, 'assistant') returned: {result}")
+        logger.info(f"_user_chat_modes after change: {handlers_module._user_chat_modes}")
         
         await update.message.reply_text(
             f"👩‍💼 <b>已切換到秘書模式</b>\n\n"
@@ -4440,6 +4447,78 @@ async def notify_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
 
+# ============================================
+# v1.1 Personal Secretary Handlers
+# ============================================
+
+@authorized_only
+async def secretary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /secretary command - secretary settings."""
+    from ..core.unified_commands import handle_secretary, CommandContext
+    
+    user = update.effective_user
+    ctx = CommandContext(
+        user_id=str(user.id),
+        user_name=user.first_name or user.username or "用戶",
+        platform="telegram",
+        args=context.args or [],
+    )
+    
+    result = await handle_secretary(ctx)
+    await update.message.reply_text(result.message)
+
+
+@authorized_only
+async def briefing_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /briefing command - daily briefing."""
+    from ..core.unified_commands import handle_briefing, CommandContext
+    
+    user = update.effective_user
+    ctx = CommandContext(
+        user_id=str(user.id),
+        user_name=user.first_name or user.username or "用戶",
+        platform="telegram",
+        args=context.args or [],
+    )
+    
+    result = await handle_briefing(ctx)
+    await update.message.reply_text(result.message)
+
+
+@authorized_only
+async def todo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /todo command - task management."""
+    from ..core.unified_commands import handle_todo, CommandContext
+    
+    user = update.effective_user
+    ctx = CommandContext(
+        user_id=str(user.id),
+        user_name=user.first_name or user.username or "用戶",
+        platform="telegram",
+        args=context.args or [],
+    )
+    
+    result = await handle_todo(ctx)
+    await update.message.reply_text(result.message)
+
+
+@authorized_only
+async def book_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /book command - booking assistant."""
+    from ..core.unified_commands import handle_book, CommandContext
+    
+    user = update.effective_user
+    ctx = CommandContext(
+        user_id=str(user.id),
+        user_name=user.first_name or user.username or "用戶",
+        platform="telegram",
+        args=context.args or [],
+    )
+    
+    result = await handle_book(ctx)
+    await update.message.reply_text(result.message)
+
+
 def setup_core_handlers(app) -> None:
     """
     Setup core feature handlers.
@@ -4550,6 +4629,16 @@ def setup_core_handlers(app) -> None:
     app.add_handler(CommandHandler("alias", alias_handler))
     app.add_handler(CommandHandler("notify", notify_handler))
     app.add_handler(CommandHandler("notif", notify_handler))  # Alias
+    
+    # v1.1 Personal Secretary commands
+    app.add_handler(CommandHandler("secretary", secretary_handler))
+    app.add_handler(CommandHandler("sec", secretary_handler))  # Alias
+    app.add_handler(CommandHandler("briefing", briefing_handler))
+    app.add_handler(CommandHandler("daily", briefing_handler))  # Alias
+    app.add_handler(CommandHandler("todo", todo_handler))
+    app.add_handler(CommandHandler("task", todo_handler))  # Alias
+    app.add_handler(CommandHandler("book", book_handler))
+    app.add_handler(CommandHandler("booking", book_handler))  # Alias
 
     logger.info("Core handlers configured")
 
@@ -4590,6 +4679,11 @@ __all__ = [
     # v0.4 handlers
     "verbose_handler",
     "think_handler",
+    # v1.1 secretary handlers
+    "secretary_handler",
+    "briefing_handler",
+    "todo_handler",
+    "book_handler",
     "alias_handler",
     "notify_handler",
     "setup_core_handlers",

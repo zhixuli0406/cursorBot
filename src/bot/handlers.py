@@ -43,8 +43,10 @@ def get_user_chat_mode(user_id: int) -> str:
 def set_user_chat_mode(user_id: int, mode: str) -> bool:
     """Set user's chat mode preference."""
     if mode not in VALID_CHAT_MODES:
+        logger.warning(f"Invalid chat mode: {mode}")
         return False
     _user_chat_modes[user_id] = mode
+    logger.info(f"Set user {user_id} chat mode to: {mode} (all modes: {_user_chat_modes})")
     return True
 
 
@@ -115,12 +117,6 @@ async def store_conversation_to_rag(
     except Exception as e:
         logger.warning(f"Failed to store conversation to RAG: {e}")
         return False
-
-
-def set_user_chat_mode(user_id: int, mode: str) -> None:
-    """Set user's chat mode preference."""
-    if mode in ("auto", "cli", "agent", "cursor"):
-        _user_chat_modes[user_id] = mode
 
 
 def get_best_available_mode() -> str:
@@ -219,22 +215,30 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 我是您的專屬秘書 <b>{secretary_name_safe}</b>！✨
 
+<b>🎀 關於我：</b>
+• 溫柔體貼的女秘書人設
+• 說話親切、主動關心您的需求
+• 會記住您的偏好和習慣
+• 可以用自然語言跟我聊天！
+
 <b>📡 狀態:</b> {status_text}
 
 <b>👩‍💼 秘書服務：</b>
+• /mode assistant - 切換秘書模式（推薦！）
 • /briefing - 今日簡報（行程 + 待辦）
 • /todo add &lt;任務&gt; - 新增待辦事項
 • /book - 訂票助手（機票、火車、飯店）
 • /calendar - 查看行程
-• /reminder on - 啟用每日提醒
 
-<b>⚡ AI 助手：</b>
-• 直接發送訊息即可對話
-• /mode cli - 切換程式碼模式
-• /mode agent - 切換 AI 助手模式
+<b>💬 自然語言互動：</b>
+切換秘書模式後直接聊天：
+• 「幫我記下明天開會」
+• 「今天有什麼行程？」
+• 「查一下去東京的機票」
 
-<b>🎤 語音控制：</b>
-• 說「Hey Cursor」喚醒語音助手
+<b>⚙️ 其他模式：</b>
+• /mode cli - 程式碼模式
+• /mode agent - AI Agent 模式
 
 📋 更多指令請輸入 /help
 
@@ -281,13 +285,33 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     help_text = f"""<b>📖 CursorBot v1.1 指令說明</b>
 {status_info}
 
-<b>👩‍💼 個人秘書</b>
+<b>👩‍💼 個人秘書 - {secretary_name_safe}</b>
 ━━━━━━━━━━━━━━━━━━━━━━
+✨ 溫柔體貼的女秘書人設
+💬 說話親切、主動關心
+📝 記住你的偏好與習慣
+
+<b>🎀 秘書指令</b>
 /mode assistant - 切換秘書模式 👈
 /briefing - 今日簡報
 /todo [add|done|list] - 待辦事項
 /book [flight|train|hotel] - 訂票助手
-/secretary - 秘書設定
+
+<b>🎭 人設切換</b>
+/secretary persona - 查看所有人設
+/secretary persona [ID] - 切換人設
+• gentle - 溫柔體貼的小雅
+• professional - 專業幹練的雅琳
+• cheerful - 活潑開朗的小晴
+• cool - 冷酷高效的冰凝
+• cute - 可愛軟萌的萌萌
+• butler - 優雅紳士的賽巴斯
+
+<b>⚙️ 秘書設定</b>
+/secretary - 查看設定
+/secretary name [名字] - 設定您的稱呼
+/secretary add [ID] [名字] [描述] - 新增自訂人設
+/secretary clear - 清除對話記錄
 
 <b>📅 日曆 &amp; 郵件</b>
 /calendar [week|list|add]
@@ -308,11 +332,12 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /meeting - 會議助手
 
 <b>💡 秘書模式可用自然語言：</b>
-• 「幫我記開會」
-• 「今天有什麼行程」
-• 「訂機票去東京」
+• 「幫我記開會」→ 新增待辦
+• 「今天有什麼行程」→ 查詢日曆
+• 「訂機票去東京」→ 訂票建議
+• 「早安」→ 今日簡報
 
-—— {secretary_name_safe}
+—— {secretary_name_safe} 💕
 """
     await update.message.reply_text(help_text, parse_mode="HTML")
 
@@ -823,15 +848,20 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     # Get user's chat mode preference
     chat_mode = get_user_chat_mode(user_id)
+    logger.info(f"User {user_id} chat_mode: {chat_mode} (from _user_chat_modes: {_user_chat_modes})")
     
     # Handle auto mode - use priority: CLI -> Agent
     if chat_mode == "auto":
         chat_mode = get_best_available_mode()
+        logger.info(f"Auto mode resolved to: {chat_mode}")
     
     # Route based on mode
+    logger.info(f"Routing to mode: {chat_mode}")
     if chat_mode == "assistant":
         # Use Assistant Mode (personal secretary)
+        logger.info(f">>> Entering assistant mode for user {user_id}")
         await _handle_assistant_mode(update, message_text, user_id, username, chat_id)
+        return  # Ensure we don't fall through
     elif chat_mode == "cli":
         # Use Cursor CLI mode (async)
         from ..cursor.cli_agent import is_cli_available
@@ -860,11 +890,16 @@ async def _handle_assistant_mode(
     """
     from ..core.secretary import get_assistant_mode
     
+    logger.info(f"_handle_assistant_mode called for user {user_id}: {message_text[:50]}")
+    
     try:
         assistant = get_assistant_mode()
         
         # Process message with assistant
+        logger.info(f"Processing message with assistant...")
         response = await assistant.process_message(str(user_id), message_text)
+        
+        logger.info(f"Assistant response: {response[:100] if response else 'None'}...")
         
         # Send response
         await update.message.reply_text(response)

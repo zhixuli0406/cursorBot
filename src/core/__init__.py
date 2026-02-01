@@ -182,7 +182,12 @@ from .calendar_reminder import (
 from .secretary import (
     PersonalSecretary, SecretaryPersona, Task, TaskPriority,
     UserPreferences, AssistantIntent, AssistantNLU, AssistantMode,
+    PersonaTemplate, PRESET_PERSONAS,
     get_secretary, get_assistant_mode,
+)
+from .conversation_rag import (
+    ConversationRAG, ConversationRAGConfig, ConversationMessage,
+    RelevantContext, PatternType, get_conversation_rag, reset_conversation_rag,
 )
 from .remote_gateway import (
     RemoteGateway, GatewayConfig, GatewayNode, GatewayStatus,

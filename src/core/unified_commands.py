@@ -1412,10 +1412,11 @@ async def handle_translate(ctx: CommandContext) -> CommandResult:
 
 async def handle_secretary(ctx: CommandContext) -> CommandResult:
     """Handle /secretary command - secretary settings."""
-    from .secretary import get_secretary
+    from .secretary import get_secretary, get_assistant_mode, PRESET_PERSONAS
     
     secretary = get_secretary()
     prefs = secretary.get_preferences(ctx.user_id)
+    persona = prefs.get_current_persona()
     
     if ctx.args:
         action = ctx.args[0].lower()
@@ -1426,7 +1427,7 @@ async def handle_secretary(ctx: CommandContext) -> CommandResult:
             secretary.set_user_name(ctx.user_id, name)
             return CommandResult(
                 success=True,
-                message=f"好的～以後我就稱呼您為「{name}」囉！✨\n\n—— {prefs.secretary_name}"
+                message=f"好的～以後我就稱呼您為「{name}」囉！✨\n\n{persona.signature}"
             )
         
         elif action == "rename" and len(ctx.args) > 1:
@@ -1435,24 +1436,120 @@ async def handle_secretary(ctx: CommandContext) -> CommandResult:
             secretary.set_secretary_name(ctx.user_id, new_name)
             return CommandResult(
                 success=True,
-                message=f"好的！從現在起我就叫「{new_name}」了～ 請多指教！💕\n\n—— {new_name}"
+                message=f"好的！從現在起我就叫「{new_name}」了～ 請多指教！\n\n—— {new_name}"
             )
+        
+        elif action in ["clear", "reset", "新對話"]:
+            # Clear conversation history
+            assistant = get_assistant_mode()
+            assistant.clear_history(ctx.user_id)
+            return CommandResult(
+                success=True,
+                message=f"好的～已經清除對話紀錄，我們重新開始吧！✨\n\n{persona.signature}"
+            )
+        
+        elif action in ["persona", "人設", "style"]:
+            # Persona management
+            if len(ctx.args) < 2:
+                # List available personas
+                lines = ["🎭 可用人設列表\n"]
+                
+                lines.append("📦 預設人設：")
+                for pid, p in PRESET_PERSONAS.items():
+                    current = "👈 當前" if pid == prefs.persona_id else ""
+                    lines.append(f"  • {pid}: {p.name} - {p.description} {current}")
+                
+                if prefs.custom_personas:
+                    lines.append("\n🎨 自訂人設：")
+                    for pid, pdata in prefs.custom_personas.items():
+                        current = "👈 當前" if pid == prefs.persona_id else ""
+                        lines.append(f"  • {pid}: {pdata['name']} - {pdata['description']} {current}")
+                
+                lines.append("\n切換人設：/secretary persona [人設ID]")
+                lines.append(f"\n{persona.signature}")
+                
+                return CommandResult(success=True, message="\n".join(lines))
+            
+            # Switch persona
+            persona_id = ctx.args[1].lower()
+            if secretary.set_persona(ctx.user_id, persona_id):
+                new_persona = secretary.get_current_persona(ctx.user_id)
+                return CommandResult(
+                    success=True,
+                    message=f"人設已切換！\n\n🎭 {new_persona.name}\n{new_persona.description}\n\n很高興為您服務！\n\n{new_persona.signature}"
+                )
+            else:
+                return CommandResult(
+                    success=False,
+                    message=f"找不到人設「{persona_id}」\n\n使用 /secretary persona 查看可用人設列表"
+                )
+        
+        elif action in ["add", "新增"] and len(ctx.args) >= 4:
+            # Add custom persona: /secretary add [id] [name] [description]
+            pid = ctx.args[1].lower()
+            pname = ctx.args[2]
+            pdesc = " ".join(ctx.args[3:])
+            
+            # Check if ID already exists
+            if pid in PRESET_PERSONAS:
+                return CommandResult(
+                    success=False,
+                    message=f"「{pid}」是預設人設ID，請使用其他名稱"
+                )
+            
+            secretary.add_custom_persona(
+                user_id=ctx.user_id,
+                persona_id=pid,
+                name=pname,
+                description=pdesc,
+                tone="自然對話",
+            )
+            
+            return CommandResult(
+                success=True,
+                message=f"已新增自訂人設！\n\n🎭 {pname}\n{pdesc}\n\n使用 /secretary persona {pid} 切換到此人設\n\n{persona.signature}"
+            )
+        
+        elif action in ["delete", "del", "刪除"] and len(ctx.args) >= 2:
+            # Delete custom persona
+            pid = ctx.args[1].lower()
+            
+            if pid in PRESET_PERSONAS:
+                return CommandResult(
+                    success=False,
+                    message="無法刪除預設人設"
+                )
+            
+            if secretary.delete_custom_persona(ctx.user_id, pid):
+                return CommandResult(
+                    success=True,
+                    message=f"已刪除人設「{pid}」\n\n{persona.signature}"
+                )
+            else:
+                return CommandResult(
+                    success=False,
+                    message=f"找不到自訂人設「{pid}」"
+                )
     
-    message = f"""👩‍💼 **個人秘書設定**
+    message = f"""👩‍💼 個人秘書設定
 
-秘書名稱：{prefs.secretary_name}
-您的稱呼：{prefs.name or '（未設定）'}
-每日簡報：{'✅ 已啟用' if prefs.briefing_enabled else '❌ 已停用'}
-簡報時間：{prefs.wake_time.strftime('%H:%M')}
+🎭 當前人設：{persona.name}
+📝 描述：{persona.description}
+💬 風格：{persona.tone}
 
-**設定指令：**
-• /secretary name <名字> - 設定您的稱呼
-• /secretary rename <名字> - 修改秘書名稱
-• /briefing - 查看今日簡報
-• /todo - 管理待辦事項
-• /book - 訂票助手
+👤 您的稱呼：{prefs.name or '（未設定）'}
+📅 每日簡報：{'✅ 已啟用' if prefs.briefing_enabled else '❌ 已停用'}
+⏰ 簡報時間：{prefs.wake_time.strftime('%H:%M')}
 
-—— {prefs.secretary_name}，隨時為您服務！💕
+設定指令：
+• /secretary persona - 查看/切換人設
+• /secretary name [名字] - 設定您的稱呼
+• /secretary rename [名字] - 修改秘書名稱
+• /secretary add [ID] [名字] [描述] - 新增自訂人設
+• /secretary delete [ID] - 刪除自訂人設
+• /secretary clear - 清除對話紀錄
+
+{persona.signature}
 """
     return CommandResult(success=True, message=message)
 
@@ -1594,11 +1691,11 @@ async def handle_book(ctx: CommandContext) -> CommandResult:
                 message=secretary.booking_response(ctx.user_id, type_map[booking_type])
             )
     
-    message = f"""🎫 **訂票助手**
+    message = f"""🎫 訂票助手
 
 {prefs.name or '主人'}，請問要預訂什麼呢？
 
-**可用服務：**
+可用服務：
 • /book flight - ✈️ 機票預訂
 • /book train - 🚄 火車票預訂
 • /book hotel - 🏨 飯店預訂
