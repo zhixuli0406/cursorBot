@@ -283,6 +283,36 @@ class Settings(BaseSettings):
         description="AI temperature (0.0-1.0)",
     )
 
+    # Secretary Settings
+    secretary_default_name: str = Field(
+        default="小雅",
+        description="Default secretary name",
+    )
+    secretary_briefing_enabled: bool = Field(
+        default=False,
+        description="Enable automatic daily briefing push",
+    )
+    secretary_briefing_time: str = Field(
+        default="09:00",
+        description="Time(s) to send daily briefing (HH:MM format, comma-separated for multiple times)",
+    )
+    secretary_briefing_users: str = Field(
+        default="",
+        description="Comma-separated list of user IDs to send briefing to",
+    )
+    secretary_briefing_platforms: str = Field(
+        default="telegram",
+        description="Comma-separated list of platforms to send briefing to (telegram,discord,line,slack)",
+    )
+    secretary_care_messages: bool = Field(
+        default=True,
+        description="Enable random caring messages",
+    )
+    secretary_language: str = Field(
+        default="zh-TW",
+        description="Default language for secretary",
+    )
+
     # Discord Settings
     discord_bot_token: str = Field(
         default="",

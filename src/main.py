@@ -110,9 +110,9 @@ class CursorBotApp:
             
             # Register Telegram send handler
             async def telegram_send_handler(chat_id: str, message: str) -> None:
-                if self.telegram_bot and self.telegram_bot.application:
+                if self.telegram_bot and self.telegram_bot.bot:
                     try:
-                        await self.telegram_bot.application.bot.send_message(
+                        await self.telegram_bot.bot.send_message(
                             chat_id=int(chat_id),
                             text=message,
                             parse_mode="Markdown",
@@ -147,6 +147,84 @@ class CursorBotApp:
         except Exception as e:
             logger.warning(f"Failed to start reminder service: {e}")
 
+    async def _start_briefing_scheduler(self) -> None:
+        """Start the secretary briefing scheduler."""
+        try:
+            from .core.secretary import get_briefing_scheduler
+            
+            briefing_scheduler = get_briefing_scheduler()
+            
+            # Register Telegram send handler
+            async def telegram_briefing_handler(user_id: str, message: str) -> None:
+                if not self.telegram_bot or not self.telegram_bot.bot:
+                    raise RuntimeError("Telegram bot not available")
+                
+                await self.telegram_bot.bot.send_message(
+                    chat_id=int(user_id),
+                    text=message,
+                    parse_mode="Markdown",
+                )
+            
+            briefing_scheduler.register_send_handler("telegram", telegram_briefing_handler)
+            
+            # Register Discord send handler (as fallback)
+            async def discord_briefing_handler(user_id: str, message: str) -> None:
+                if not self.discord_channel or not self.discord_channel.client:
+                    raise RuntimeError("Discord bot not available")
+                
+                # Try to find user and send DM
+                user = await self.discord_channel.client.fetch_user(int(user_id))
+                if not user:
+                    raise RuntimeError(f"Discord user {user_id} not found")
+                await user.send(message)
+            
+            briefing_scheduler.register_send_handler("discord", discord_briefing_handler)
+            
+            # Start the briefing scheduler
+            await briefing_scheduler.start()
+            
+        except Exception as e:
+            logger.warning(f"Failed to start briefing scheduler: {e}")
+
+    async def _start_recurring_task_scheduler(self) -> None:
+        """Start the recurring task reminder scheduler."""
+        try:
+            from .core.secretary import get_recurring_task_scheduler
+            
+            recurring_scheduler = get_recurring_task_scheduler()
+            
+            # Register Telegram send handler
+            async def telegram_recurring_handler(user_id: str, message: str) -> None:
+                if not self.telegram_bot or not self.telegram_bot.bot:
+                    raise RuntimeError("Telegram bot not available")
+                
+                await self.telegram_bot.bot.send_message(
+                    chat_id=int(user_id),
+                    text=message,
+                    parse_mode="Markdown",
+                )
+            
+            recurring_scheduler.register_handler("telegram", telegram_recurring_handler)
+            
+            # Register Discord send handler (as fallback)
+            async def discord_recurring_handler(user_id: str, message: str) -> None:
+                if not self.discord_channel or not self.discord_channel.client:
+                    raise RuntimeError("Discord bot not available")
+                
+                user = await self.discord_channel.client.fetch_user(int(user_id))
+                if not user:
+                    raise RuntimeError(f"Discord user {user_id} not found")
+                await user.send(message)
+            
+            recurring_scheduler.register_handler("discord", discord_recurring_handler)
+            
+            # Start the recurring task scheduler
+            await recurring_scheduler.start()
+            logger.info("Recurring task scheduler started")
+            
+        except Exception as e:
+            logger.warning(f"Failed to start recurring task scheduler: {e}")
+
     async def run(self) -> None:
         """
         Run all services concurrently.
@@ -169,6 +247,12 @@ class CursorBotApp:
 
             # Initialize and start calendar reminder service
             await self._start_reminder_service()
+            
+            # Initialize and start secretary briefing scheduler
+            await self._start_briefing_scheduler()
+            
+            # Initialize and start recurring task scheduler
+            await self._start_recurring_task_scheduler()
 
             # Start services concurrently
             tasks = []

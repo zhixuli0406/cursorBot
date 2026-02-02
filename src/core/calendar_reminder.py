@@ -226,8 +226,11 @@ class CalendarReminderService:
         
         return True
     
-    async def _send_reminder(self, settings: ReminderSettings) -> None:
-        """Send reminder to user."""
+    async def _send_reminder(self, settings: ReminderSettings, retry_count: int = 0) -> None:
+        """Send reminder to user with retry on failure."""
+        max_retries = 3
+        retry_delay = 30  # seconds
+        
         try:
             # Get today's events
             events = await self._get_today_events(settings.user_id)
@@ -248,7 +251,15 @@ class CalendarReminderService:
             self._save_settings()
             
         except Exception as e:
-            logger.error(f"Failed to send reminder to {settings.user_id}: {e}")
+            logger.error(f"Failed to send reminder to {settings.user_id} (attempt {retry_count + 1}): {e}")
+            
+            # Retry on network errors
+            if retry_count < max_retries:
+                logger.info(f"Retrying reminder for {settings.user_id} in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
+                await self._send_reminder(settings, retry_count + 1)
+            else:
+                logger.error(f"Gave up sending reminder to {settings.user_id} after {max_retries + 1} attempts")
     
     async def _get_today_events(self, user_id: str) -> list[CalendarEventSummary]:
         """Get today's calendar events for a user."""
@@ -278,16 +289,20 @@ class CalendarReminderService:
         
         # Try Apple Calendar (macOS only)
         try:
-            import platform
-            if platform.system() == "Darwin":
-                from .apple_calendar import get_apple_calendar, APPLESCRIPT_AVAILABLE
+            import platform as plat
+            if plat.system() == "Darwin":
+                from .apple_calendar import get_apple_calendar
                 
-                if APPLESCRIPT_AVAILABLE:
-                    apple_cal = get_apple_calendar()
-                    apple_events = await apple_cal.get_events_today()
+                apple_cal = get_apple_calendar()
+                if apple_cal.is_available():
+                    # get_events_today is synchronous, run in executor
+                    import asyncio
+                    loop = asyncio.get_event_loop()
+                    apple_events = await loop.run_in_executor(None, apple_cal.get_events_today)
+                    
                     for event in apple_events:
-                        start_time = event.start.strftime("%H:%M") if event.start else ""
-                        end_time = event.end.strftime("%H:%M") if event.end else ""
+                        start_time = event.start_time.strftime("%H:%M") if event.start_time else ""
+                        end_time = event.end_time.strftime("%H:%M") if event.end_time else ""
                         
                         events.append(CalendarEventSummary(
                             title=event.title,

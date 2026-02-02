@@ -43,6 +43,15 @@ class TaskPriority(Enum):
     LOW = "low"
 
 
+class RecurringType(Enum):
+    """Recurring task types."""
+    NONE = "none"           # Not recurring
+    DAILY = "daily"         # Every day
+    WEEKLY = "weekly"       # Every week
+    MONTHLY = "monthly"     # Every month
+    WEEKDAYS = "weekdays"   # Mon-Fri only
+
+
 @dataclass
 class Task:
     """A task/to-do item."""
@@ -54,6 +63,11 @@ class Task:
     completed: bool = False
     created_at: datetime = field(default_factory=datetime.now)
     reminder_time: Optional[datetime] = None
+    # Recurring task fields
+    recurring: RecurringType = RecurringType.NONE
+    recurring_time: Optional[time] = None  # Time of day for recurring reminder
+    recurring_days: list[int] = field(default_factory=list)  # For weekly: [0=Mon, 6=Sun]
+    last_reminded: Optional[datetime] = None  # Track last reminder sent
     
     def to_dict(self) -> dict:
         return {
@@ -65,10 +79,21 @@ class Task:
             "completed": self.completed,
             "created_at": self.created_at.isoformat(),
             "reminder_time": self.reminder_time.isoformat() if self.reminder_time else None,
+            "recurring": self.recurring.value,
+            "recurring_time": self.recurring_time.isoformat() if self.recurring_time else None,
+            "recurring_days": self.recurring_days,
+            "last_reminded": self.last_reminded.isoformat() if self.last_reminded else None,
         }
     
     @classmethod
     def from_dict(cls, data: dict) -> "Task":
+        recurring_time = None
+        if data.get("recurring_time"):
+            try:
+                recurring_time = time.fromisoformat(data["recurring_time"])
+            except (ValueError, TypeError):
+                pass
+        
         return cls(
             id=data["id"],
             title=data["title"],
@@ -78,7 +103,43 @@ class Task:
             completed=data.get("completed", False),
             created_at=datetime.fromisoformat(data["created_at"]) if data.get("created_at") else datetime.now(),
             reminder_time=datetime.fromisoformat(data["reminder_time"]) if data.get("reminder_time") else None,
+            recurring=RecurringType(data.get("recurring", "none")),
+            recurring_time=recurring_time,
+            recurring_days=data.get("recurring_days", []),
+            last_reminded=datetime.fromisoformat(data["last_reminded"]) if data.get("last_reminded") else None,
         )
+    
+    def should_remind_now(self) -> bool:
+        """Check if this recurring task should trigger a reminder now."""
+        if self.recurring == RecurringType.NONE:
+            return False
+        if self.completed:
+            return False
+        if not self.recurring_time:
+            return False
+        
+        now = datetime.now()
+        
+        # Check if already reminded today
+        if self.last_reminded and self.last_reminded.date() == now.date():
+            return False
+        
+        # Check if current time matches (within 1 minute window)
+        if now.hour != self.recurring_time.hour or now.minute != self.recurring_time.minute:
+            return False
+        
+        # Check recurring type
+        if self.recurring == RecurringType.DAILY:
+            return True
+        elif self.recurring == RecurringType.WEEKDAYS:
+            return now.weekday() < 5  # Mon-Fri = 0-4
+        elif self.recurring == RecurringType.WEEKLY:
+            return now.weekday() in self.recurring_days if self.recurring_days else True
+        elif self.recurring == RecurringType.MONTHLY:
+            # Remind on same day of month as created
+            return now.day == self.created_at.day
+        
+        return False
 
 
 @dataclass
@@ -601,6 +662,43 @@ class PersonalSecretary:
         
         return task
     
+    def add_recurring_task(
+        self,
+        user_id: str,
+        title: str,
+        recurring: RecurringType,
+        recurring_time: time,
+        recurring_days: list[int] = None,
+        description: str = "",
+        priority: TaskPriority = TaskPriority.MEDIUM,
+    ) -> Task:
+        """Add a new recurring task."""
+        import uuid
+        
+        task = Task(
+            id=uuid.uuid4().hex[:8],
+            title=title,
+            description=description,
+            priority=priority,
+            recurring=recurring,
+            recurring_time=recurring_time,
+            recurring_days=recurring_days or [],
+        )
+        
+        if user_id not in self._tasks:
+            self._tasks[user_id] = []
+        
+        self._tasks[user_id].append(task)
+        self._save_data()
+        
+        logger.info(f"Added recurring task: {title} ({recurring.value} at {recurring_time})")
+        return task
+    
+    def get_recurring_tasks(self, user_id: str) -> list[Task]:
+        """Get user's recurring tasks."""
+        tasks = self._tasks.get(user_id, [])
+        return [t for t in tasks if t.recurring != RecurringType.NONE and not t.completed]
+    
     def get_tasks(self, user_id: str, include_completed: bool = False) -> list[Task]:
         """Get user's tasks."""
         tasks = self._tasks.get(user_id, [])
@@ -641,19 +739,46 @@ class PersonalSecretary:
     # Daily Briefing
     # ============================================
     
-    async def daily_briefing(self, user_id: str) -> str:
-        """Generate daily briefing for user."""
+    async def daily_briefing(self, user_id: str, briefing_type: dict = None) -> str:
+        """
+        Generate daily briefing for user.
+        
+        Args:
+            user_id: User identifier
+            briefing_type: Optional dict with 'type', 'name', 'greeting' for time-based briefing
+        """
         prefs = self.get_preferences(user_id)
         persona = SecretaryPersona
         
         lines = []
         
-        # Greeting
-        lines.append(persona.greeting(prefs.name))
+        # Determine greeting based on briefing type or current time
+        now = datetime.now()
+        if briefing_type:
+            greeting_word = briefing_type.get("greeting", "您好")
+            briefing_name = briefing_type.get("name", "日報")
+        else:
+            # Determine from current hour
+            hour = now.hour
+            if 5 <= hour < 12:
+                greeting_word = "早安"
+                briefing_name = "早報"
+            elif 12 <= hour < 18:
+                greeting_word = "午安"
+                briefing_name = "午報"
+            elif 18 <= hour < 24:
+                greeting_word = "晚安"
+                briefing_name = "晚報"
+            else:
+                greeting_word = "夜深了"
+                briefing_name = "夜報"
+        
+        # Greeting with time-based message
+        name_part = f"{prefs.name}，" if prefs.name else ""
+        lines.append(f"📰 **{briefing_name}** | {greeting_word}，{name_part}這是您的{briefing_name}～")
         lines.append("")
         
         # Today's date
-        now = datetime.now()
         weekdays = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"]
         date_str = f"📅 今天是 {now.strftime('%Y年%m月%d日')} {weekdays[now.weekday()]}"
         lines.append(date_str)
@@ -684,8 +809,12 @@ class PersonalSecretary:
                 lines.append(f"  {priority_icon} {task.title}")
         lines.append("")
         
-        # Care message (randomly)
-        if random.random() < 0.5:
+        # Care message (randomly, but not for night briefing)
+        show_care = True
+        if briefing_type and briefing_type.get("type") == "night":
+            show_care = False
+        
+        if show_care and random.random() < 0.5:
             lines.append(f"💕 {persona.care_message()}")
             lines.append("")
         
@@ -816,18 +945,40 @@ class PersonalSecretary:
         prefs = self.get_preferences(user_id)
         persona = SecretaryPersona
         
-        lines = [
-            persona.confirmation(),
-            "",
-            f"📝 已新增待辦事項：",
-            f"  標題：{task.title}",
-        ]
+        # Check if it's a recurring task
+        is_recurring = task.recurring != RecurringType.NONE
         
-        if task.due_date:
-            lines.append(f"  到期：{task.due_date.strftime('%Y/%m/%d %H:%M')}")
-        
-        priority_text = {"high": "高", "medium": "中", "low": "低"}
-        lines.append(f"  優先級：{priority_text.get(task.priority.value, '中')}")
+        if is_recurring:
+            recurring_type_names = {
+                RecurringType.DAILY: "每日",
+                RecurringType.WEEKLY: "每週",
+                RecurringType.WEEKDAYS: "平日",
+                RecurringType.MONTHLY: "每月",
+            }
+            type_name = recurring_type_names.get(task.recurring, "")
+            time_str = task.recurring_time.strftime("%H:%M") if task.recurring_time else ""
+            
+            lines = [
+                persona.confirmation(),
+                "",
+                f"🔁 已新增重複提醒：",
+                f"  標題：{task.title}",
+                f"  頻率：{type_name}",
+                f"  時間：{time_str}",
+            ]
+        else:
+            lines = [
+                persona.confirmation(),
+                "",
+                f"📝 已新增待辦事項：",
+                f"  標題：{task.title}",
+            ]
+            
+            if task.due_date:
+                lines.append(f"  到期：{task.due_date.strftime('%Y/%m/%d %H:%M')}")
+            
+            priority_text = {"high": "高", "medium": "中", "low": "低"}
+            lines.append(f"  優先級：{priority_text.get(task.priority.value, '中')}")
         
         lines.append("")
         lines.append(f"—— {prefs.secretary_name}")
@@ -845,21 +996,42 @@ class PersonalSecretary:
                 f"{prefs.name or '主人'}，目前沒有待辦事項呢～\n有什麼任務要交給我嗎？"
             )
         
+        # Separate recurring and one-time tasks
+        recurring_tasks = [t for t in tasks if t.recurring != RecurringType.NONE]
+        one_time_tasks = [t for t in tasks if t.recurring == RecurringType.NONE]
+        
         lines = [f"📋 {prefs.name or '主人'}的待辦清單：", ""]
         
-        for i, task in enumerate(tasks[:10], 1):
-            priority_icon = "🔴" if task.priority == TaskPriority.HIGH else "🟡" if task.priority == TaskPriority.MEDIUM else "🟢"
-            status = "✅" if task.completed else "⬜"
-            line = f"{i}. {status} {priority_icon} {task.title}"
-            if task.due_date:
-                line += f" (到期: {task.due_date.strftime('%m/%d')})"
-            lines.append(line)
+        # Show one-time tasks first
+        if one_time_tasks:
+            for i, task in enumerate(one_time_tasks[:8], 1):
+                priority_icon = "🔴" if task.priority == TaskPriority.HIGH else "🟡" if task.priority == TaskPriority.MEDIUM else "🟢"
+                status = "✅" if task.completed else "⬜"
+                line = f"{i}. {status} {priority_icon} {task.title}"
+                if task.due_date:
+                    line += f" (到期: {task.due_date.strftime('%m/%d')})"
+                lines.append(line)
         
-        if len(tasks) > 10:
-            lines.append(f"... 還有 {len(tasks) - 10} 項")
+        # Show recurring tasks
+        if recurring_tasks:
+            lines.append("")
+            lines.append("🔁 重複提醒：")
+            recurring_type_names = {
+                RecurringType.DAILY: "每日",
+                RecurringType.WEEKLY: "每週",
+                RecurringType.WEEKDAYS: "平日",
+                RecurringType.MONTHLY: "每月",
+            }
+            for task in recurring_tasks[:5]:
+                type_name = recurring_type_names.get(task.recurring, "")
+                time_str = task.recurring_time.strftime("%H:%M") if task.recurring_time else ""
+                lines.append(f"  • {task.title} ({type_name} {time_str})")
+        
+        if len(one_time_tasks) > 8:
+            lines.append(f"... 還有 {len(one_time_tasks) - 8} 項一般待辦")
         
         lines.append("")
-        lines.append(f"共 {len(tasks)} 項待辦")
+        lines.append(f"共 {len(one_time_tasks)} 項待辦，{len(recurring_tasks)} 項重複提醒")
         
         return self.format_response(user_id, "\n".join(lines))
     
@@ -1353,18 +1525,75 @@ class AssistantMode:
         
         logger.debug(f"Building context with scope: {calendar_scope}")
         
-        # Tasks
+        # Calculate date range for context
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        if calendar_scope == "today":
+            context_start = today
+            context_end = today + timedelta(days=1)
+        elif calendar_scope == "week":
+            days_since_monday = today.weekday()
+            context_start = today - timedelta(days=days_since_monday)
+            context_end = context_start + timedelta(days=7)
+        elif calendar_scope == "next_week":
+            days_since_monday = today.weekday()
+            next_monday = today + timedelta(days=(7 - days_since_monday))
+            context_start = next_monday
+            context_end = next_monday + timedelta(days=7)
+        else:  # month
+            context_start = today.replace(day=1)
+            if today.month == 12:
+                context_end = today.replace(year=today.year + 1, month=1, day=1)
+            else:
+                context_end = today.replace(month=today.month + 1, day=1)
+        
+        # Tasks - filter by scope if asking about specific time range
         tasks = self.secretary.get_tasks(user_id)
         pending_tasks = [t for t in tasks if not t.completed]
-        if pending_tasks:
-            lines.append(f"📋 待辦事項（{len(pending_tasks)} 項未完成）：")
-            for i, task in enumerate(pending_tasks[:5], 1):
+        
+        # Separate recurring and one-time tasks
+        recurring_tasks = [t for t in pending_tasks if t.recurring != RecurringType.NONE]
+        one_time_tasks = [t for t in pending_tasks if t.recurring == RecurringType.NONE]
+        
+        # Filter one-time tasks by due date if asking about specific time
+        if calendar_scope != "today":
+            scope_tasks = []
+            no_due_tasks = []
+            for t in one_time_tasks:
+                if t.due_date:
+                    if context_start <= t.due_date < context_end:
+                        scope_tasks.append(t)
+                else:
+                    no_due_tasks.append(t)
+            # Show tasks in scope + tasks without due date
+            filtered_tasks = scope_tasks + no_due_tasks[:2]  # Limit no-due tasks
+        else:
+            filtered_tasks = one_time_tasks
+        
+        if filtered_tasks:
+            lines.append(f"📋 {scope_label}待辦（{len(filtered_tasks)} 項）：")
+            for i, task in enumerate(filtered_tasks[:5], 1):
                 due_info = ""
                 if task.due_date:
-                    due_info = f" (截止: {task.due_date.strftime('%m/%d')})"
+                    weekday = ['一', '二', '三', '四', '五', '六', '日'][task.due_date.weekday()]
+                    due_info = f" (截止: {task.due_date.strftime('%m/%d')}({weekday}))"
                 lines.append(f"  {i}. ⬜ {task.title}{due_info}")
         else:
-            lines.append("📋 待辦事項：無待辦")
+            lines.append(f"📋 {scope_label}待辦：無")
+        
+        # Show recurring tasks separately
+        if recurring_tasks:
+            recurring_type_names = {
+                RecurringType.DAILY: "每日",
+                RecurringType.WEEKLY: "每週",
+                RecurringType.WEEKDAYS: "平日",
+                RecurringType.MONTHLY: "每月",
+            }
+            lines.append(f"\n🔁 重複提醒（{len(recurring_tasks)} 項）：")
+            for task in recurring_tasks[:5]:
+                type_name = recurring_type_names.get(task.recurring, "")
+                time_str = task.recurring_time.strftime("%H:%M") if task.recurring_time else ""
+                lines.append(f"  • {task.title} ({type_name} {time_str})")
         
         # Calendar events - get appropriate scope
         cal_start = time_module.time()
@@ -1399,20 +1628,27 @@ class AssistantMode:
         response_lower = llm_response.lower()
         
         # Check if user wants to add a task
-        task_keywords = ["幫我記", "新增待辦", "加一個任務", "記一下", "別忘了", "記得", "提醒我"]
+        task_keywords = ["幫我記", "新增待辦", "加一個任務", "記一下", "別忘了", "記得", "提醒我", "每天提醒", "每日提醒"]
+        recurring_keywords = ["每天", "每日", "daily", "每週", "每星期", "每禮拜", "weekly", "每月", "monthly", "平日", "工作日"]
+        
         if any(kw in text_lower for kw in task_keywords):
-            # Extract task from user text
-            task_text = user_text
-            for prefix in task_keywords:
-                task_text = task_text.replace(prefix, "").strip()
+            # Check if this is a recurring task
+            is_recurring = any(kw in text_lower for kw in recurring_keywords)
             
-            if task_text and len(task_text) > 1:
-                self.secretary.add_task(user_id, task_text)
-                logger.info(f"Auto-added task for user {user_id}: {task_text}")
+            if is_recurring:
+                # Use LLM to extract recurring task details
+                await self._try_add_recurring_task(user_id, user_text, llm_response)
+            else:
+                # Simple task - use LLM to extract properly
+                await self._try_add_task_with_llm(user_id, user_text, llm_response)
         
         # Check if this looks like an event/schedule
         # Keywords in user message
-        event_keywords = ["加入行事曆", "新增行程", "加到日曆", "安排", "排個", "約", "預約", "行程加入"]
+        event_keywords = [
+            "加入行事曆", "新增行程", "加到日曆", "安排", "排個", "約", "預約", "行程加入",
+            "記錄到行事曆", "加行事曆", "加日曆", "寫入行事曆", "記到行事曆",
+            "新增到行事曆", "加入日曆", "添加行程", "行事曆新增", "日曆加入",
+        ]
         
         # Patterns that suggest an event (date + activity)
         event_patterns = [
@@ -1421,11 +1657,22 @@ class AssistantMode:
             "看醫生", "看診", "體檢", "健檢", "牙醫", "回診",
             "上課", "培訓", "講座", "研討會", "工作坊",
             "入席", "報到", "集合", "出發",
+            "測試", "發布", "上線", "部署", "Demo",  # Tech events
         ]
         
         # Date patterns (check if message contains date-like info)
         import re
-        date_pattern = re.compile(r'(\d{1,2}[/\-\.月]\d{1,2}|\d{1,2}號|\d{1,2}日|明天|後天|下週|週[一二三四五六日]|星期[一二三四五六日天])')
+        date_pattern = re.compile(
+            r'(\d{1,2}[/\-\.月]\d{1,2}|'  # 1/2, 1-2, 1.2, 1月2
+            r'\d{1,2}號|\d{1,2}日|'  # 1號, 1日
+            r'明天|後天|大後天|'  # tomorrow, day after
+            r'下週|下禮拜|下星期|'  # next week
+            r'這週|這禮拜|這星期|'  # this week
+            r'週[一二三四五六日]|'  # 週一
+            r'星期[一二三四五六日天]|'  # 星期一
+            r'禮拜[一二三四五六日天]|'  # 禮拜一
+            r'今天|今日)'  # today
+        )
         has_date = bool(date_pattern.search(user_text))
         
         # Time patterns
@@ -1449,6 +1696,188 @@ class AssistantMode:
             logger.info(f"Detected event intent for user {user_id}: {user_text[:50]}...")
             await self._try_add_calendar_event(user_id, user_text, llm_response)
     
+    async def _try_add_task_with_llm(self, user_id: str, user_text: str, llm_response: str) -> bool:
+        """Use LLM to extract task details and add task."""
+        logger.info(f"Extracting task details for user {user_id}")
+        
+        try:
+            from .llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            
+            extract_prompt = f"""從以下對話中提取待辦事項資訊，以 JSON 格式回傳：
+{{
+    "title": "待辦事項標題（簡潔明確）",
+    "due_date": "YYYY-MM-DD 格式的截止日期，無截止日期則為 null",
+    "priority": "high/medium/low",
+    "has_valid_task": true/false
+}}
+
+用戶說：{user_text}
+AI 回覆：{llm_response}
+
+今天是 {datetime.now().strftime('%Y-%m-%d')}（{['週一','週二','週三','週四','週五','週六','週日'][datetime.now().weekday()]}）
+
+規則：
+- 標題應該是完整的事項描述，不要截斷
+- 「禮拜三」「週三」等要轉換成實際日期
+- 如果沒有明確截止日期，due_date 設為 null
+- 如果無法確定任務內容，將 has_valid_task 設為 false
+只回傳 JSON，不要其他文字。"""
+            
+            messages = [{"role": "user", "content": extract_prompt}]
+            result = await manager.generate(messages)
+            
+            if not result:
+                logger.warning("Failed to extract task details from LLM")
+                return False
+            
+            import json
+            import re
+            
+            json_match = re.search(r'\{[^{}]*\}', result, re.DOTALL)
+            if not json_match:
+                logger.warning(f"No JSON found in LLM response: {result}")
+                return False
+            
+            task_data = json.loads(json_match.group())
+            
+            if not task_data.get("has_valid_task", False):
+                logger.info("LLM determined no valid task to add")
+                return False
+            
+            title = task_data.get("title", "")
+            due_date_str = task_data.get("due_date")
+            priority_str = task_data.get("priority", "medium")
+            
+            if not title:
+                logger.warning("Missing title for task")
+                return False
+            
+            # Parse due date
+            due_date = None
+            if due_date_str:
+                try:
+                    due_date = datetime.strptime(due_date_str, "%Y-%m-%d")
+                except ValueError:
+                    pass
+            
+            # Parse priority
+            try:
+                priority = TaskPriority(priority_str)
+            except ValueError:
+                priority = TaskPriority.MEDIUM
+            
+            # Add task
+            self.secretary.add_task(
+                user_id=user_id,
+                title=title,
+                due_date=due_date,
+                priority=priority
+            )
+            logger.info(f"Added task for user {user_id}: {title} (due: {due_date}, priority: {priority.value})")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error extracting task: {e}")
+            return False
+    
+    async def _try_add_recurring_task(self, user_id: str, user_text: str, llm_response: str) -> bool:
+        """Use LLM to extract recurring task details and add task."""
+        logger.info(f"Extracting recurring task details for user {user_id}")
+        
+        try:
+            from .llm_providers import get_llm_manager
+            manager = get_llm_manager()
+            
+            extract_prompt = f"""從以下對話中提取重複提醒任務資訊，以 JSON 格式回傳：
+{{
+    "title": "提醒事項標題（簡潔明確）",
+    "recurring_type": "daily/weekly/weekdays/monthly",
+    "recurring_time": "HH:MM 格式的提醒時間（24小時制）",
+    "recurring_days": [0,1,2,3,4,5,6] (週一到週日為0-6，僅 weekly 類型需要),
+    "priority": "high/medium/low",
+    "has_valid_task": true/false
+}}
+
+用戶說：{user_text}
+AI 回覆：{llm_response}
+
+規則：
+- 「每天」「每日」= daily
+- 「每週」「每星期」= weekly（需指定 recurring_days）
+- 「平日」「工作日」= weekdays（週一到週五）
+- 「每月」= monthly
+- 「早上」= 08:00，「中午」= 12:00，「下午」= 14:00，「晚上」= 18:00
+- 如果無法確定時間，預設 09:00
+- 如果無法確定任務內容或重複規則，將 has_valid_task 設為 false
+只回傳 JSON，不要其他文字。"""
+            
+            messages = [{"role": "user", "content": extract_prompt}]
+            result = await manager.generate(messages)
+            
+            if not result:
+                logger.warning("Failed to extract recurring task details from LLM")
+                return False
+            
+            import json
+            import re
+            
+            json_match = re.search(r'\{[^{}]*\}', result, re.DOTALL)
+            if not json_match:
+                logger.warning(f"No JSON found in LLM response: {result}")
+                return False
+            
+            task_data = json.loads(json_match.group())
+            
+            if not task_data.get("has_valid_task", False):
+                logger.info("LLM determined no valid recurring task to add")
+                return False
+            
+            title = task_data.get("title", "")
+            recurring_type_str = task_data.get("recurring_type", "daily")
+            recurring_time_str = task_data.get("recurring_time", "09:00")
+            recurring_days = task_data.get("recurring_days", [])
+            priority_str = task_data.get("priority", "medium")
+            
+            if not title:
+                logger.warning("Missing title for recurring task")
+                return False
+            
+            # Parse recurring type
+            try:
+                recurring_type = RecurringType(recurring_type_str)
+            except ValueError:
+                recurring_type = RecurringType.DAILY
+            
+            # Parse recurring time
+            try:
+                hour, minute = map(int, recurring_time_str.split(":"))
+                recurring_time = time(hour, minute)
+            except (ValueError, TypeError):
+                recurring_time = time(9, 0)
+            
+            # Parse priority
+            try:
+                priority = TaskPriority(priority_str)
+            except ValueError:
+                priority = TaskPriority.MEDIUM
+            
+            # Add recurring task
+            self.secretary.add_recurring_task(
+                user_id=user_id,
+                title=title,
+                recurring=recurring_type,
+                recurring_time=recurring_time,
+                recurring_days=recurring_days,
+                priority=priority
+            )
+            logger.info(f"Added recurring task for user {user_id}: {title} ({recurring_type.value} at {recurring_time})")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error extracting recurring task: {e}")
+            return False
+    
     async def _try_add_calendar_event(self, user_id: str, user_text: str, llm_response: str) -> bool:
         """Try to extract event details and add to calendar."""
         logger.info(f"Attempting to add calendar event for user {user_id}")
@@ -1462,8 +1891,9 @@ class AssistantMode:
 {{
     "title": "事件標題",
     "date": "YYYY-MM-DD 格式的日期",
-    "time": "HH:MM 格式的時間（24小時制）",
-    "duration_hours": 1,
+    "time": "HH:MM 格式的時間（24小時制），整日事件填 00:00",
+    "duration_hours": 小時數（整日事件填 24）,
+    "all_day": true/false（是否為整日事件）,
     "location": "地點（如果有）",
     "has_valid_event": true/false
 }}
@@ -1473,7 +1903,10 @@ AI 回覆：{llm_response}
 
 今天是 {datetime.now().strftime('%Y-%m-%d')}（{['週一','週二','週三','週四','週五','週六','週日'][datetime.now().weekday()]}）
 
-如果無法確定具體時間或事件不清楚，將 has_valid_event 設為 false。
+規則：
+- 「整日」「全天」表示 all_day=true, time="00:00", duration_hours=24
+- 計算正確的日期：禮拜三、週三、星期三都要轉換成實際日期
+- 如果無法確定日期或事件不清楚，將 has_valid_event 設為 false
 只回傳 JSON，不要其他文字。"""
             
             messages = [{"role": "user", "content": extract_prompt}]
@@ -1504,18 +1937,29 @@ AI 回覆：{llm_response}
             time_str = event_data.get("time", "09:00")
             duration = event_data.get("duration_hours", 1)
             location = event_data.get("location", "")
+            all_day = event_data.get("all_day", False)
             
-            logger.info(f"Extracted event: title={title}, date={date_str}, time={time_str}, location={location}")
+            logger.info(f"Extracted event: title={title}, date={date_str}, time={time_str}, location={location}, all_day={all_day}")
             
             if not title or not date_str:
                 logger.warning("Missing title or date for event")
                 return False
             
             # Build datetime
-            start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
-            end_dt = start_dt + timedelta(hours=duration)
+            try:
+                start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            except ValueError:
+                # If time parsing fails, default to 9:00
+                start_dt = datetime.strptime(f"{date_str} 09:00", "%Y-%m-%d %H:%M")
             
-            logger.info(f"Event datetime: {start_dt} - {end_dt}")
+            if all_day:
+                # For all-day events, set to start of day
+                start_dt = start_dt.replace(hour=0, minute=0, second=0)
+                end_dt = start_dt + timedelta(days=1)
+            else:
+                end_dt = start_dt + timedelta(hours=duration)
+            
+            logger.info(f"Event datetime: {start_dt} - {end_dt}, all_day={all_day}")
             
             # Try Google Calendar first
             try:
@@ -1538,22 +1982,26 @@ AI 回覆：{llm_response}
             
             # Try Apple Calendar
             try:
-                from .apple_calendar import get_apple_calendar_manager
-                apple = get_apple_calendar_manager()
+                from .apple_calendar import get_apple_calendar
+                apple = get_apple_calendar()
                 
                 if apple and apple.is_available():
+                    logger.info(f"Creating Apple Calendar event: {title}, {start_dt}, all_day={all_day}")
                     event_id = apple.create_event(
                         title=title,
                         start_time=start_dt,
                         end_time=end_dt,
                         location=location,
+                        all_day=all_day,
                     )
                     
                     if event_id:
                         logger.info(f"Added Apple Calendar event for user {user_id}: {title} at {start_dt}")
                         return True
+                    else:
+                        logger.warning(f"Apple Calendar create_event returned None for: {title}")
             except Exception as e:
-                logger.debug(f"Apple Calendar failed: {e}")
+                logger.error(f"Apple Calendar failed: {e}", exc_info=True)
             
             # Fallback: add as a task with date
             self.secretary.add_task(
@@ -1772,15 +2220,355 @@ def get_assistant_mode() -> AssistantMode:
     return _assistant_mode
 
 
+# ============================================
+# Recurring Task Scheduler
+# ============================================
+
+class RecurringTaskScheduler:
+    """
+    Scheduler for recurring task reminders.
+    
+    Checks all recurring tasks and sends reminders at the scheduled times.
+    """
+    
+    def __init__(self):
+        self._running = False
+        self._task: Optional[asyncio.Task] = None
+        self._send_handlers: dict[str, Callable] = {}  # platform -> handler
+        self._last_check: Optional[datetime] = None
+        
+        logger.info("RecurringTaskScheduler initialized")
+    
+    def register_handler(self, platform: str, handler: Callable) -> None:
+        """Register a send handler for a platform."""
+        self._send_handlers[platform] = handler
+        logger.debug(f"Registered recurring task handler for {platform}")
+    
+    async def start(self) -> None:
+        """Start the recurring task scheduler."""
+        if self._running:
+            return
+        
+        self._running = True
+        self._task = asyncio.create_task(self._run_loop())
+        logger.info("RecurringTaskScheduler started")
+    
+    async def stop(self) -> None:
+        """Stop the recurring task scheduler."""
+        self._running = False
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+    
+    async def _run_loop(self) -> None:
+        """Main scheduler loop - check every minute."""
+        while self._running:
+            try:
+                now = datetime.now()
+                
+                # Only check once per minute
+                if self._last_check and now.minute == self._last_check.minute:
+                    await asyncio.sleep(30)
+                    continue
+                
+                self._last_check = now
+                
+                # Check all users' recurring tasks
+                await self._check_and_send_reminders()
+                
+                # Wait before next check
+                await asyncio.sleep(30)
+                    
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"RecurringTaskScheduler error: {e}")
+                await asyncio.sleep(60)
+    
+    async def _check_and_send_reminders(self) -> None:
+        """Check all recurring tasks and send reminders."""
+        secretary = get_secretary()
+        
+        for user_id, tasks in secretary._tasks.items():
+            for task in tasks:
+                if task.should_remind_now():
+                    await self._send_reminder(user_id, task)
+                    
+                    # Update last reminded time
+                    task.last_reminded = datetime.now()
+                    secretary._save_data()
+    
+    async def _send_reminder(self, user_id: str, task: Task) -> None:
+        """Send a reminder for a recurring task."""
+        prefs = get_secretary().get_preferences(user_id)
+        
+        # Build reminder message
+        recurring_type_names = {
+            RecurringType.DAILY: "每日",
+            RecurringType.WEEKLY: "每週",
+            RecurringType.WEEKDAYS: "平日",
+            RecurringType.MONTHLY: "每月",
+        }
+        type_name = recurring_type_names.get(task.recurring, "")
+        
+        message = f"""⏰ **{type_name}提醒**
+
+📌 {task.title}
+
+記得完成這件事喔！
+
+—— {prefs.secretary_name}"""
+        
+        # Try to send via registered handlers
+        for platform, handler in self._send_handlers.items():
+            try:
+                await handler(user_id, message)
+                logger.info(f"Sent recurring reminder to {user_id} via {platform}: {task.title}")
+                return
+            except Exception as e:
+                logger.warning(f"Failed to send recurring reminder via {platform}: {e}")
+        
+        logger.warning(f"Failed to send recurring reminder to {user_id}: no handler succeeded")
+
+
+# ============================================
+# Secretary Briefing Scheduler
+# ============================================
+
+class SecretaryBriefingScheduler:
+    """
+    Scheduler for automatic daily briefing.
+    
+    Reads from environment variables:
+        SECRETARY_BRIEFING_ENABLED: Enable/disable automatic briefing (default: false)
+        SECRETARY_BRIEFING_TIME: Time to send briefing in HH:MM format (default: 09:00)
+        SECRETARY_BRIEFING_USERS: Comma-separated list of user IDs to send briefing to
+    """
+    
+    # Briefing types based on time of day
+    BRIEFING_TYPES = {
+        "morning": {"start": 5, "end": 12, "name": "早報", "greeting": "早安"},
+        "afternoon": {"start": 12, "end": 18, "name": "午報", "greeting": "午安"},
+        "evening": {"start": 18, "end": 24, "name": "晚報", "greeting": "晚安"},
+        "night": {"start": 0, "end": 5, "name": "夜報", "greeting": "夜深了"},
+    }
+    
+    def __init__(self):
+        self._running = False
+        self._task: Optional[asyncio.Task] = None
+        self._send_handlers: dict[str, Callable] = {}  # platform -> handler
+        self._sent_today: set[str] = set()  # Track sent briefings: "HH:MM_user_id"
+        
+        # Load settings from pydantic settings (which reads from .env)
+        self.enabled = settings.secretary_briefing_enabled
+        
+        # Parse multiple times (comma-separated)
+        time_str = settings.secretary_briefing_time
+        self.briefing_times: list[time] = []
+        for t in time_str.split(","):
+            t = t.strip()
+            if not t:
+                continue
+            try:
+                hour, minute = map(int, t.split(":"))
+                self.briefing_times.append(time(hour, minute))
+            except ValueError:
+                logger.warning(f"Invalid briefing time: {t}, skipping")
+        
+        if not self.briefing_times:
+            self.briefing_times = [time(9, 0)]  # Default to 09:00
+            logger.warning("No valid briefing times found, using default 09:00")
+        
+        # User IDs to send briefing to (from settings or from preferences)
+        users_str = settings.secretary_briefing_users
+        self.target_users = [u.strip() for u in users_str.split(",") if u.strip()]
+        
+        # Platforms to send briefing to (can select multiple)
+        platforms_str = settings.secretary_briefing_platforms
+        self.target_platforms = [p.strip().lower() for p in platforms_str.split(",") if p.strip()]
+        if not self.target_platforms:
+            self.target_platforms = ["telegram"]  # Default to Telegram
+        
+        times_str = ", ".join(t.strftime("%H:%M") for t in self.briefing_times)
+        logger.info(f"SecretaryBriefingScheduler: enabled={self.enabled}, times=[{times_str}], users={self.target_users}, platforms={self.target_platforms}")
+    
+    def register_send_handler(self, platform: str, handler: Callable) -> None:
+        """Register a send handler for a platform."""
+        self._send_handlers[platform] = handler
+        logger.debug(f"Registered briefing handler for {platform}")
+    
+    async def start(self) -> None:
+        """Start the briefing scheduler."""
+        if not self.enabled:
+            logger.info("Secretary briefing scheduler is disabled")
+            return
+        
+        if self._running:
+            return
+        
+        self._running = True
+        self._task = asyncio.create_task(self._run_loop())
+        times_str = ", ".join(t.strftime("%H:%M") for t in self.briefing_times)
+        logger.info(f"Secretary briefing scheduler started, will send at: {times_str}")
+    
+    async def stop(self) -> None:
+        """Stop the briefing scheduler."""
+        self._running = False
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+    
+    def _get_briefing_type(self, hour: int) -> dict:
+        """Get briefing type based on hour of day."""
+        for btype, config in self.BRIEFING_TYPES.items():
+            if config["start"] <= hour < config["end"]:
+                return {"type": btype, **config}
+        return {"type": "morning", **self.BRIEFING_TYPES["morning"]}
+    
+    async def _run_loop(self) -> None:
+        """Main scheduler loop."""
+        # Reset sent tracking at midnight
+        last_date = datetime.now().date()
+        
+        while self._running:
+            try:
+                now = datetime.now()
+                
+                # Reset sent tracking at midnight
+                if now.date() != last_date:
+                    self._sent_today.clear()
+                    last_date = now.date()
+                
+                # Check if current time matches any of the briefing times
+                current_time_key = f"{now.hour:02d}:{now.minute:02d}"
+                
+                for briefing_time in self.briefing_times:
+                    if now.hour == briefing_time.hour and now.minute == briefing_time.minute:
+                        # Check if we already sent for this time today
+                        if current_time_key not in self._sent_today:
+                            await self._send_briefings(briefing_time)
+                            self._sent_today.add(current_time_key)
+                
+                # Check every 30 seconds
+                await asyncio.sleep(30)
+                    
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Secretary briefing scheduler error: {e}")
+                await asyncio.sleep(60)
+    
+    async def _send_briefings(self, briefing_time: time) -> None:
+        """Send briefings to all configured users."""
+        secretary = get_secretary()
+        
+        # Get briefing type based on time
+        briefing_type = self._get_briefing_type(briefing_time.hour)
+        
+        # Get users to send to
+        users_to_notify = []
+        
+        if self.target_users:
+            # Use explicitly configured users
+            users_to_notify = self.target_users
+        else:
+            # Get all users with briefing enabled from preferences
+            for user_id, prefs in secretary._preferences.items():
+                if prefs.briefing_enabled:
+                    users_to_notify.append(user_id)
+        
+        if not users_to_notify:
+            logger.debug("No users to send briefing to")
+            return
+        
+        logger.info(f"Sending {briefing_type['name']} to {len(users_to_notify)} users at {briefing_time.strftime('%H:%M')}")
+        
+        for user_id in users_to_notify:
+            try:
+                await self._send_briefing_to_user(user_id, secretary, briefing_type)
+            except Exception as e:
+                logger.error(f"Failed to send briefing to {user_id}: {e}")
+    
+    async def _send_briefing_to_user(self, user_id: str, secretary: PersonalSecretary, briefing_type: dict) -> None:
+        """Send briefing to a specific user on configured platforms."""
+        # Generate briefing with time-based greeting
+        briefing = await secretary.daily_briefing(user_id, briefing_type=briefing_type)
+        
+        # Send to all configured platforms
+        sent_platforms = []
+        failed_platforms = []
+        
+        for platform in self.target_platforms:
+            if platform not in self._send_handlers:
+                logger.warning(f"Platform '{platform}' not registered, skipping")
+                continue
+            
+            handler = self._send_handlers[platform]
+            try:
+                # The handler expects (chat_id, message)
+                # For Telegram, chat_id is usually same as user_id for DMs
+                await handler(user_id, briefing)
+                logger.info(f"Sent briefing to {user_id} via {platform}")
+                sent_platforms.append(platform)
+            except Exception as e:
+                logger.warning(f"Failed to send briefing via {platform}: {e}")
+                failed_platforms.append(platform)
+        
+        if sent_platforms:
+            logger.info(f"Briefing sent to {user_id} via: {', '.join(sent_platforms)}")
+        else:
+            logger.error(f"Could not send briefing to {user_id}: all platforms failed ({', '.join(failed_platforms)})")
+    
+    async def send_test_briefing(self, user_id: str) -> str:
+        """Send a test briefing to a user (for debugging)."""
+        secretary = get_secretary()
+        return await secretary.daily_briefing(user_id)
+
+
+# Global briefing scheduler instance
+_briefing_scheduler: Optional[SecretaryBriefingScheduler] = None
+
+
+def get_briefing_scheduler() -> SecretaryBriefingScheduler:
+    """Get the global SecretaryBriefingScheduler instance."""
+    global _briefing_scheduler
+    if _briefing_scheduler is None:
+        _briefing_scheduler = SecretaryBriefingScheduler()
+    return _briefing_scheduler
+
+
+# Global recurring task scheduler instance
+_recurring_task_scheduler: Optional[RecurringTaskScheduler] = None
+
+
+def get_recurring_task_scheduler() -> RecurringTaskScheduler:
+    """Get the global RecurringTaskScheduler instance."""
+    global _recurring_task_scheduler
+    if _recurring_task_scheduler is None:
+        _recurring_task_scheduler = RecurringTaskScheduler()
+    return _recurring_task_scheduler
+
+
 __all__ = [
     "PersonalSecretary",
     "SecretaryPersona",
     "Task",
     "TaskPriority",
+    "RecurringType",
     "UserPreferences",
     "AssistantIntent",
     "AssistantNLU",
     "AssistantMode",
+    "SecretaryBriefingScheduler",
+    "RecurringTaskScheduler",
     "get_secretary",
     "get_assistant_mode",
+    "get_briefing_scheduler",
+    "get_recurring_task_scheduler",
 ]

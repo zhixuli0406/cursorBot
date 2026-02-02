@@ -98,54 +98,129 @@ class AppleCalendarManager:
     Manager for Apple Calendar integration.
     
     Uses AppleScript to interact with Calendar.app on macOS.
+    Includes caching to avoid frequent AppleScript calls.
+    
+    Environment variables:
+        APPLE_CALENDAR_ENABLED: Enable/disable Apple Calendar (default: true)
+        APPLE_CALENDAR_TIMEOUT: AppleScript timeout in seconds (default: 8)
+        APPLE_CALENDAR_CACHE_TTL: Cache TTL in seconds (default: 60)
     """
     
     def __init__(self):
         """Initialize calendar manager."""
+        import os
+        
         self._available = None
         self._default_calendar = None
+        self._events_cache: dict[str, tuple[datetime, list[CalendarEvent]]] = {}
+        self._calendars_cache: tuple[datetime, list[CalendarInfo]] | None = None
+        
+        # Load settings from environment
+        self.cache_ttl = int(os.getenv("APPLE_CALENDAR_CACHE_TTL", "60"))
+        self.timeout = int(os.getenv("APPLE_CALENDAR_TIMEOUT", "8"))
+        
+        # Calendars to include (comma-separated list, empty = all)
+        # Example: "工作,家族,行事曆"
+        include_str = os.getenv("APPLE_CALENDAR_INCLUDE", "")
+        self.include_calendars = [c.strip() for c in include_str.split(",") if c.strip()] if include_str else []
+        
+        # Calendars to exclude (comma-separated list)
+        # Example: "台湾节假日,Holidays"
+        exclude_str = os.getenv("APPLE_CALENDAR_EXCLUDE", "")
+        self.exclude_calendars = [c.strip() for c in exclude_str.split(",") if c.strip()] if exclude_str else []
+        
+        if self.include_calendars:
+            logger.info(f"Apple Calendar: only including calendars: {self.include_calendars}")
+        if self.exclude_calendars:
+            logger.info(f"Apple Calendar: excluding calendars: {self.exclude_calendars}")
     
     def is_available(self) -> bool:
         """Check if Apple Calendar is available (macOS only)."""
         if self._available is not None:
             return self._available
         
+        # Check if Apple Calendar is disabled via environment variable
+        import os
+        if os.getenv("APPLE_CALENDAR_ENABLED", "true").lower() in ("false", "0", "no", "off"):
+            logger.info("Apple Calendar disabled via APPLE_CALENDAR_ENABLED=false")
+            self._available = False
+            return False
+        
         if platform.system() != "Darwin":
             logger.info("Apple Calendar is only available on macOS")
             self._available = False
             return False
         
-        # Test if Calendar.app is accessible
-        try:
-            script = 'tell application "Calendar" to return name of calendars'
-            result = self._run_applescript(script)
-            self._available = result is not None
-            return self._available
-        except Exception as e:
-            logger.error(f"Apple Calendar not available: {e}")
-            self._available = False
-            return False
+        # Quick check - just verify we're on macOS, skip the slow Calendar.app test
+        # The actual Calendar.app test will happen on first real query
+        self._available = True
+        logger.debug("Apple Calendar marked as available (macOS detected)")
+        return self._available
     
-    def _run_applescript(self, script: str, timeout: int = 30) -> Optional[str]:
-        """Run AppleScript and return result."""
+    def _should_include_calendar(self, calendar_name: str) -> bool:
+        """Check if a calendar should be included based on settings."""
+        # If include list is specified, only include those
+        if self.include_calendars:
+            return calendar_name in self.include_calendars
+        
+        # If exclude list is specified, exclude those
+        if self.exclude_calendars:
+            return calendar_name not in self.exclude_calendars
+        
+        # Default: include all
+        return True
+    
+    def _get_filtered_calendar_names(self) -> list[str]:
+        """Get list of calendar names to query, applying filters."""
+        # First, get all calendar names quickly
+        script = 'tell application "Calendar" to return name of calendars'
+        result = self._run_applescript(script, timeout=5)
+        
+        if not result:
+            return []
+        
+        all_calendars = [name.strip() for name in result.split(", ") if name.strip()]
+        
+        # Apply filters
+        filtered = [name for name in all_calendars if self._should_include_calendar(name)]
+        
+        if len(filtered) < len(all_calendars):
+            logger.debug(f"Filtered calendars: {len(filtered)}/{len(all_calendars)}")
+        
+        return filtered
+    
+    def _run_applescript(self, script: str, timeout: int = 30, use_jxa: bool = False) -> Optional[str]:
+        """Run AppleScript or JXA and return result."""
         try:
-            result = subprocess.run(
-                ["osascript", "-e", script],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
+            if use_jxa:
+                # Use osascript with -l JavaScript for JXA
+                result = subprocess.run(
+                    ["osascript", "-l", "JavaScript", "-e", script],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                )
+            else:
+                result = subprocess.run(
+                    ["osascript", "-e", script],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                )
             
             if result.returncode != 0:
-                logger.error(f"AppleScript error: {result.stderr}")
+                if use_jxa:
+                    logger.debug(f"JXA error: {result.stderr[:200]}")
+                else:
+                    logger.error(f"AppleScript error: {result.stderr}")
                 return None
             
             return result.stdout.strip()
         except subprocess.TimeoutExpired:
-            logger.error(f"AppleScript timeout after {timeout}s")
+            logger.error(f"{'JXA' if use_jxa else 'AppleScript'} timeout after {timeout}s")
             return None
         except Exception as e:
-            logger.error(f"AppleScript execution error: {e}")
+            logger.error(f"{'JXA' if use_jxa else 'AppleScript'} execution error: {e}")
             return None
     
     def list_calendars(self) -> list[CalendarInfo]:
@@ -191,100 +266,147 @@ class AppleCalendarManager:
         start_date: datetime,
         end_date: datetime,
         calendar_name: str = "",
+        use_cache: bool = True,
     ) -> list[CalendarEvent]:
-        """Get events in date range."""
+        """
+        Get events in date range.
+        
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+            calendar_name: Optional specific calendar name to query
+            use_cache: Whether to use cached results (default True)
+        
+        Returns:
+            List of CalendarEvent objects
+        """
         if not self.is_available():
             return []
         
         start_str = start_date.strftime("%Y-%m-%d")
         end_str = end_date.strftime("%Y-%m-%d")
         
-        # Build calendar filter - skip subscription calendars (holidays, birthdays)
-        # These are typically read-only and slow to query
-        cal_filter = ""
-        if calendar_name:
-            cal_filter = f'whose name is "{calendar_name}"'
+        # Check cache first
+        cache_key = f"{start_str}_{end_str}_{calendar_name}"
+        if use_cache and cache_key in self._events_cache:
+            cached_time, cached_events = self._events_cache[cache_key]
+            if (datetime.now() - cached_time).total_seconds() < self.cache_ttl:
+                logger.debug(f"Using cached events for {cache_key}")
+                return cached_events
         
-        # Use a simpler, faster script
-        script = f'''
-        tell application "Calendar"
-            set eventList to {{}}
-            set startDate to date "{start_str}"
-            set endDate to date "{end_str}"
-            
-                -- Skip subscription calendars (holidays, birthdays) for performance
-                -- Only skip very specific system calendars
-                set skipPatterns to {{"中華民國節假日", "台灣節假日", "Taiwan Holidays", "Chinese Holidays", "Siri Suggestions", "Siri 建議"}}
-            
-            repeat with cal in (calendars {cal_filter})
-                set calName to name of cal
-                set shouldSkip to false
-                
-                repeat with skipPattern in skipPatterns
-                    if calName contains skipPattern then
-                        set shouldSkip to true
-                        exit repeat
-                    end if
-                end repeat
-                
-                if not shouldSkip then
-                    try
-                        repeat with evt in (events of cal whose start date >= startDate and start date < endDate)
-                            try
-                                set evtTitle to summary of evt
-                                set evtStart to start date of evt
-                                set evtLoc to ""
-                                try
-                                    set evtLoc to location of evt
-                                end try
-                                set evtAllDay to allday event of evt
-                                
-                                set evtInfo to evtTitle & "|||" & (evtStart as string) & "|||" & calName & "|||" & evtLoc & "|||" & evtAllDay
-                                set end of eventList to evtInfo
-                            end try
-                        end repeat
-                    end try
-                end if
-            end repeat
-            
-            return eventList as string
-        end tell
-        '''
-        
-        # Give more time for event queries
-        result = self._run_applescript(script, timeout=60)
-        if not result:
-            logger.debug("Apple Calendar returned no events")
+        # Get filtered calendar names first (this is fast)
+        calendar_names = self._get_filtered_calendar_names()
+        if not calendar_names:
+            logger.debug("No calendars to query")
+            self._events_cache[cache_key] = (datetime.now(), [])
             return []
         
-        logger.debug(f"Apple Calendar raw result length: {len(result)}")
+        logger.debug(f"Querying {len(calendar_names)} calendars for events")
         
+        # Query each calendar individually with short timeout
+        # This way slow calendars don't block everything
+        all_events = []
+        per_calendar_timeout = max(3, self.timeout // max(1, min(len(calendar_names), 5)))
+        
+        for cal_name in calendar_names:
+            script = f'''
+            tell application "Calendar"
+                set eventList to {{}}
+                set startDate to date "{start_str}"
+                set endDate to date "{end_str}"
+                
+                try
+                    set targetCal to calendar "{cal_name}"
+                    set calEvents to (every event of targetCal whose start date >= startDate and start date < endDate)
+                    repeat with evt in calEvents
+                        try
+                            set evtTitle to summary of evt
+                            set evtStart to start date of evt
+                            set evtLoc to ""
+                            try
+                                set evtLoc to location of evt
+                            end try
+                            set evtAllDay to allday event of evt
+                            set evtInfo to evtTitle & "|||" & ((evtStart) as string) & "|||" & evtLoc & "|||" & evtAllDay & "|||" & "{cal_name}"
+                            set end of eventList to evtInfo
+                        on error
+                            -- Skip problematic events
+                        end try
+                    end repeat
+                on error errMsg
+                    -- Calendar not accessible
+                end try
+                
+                return eventList as string
+            end tell
+            '''
+            
+            result = self._run_applescript(script, timeout=per_calendar_timeout)
+            if result:
+                events = self._parse_applescript_events(result, start_str, end_str)
+                all_events.extend(events)
+            else:
+                logger.debug(f"Calendar '{cal_name}' query failed or timed out")
+        
+        # Sort all events by start time
+        all_events.sort(key=lambda e: e.start_time)
+        
+        # Cache the results
+        self._events_cache[cache_key] = (datetime.now(), all_events)
+        
+        logger.info(f"Apple Calendar found {len(all_events)} events for {start_str} to {end_str}")
+        return all_events
+    
+    def _parse_applescript_events(self, result: str, start_str: str, end_str: str) -> list[CalendarEvent]:
+        """Parse AppleScript result into CalendarEvent list."""
         events = []
+        
+        # AppleScript returns comma-separated list
         for item in result.split(", "):
-            if "|||" in item:
-                parts = item.split("|||")
-                if len(parts) >= 3:
-                    try:
-                        # Parse dates (AppleScript format varies)
-                        start_time = self._parse_applescript_date(parts[1])
-                        
-                        events.append(CalendarEvent(
-                            id=f"{parts[0]}_{start_time.isoformat()}",  # Generate ID
-                            title=parts[0],
-                            start_time=start_time,
-                            end_time=start_time + timedelta(hours=1),  # Default 1 hour
-                            calendar_name=parts[2] if len(parts) > 2 else "",
-                            location=parts[3] if len(parts) > 3 else "",
-                            all_day=parts[4].lower() == "true" if len(parts) > 4 else False,
-                        ))
-                    except Exception as e:
-                        logger.warning(f"Failed to parse event: {e}")
+            if "|||" not in item:
+                continue
+            
+            parts = item.split("|||")
+            if len(parts) < 2:
+                continue
+            
+            try:
+                title = parts[0].strip()
+                if not title:
+                    continue
+                
+                # Parse date - parts[1] is either a timestamp or date string
+                date_part = parts[1].strip()
+                try:
+                    # Try as timestamp first
+                    timestamp = float(date_part)
+                    start_time = datetime.fromtimestamp(timestamp)
+                except ValueError:
+                    # Parse as date string
+                    start_time = self._parse_applescript_date(date_part)
+                
+                location = parts[2].strip() if len(parts) > 2 else ""
+                all_day_str = parts[3].strip().lower() if len(parts) > 3 else "false"
+                all_day = all_day_str == "true"
+                calendar_name = parts[4].strip() if len(parts) > 4 else ""
+                
+                events.append(CalendarEvent(
+                    id=f"{title}_{start_time.isoformat()}",
+                    title=title,
+                    start_time=start_time,
+                    end_time=start_time + timedelta(hours=1),
+                    calendar_name=calendar_name,
+                    location=location,
+                    all_day=all_day,
+                ))
+            except Exception as e:
+                logger.warning(f"Failed to parse event '{parts[0] if parts else 'unknown'}': {e}")
         
         # Sort by start time
         events.sort(key=lambda e: e.start_time)
         
         logger.info(f"Apple Calendar found {len(events)} events for range {start_str} to {end_str}")
-        for evt in events[:5]:  # Log first 5 events
+        for evt in events[:5]:
             logger.debug(f"  - {evt.start_time.strftime('%m/%d %H:%M')} {evt.title}")
         
         return events
@@ -482,6 +604,14 @@ def reset_apple_calendar() -> None:
     """Reset Apple Calendar manager (for testing)."""
     global _calendar_manager
     _calendar_manager = None
+
+
+def clear_calendar_cache() -> None:
+    """Clear the calendar events cache."""
+    manager = get_apple_calendar()
+    manager._events_cache.clear()
+    manager._calendars_cache = None
+    logger.debug("Calendar cache cleared")
 
 
 # ============================================
