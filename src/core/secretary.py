@@ -1555,6 +1555,8 @@ class AssistantMode:
         recurring_tasks = [t for t in pending_tasks if t.recurring != RecurringType.NONE]
         one_time_tasks = [t for t in pending_tasks if t.recurring == RecurringType.NONE]
         
+        logger.info(f"Tasks for {user_id}: total={len(tasks)}, pending={len(pending_tasks)}, recurring={len(recurring_tasks)}, one_time={len(one_time_tasks)}")
+        
         # Filter one-time tasks by due date if asking about specific time
         if calendar_scope != "today":
             scope_tasks = []
