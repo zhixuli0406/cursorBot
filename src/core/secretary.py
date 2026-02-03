@@ -672,8 +672,19 @@ class PersonalSecretary:
         description: str = "",
         priority: TaskPriority = TaskPriority.MEDIUM,
     ) -> Task:
-        """Add a new recurring task."""
+        """Add a new recurring task. Checks for duplicates first."""
         import uuid
+        
+        # Check for duplicate recurring task
+        existing_tasks = self._tasks.get(user_id, [])
+        for existing in existing_tasks:
+            if (existing.recurring != RecurringType.NONE and  # Is recurring
+                existing.title.lower() == title.lower() and  # Same title
+                existing.recurring == recurring and  # Same type
+                existing.recurring_time == recurring_time and  # Same time
+                not existing.completed):  # Not completed
+                logger.info(f"Duplicate recurring task detected, skipping: {title}")
+                return existing  # Return existing task instead of creating duplicate
         
         task = Task(
             id=uuid.uuid4().hex[:8],
@@ -1012,7 +1023,7 @@ class PersonalSecretary:
                     line += f" (到期: {task.due_date.strftime('%m/%d')})"
                 lines.append(line)
         
-        # Show recurring tasks
+        # Show recurring tasks with index for deletion
         if recurring_tasks:
             lines.append("")
             lines.append("🔁 重複提醒：")
@@ -1022,16 +1033,23 @@ class PersonalSecretary:
                 RecurringType.WEEKDAYS: "平日",
                 RecurringType.MONTHLY: "每月",
             }
-            for task in recurring_tasks[:5]:
+            # Start index after one-time tasks
+            start_idx = len(one_time_tasks) + 1
+            for idx, task in enumerate(recurring_tasks[:5], start_idx):
                 type_name = recurring_type_names.get(task.recurring, "")
                 time_str = task.recurring_time.strftime("%H:%M") if task.recurring_time else ""
-                lines.append(f"  • {task.title} ({type_name} {time_str})")
+                lines.append(f"  {idx}. {task.title} ({type_name} {time_str}) [ID: {task.id}]")
         
         if len(one_time_tasks) > 8:
             lines.append(f"... 還有 {len(one_time_tasks) - 8} 項一般待辦")
         
         lines.append("")
         lines.append(f"共 {len(one_time_tasks)} 項待辦，{len(recurring_tasks)} 項重複提醒")
+        lines.append("")
+        lines.append("📝 指令：")
+        lines.append("  /todo done <編號> - 完成任務")
+        lines.append("  /todo del <編號> - 刪除任務")
+        lines.append("  /todo clear - 清除已完成")
         
         return self.format_response(user_id, "\n".join(lines))
     

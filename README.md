@@ -71,6 +71,8 @@
 /briefing         # 今日簡報
 /todo add 開會    # 新增待辦
 /todo done 1      # 完成第一項
+/todo del 2       # 刪除第二項
+/todo cleanup     # 清理重複提醒
 /book flight      # 機票預訂協助
 /secretary name   # 設定您的稱呼
 ```

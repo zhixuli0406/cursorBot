@@ -1602,16 +1602,24 @@ async def handle_todo(ctx: CommandContext) -> CommandResult:
         elif action == "done" and len(ctx.args) > 1:
             # Complete task
             task_id = ctx.args[1]
-            tasks = secretary.get_tasks(ctx.user_id)
+            all_tasks = secretary.get_tasks(ctx.user_id)
+            
+            # Separate tasks to match display order in task_list_response
+            from .secretary import RecurringType
+            one_time_tasks = [t for t in all_tasks if t.recurring == RecurringType.NONE]
+            recurring_tasks = [t for t in all_tasks if t.recurring != RecurringType.NONE]
+            
+            # Combined list matches display order: one-time first, then recurring
+            ordered_tasks = one_time_tasks + recurring_tasks
             
             # Try to match by index or ID
             target_task = None
             try:
                 idx = int(task_id) - 1
-                if 0 <= idx < len(tasks):
-                    target_task = tasks[idx]
+                if 0 <= idx < len(ordered_tasks):
+                    target_task = ordered_tasks[idx]
             except ValueError:
-                for t in tasks:
+                for t in all_tasks:
                     if t.id == task_id:
                         target_task = t
                         break
@@ -1623,27 +1631,37 @@ async def handle_todo(ctx: CommandContext) -> CommandResult:
                 )
             return CommandResult(success=False, message="❌ 找不到這個任務")
         
-        elif action == "delete" and len(ctx.args) > 1:
+        elif action in ("delete", "del", "rm", "remove") and len(ctx.args) > 1:
             task_id = ctx.args[1]
-            tasks = secretary.get_tasks(ctx.user_id, include_completed=True)
+            all_tasks = secretary.get_tasks(ctx.user_id, include_completed=True)
+            
+            # Separate tasks to match display order in task_list_response
+            from .secretary import RecurringType
+            one_time_tasks = [t for t in all_tasks if t.recurring == RecurringType.NONE]
+            recurring_tasks = [t for t in all_tasks if t.recurring != RecurringType.NONE]
+            
+            # Combined list matches display order: one-time first, then recurring
+            ordered_tasks = one_time_tasks + recurring_tasks
             
             target_task = None
             try:
                 idx = int(task_id) - 1
-                if 0 <= idx < len(tasks):
-                    target_task = tasks[idx]
+                if 0 <= idx < len(ordered_tasks):
+                    target_task = ordered_tasks[idx]
             except ValueError:
-                for t in tasks:
+                # Try to match by task ID
+                for t in all_tasks:
                     if t.id == task_id:
                         target_task = t
                         break
             
             if target_task and secretary.delete_task(ctx.user_id, target_task.id):
+                task_type = "重複提醒" if target_task.recurring != RecurringType.NONE else "任務"
                 return CommandResult(
                     success=True,
-                    message=f"🗑️ 已刪除任務「{target_task.title}」\n\n—— {prefs.secretary_name}"
+                    message=f"🗑️ 已刪除{task_type}「{target_task.title}」\n\n—— {prefs.secretary_name}"
                 )
-            return CommandResult(success=False, message="❌ 找不到這個任務")
+            return CommandResult(success=False, message="❌ 找不到這個任務或提醒")
         
         elif action == "clear":
             tasks = secretary.get_tasks(ctx.user_id, include_completed=True)
@@ -1653,6 +1671,37 @@ async def handle_todo(ctx: CommandContext) -> CommandResult:
             return CommandResult(
                 success=True,
                 message=f"🧹 已清理 {len(completed)} 個已完成的任務～\n\n—— {prefs.secretary_name}"
+            )
+        
+        elif action in ("cleanup", "dedupe", "dedup"):
+            # Remove duplicate recurring tasks
+            from .secretary import RecurringType
+            all_tasks = secretary.get_tasks(ctx.user_id, include_completed=True)
+            
+            # Find duplicates by title + recurring type + time
+            seen = {}
+            duplicates = []
+            for task in all_tasks:
+                if task.recurring != RecurringType.NONE:
+                    key = (task.title.lower(), task.recurring.value, 
+                           task.recurring_time.isoformat() if task.recurring_time else "")
+                    if key in seen:
+                        duplicates.append(task)
+                    else:
+                        seen[key] = task
+            
+            # Delete duplicates
+            for dup in duplicates:
+                secretary.delete_task(ctx.user_id, dup.id)
+            
+            if duplicates:
+                return CommandResult(
+                    success=True,
+                    message=f"🧹 已清理 {len(duplicates)} 個重複的提醒～\n\n—— {prefs.secretary_name}"
+                )
+            return CommandResult(
+                success=True,
+                message=f"✨ 沒有發現重複的提醒，一切正常！\n\n—— {prefs.secretary_name}"
             )
         
         elif action == "list":
