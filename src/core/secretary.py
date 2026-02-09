@@ -1647,27 +1647,18 @@ class AssistantMode:
         text_lower = user_text.lower()
         response_lower = llm_response.lower()
         
-        # Check if user wants to add a task
-        task_keywords = ["幫我記", "新增待辦", "加一個任務", "記一下", "別忘了", "記得", "提醒我", "每天提醒", "每日提醒"]
-        recurring_keywords = ["每天", "每日", "daily", "每週", "每星期", "每禮拜", "weekly", "每月", "monthly", "平日", "工作日"]
+        # ---- Calendar event detection (check FIRST) ----
+        # Keywords that explicitly indicate calendar/event intent
+        calendar_explicit_keywords = [
+            "行事曆", "日曆", "calendar", "apple calendar", "google calendar",
+        ]
         
-        if any(kw in text_lower for kw in task_keywords):
-            # Check if this is a recurring task
-            is_recurring = any(kw in text_lower for kw in recurring_keywords)
-            
-            if is_recurring:
-                # Use LLM to extract recurring task details
-                await self._try_add_recurring_task(user_id, user_text, llm_response)
-            else:
-                # Simple task - use LLM to extract properly
-                await self._try_add_task_with_llm(user_id, user_text, llm_response)
-        
-        # Check if this looks like an event/schedule
-        # Keywords in user message
         event_keywords = [
             "加入行事曆", "新增行程", "加到日曆", "安排", "排個", "約", "預約", "行程加入",
             "記錄到行事曆", "加行事曆", "加日曆", "寫入行事曆", "記到行事曆",
             "新增到行事曆", "加入日曆", "添加行程", "行事曆新增", "日曆加入",
+            "記錄在行事曆", "記在行事曆", "記錄在日曆", "記在日曆",
+            "記錄在apple", "加到apple", "加入apple",
         ]
         
         # Patterns that suggest an event (date + activity)
@@ -1675,9 +1666,13 @@ class AssistantMode:
             "尾牙", "聚餐", "開會", "會議", "約會", "面試", "出差", "旅行",
             "生日", "派對", "宴會", "活動", "表演", "演唱會", "展覽",
             "看醫生", "看診", "體檢", "健檢", "牙醫", "回診",
-            "上課", "培訓", "講座", "研討會", "工作坊",
+            "諮商", "心理諮商", "諮詢", "復健", "治療", "門診",
+            "上課", "培訓", "講座", "研討會", "工作坊", "課程",
             "入席", "報到", "集合", "出發",
-            "測試", "發布", "上線", "部署", "Demo",  # Tech events
+            "測試", "發布", "上線", "部署", "Demo",
+            "約吃飯", "約見面", "約碰面", "約喝咖啡",
+            "搭飛機", "搭車", "搭高鐵", "搭火車",
+            "婚禮", "喪禮", "典禮", "畢業", "頒獎",
         ]
         
         # Date patterns (check if message contains date-like info)
@@ -1696,25 +1691,49 @@ class AssistantMode:
         has_date = bool(date_pattern.search(user_text))
         
         # Time patterns
-        time_pattern = re.compile(r'(\d{1,2}[:\：點時]\d{0,2}|早上|上午|中午|下午|晚上|凌晨)')
+        time_pattern = re.compile(r'(\d{1,2}[:\：點時～~]\d{0,2}|早上|上午|中午|下午|晚上|凌晨)')
         has_time = bool(time_pattern.search(user_text))
         
         # Check if assistant's response mentions recording/adding
         response_confirms = any(kw in response_lower for kw in ["記錄", "記下", "安排", "加入", "新增"])
         
+        # Check if user explicitly mentions calendar
+        mentions_calendar = any(kw in text_lower for kw in calendar_explicit_keywords)
+        
         # Trigger event addition if:
-        # 1. User explicitly asks to add event, OR
-        # 2. Message has date + time + event-like content, OR
-        # 3. Message has date + event pattern and assistant confirms
+        # 1. User explicitly mentions calendar (highest priority), OR
+        # 2. User explicitly asks to add event with event_keywords, OR
+        # 3. Message has date + time + event-like content, OR
+        # 4. Message has date + time + calendar mention, OR
+        # 5. Message has date + event pattern and assistant confirms
         should_add_event = (
+            (mentions_calendar and has_date) or
             any(kw in text_lower for kw in event_keywords) or
             (has_date and has_time and any(p in text_lower for p in event_patterns)) or
+            (has_date and has_time and mentions_calendar) or
             (has_date and any(p in text_lower for p in event_patterns) and response_confirms)
         )
         
         if should_add_event:
             logger.info(f"Detected event intent for user {user_id}: {user_text[:50]}...")
             await self._try_add_calendar_event(user_id, user_text, llm_response)
+            # When calendar event is explicitly requested, skip task creation
+            return
+        
+        # ---- Task detection (check AFTER calendar event) ----
+        task_keywords = ["幫我記", "新增待辦", "加一個任務", "記一下", "別忘了", "記得", "提醒我", "每天提醒", "每日提醒"]
+        recurring_keywords = ["每天", "每日", "daily", "每週", "每星期", "每禮拜", "weekly", "每月", "monthly", "平日", "工作日"]
+        
+        if any(kw in text_lower for kw in task_keywords):
+            # Check if this is a recurring task
+            is_recurring = any(kw in text_lower for kw in recurring_keywords)
+            
+            if is_recurring:
+                # Use LLM to extract recurring task details
+                await self._try_add_recurring_task(user_id, user_text, llm_response)
+            else:
+                # Simple task - use LLM to extract properly
+                await self._try_add_task_with_llm(user_id, user_text, llm_response)
     
     async def _try_add_task_with_llm(self, user_id: str, user_text: str, llm_response: str) -> bool:
         """Use LLM to extract task details and add task."""
@@ -1911,8 +1930,8 @@ AI 回覆：{llm_response}
 {{
     "title": "事件標題",
     "date": "YYYY-MM-DD 格式的日期",
-    "time": "HH:MM 格式的時間（24小時制），整日事件填 00:00",
-    "duration_hours": 小時數（整日事件填 24）,
+    "start_time": "HH:MM 格式的開始時間（24小時制），整日事件填 00:00",
+    "end_time": "HH:MM 格式的結束時間（24小時制），整日事件填 23:59，如果沒有指定就根據 start_time 加 1 小時",
     "all_day": true/false（是否為整日事件）,
     "location": "地點（如果有）",
     "has_valid_event": true/false
@@ -1924,8 +1943,11 @@ AI 回覆：{llm_response}
 今天是 {datetime.now().strftime('%Y-%m-%d')}（{['週一','週二','週三','週四','週五','週六','週日'][datetime.now().weekday()]}）
 
 規則：
-- 「整日」「全天」表示 all_day=true, time="00:00", duration_hours=24
+- 「整日」「全天」表示 all_day=true, start_time="00:00", end_time="23:59"
 - 計算正確的日期：禮拜三、週三、星期三都要轉換成實際日期
+- 2/12 表示 2 月 12 日，需轉為目前年份的 YYYY-MM-DD
+- 19:00～19:50 表示 start_time="19:00", end_time="19:50"
+- 如果只有開始時間沒有結束時間，end_time = start_time + 1 小時
 - 如果無法確定日期或事件不清楚，將 has_valid_event 設為 false
 只回傳 JSON，不要其他文字。"""
             
@@ -1954,20 +1976,22 @@ AI 回覆：{llm_response}
             
             title = event_data.get("title", "")
             date_str = event_data.get("date", "")
-            time_str = event_data.get("time", "09:00")
+            # Support both old format (time/duration_hours) and new format (start_time/end_time)
+            start_time_str = event_data.get("start_time") or event_data.get("time", "09:00")
+            end_time_str = event_data.get("end_time", "")
             duration = event_data.get("duration_hours", 1)
             location = event_data.get("location", "")
             all_day = event_data.get("all_day", False)
             
-            logger.info(f"Extracted event: title={title}, date={date_str}, time={time_str}, location={location}, all_day={all_day}")
+            logger.info(f"Extracted event: title={title}, date={date_str}, start={start_time_str}, end={end_time_str}, location={location}, all_day={all_day}")
             
             if not title or not date_str:
                 logger.warning("Missing title or date for event")
                 return False
             
-            # Build datetime
+            # Build start datetime
             try:
-                start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+                start_dt = datetime.strptime(f"{date_str} {start_time_str}", "%Y-%m-%d %H:%M")
             except ValueError:
                 # If time parsing fails, default to 9:00
                 start_dt = datetime.strptime(f"{date_str} 09:00", "%Y-%m-%d %H:%M")
@@ -1976,8 +2000,17 @@ AI 回覆：{llm_response}
                 # For all-day events, set to start of day
                 start_dt = start_dt.replace(hour=0, minute=0, second=0)
                 end_dt = start_dt + timedelta(days=1)
+            elif end_time_str:
+                # Use explicit end time if provided
+                try:
+                    end_dt = datetime.strptime(f"{date_str} {end_time_str}", "%Y-%m-%d %H:%M")
+                    # Handle edge case: end time is before start time (should not happen)
+                    if end_dt <= start_dt:
+                        end_dt = start_dt + timedelta(hours=1)
+                except ValueError:
+                    end_dt = start_dt + timedelta(hours=duration if duration else 1)
             else:
-                end_dt = start_dt + timedelta(hours=duration)
+                end_dt = start_dt + timedelta(hours=duration if duration else 1)
             
             logger.info(f"Event datetime: {start_dt} - {end_dt}, all_day={all_day}")
             

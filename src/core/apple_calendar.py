@@ -172,9 +172,9 @@ class AppleCalendarManager:
     
     def _get_filtered_calendar_names(self) -> list[str]:
         """Get list of calendar names to query, applying filters."""
-        # First, get all calendar names quickly
+        # First, get all calendar names
         script = 'tell application "Calendar" to return name of calendars'
-        result = self._run_applescript(script, timeout=5)
+        result = self._run_applescript(script, timeout=max(8, self.timeout))
         
         if not result:
             return []
@@ -303,10 +303,10 @@ class AppleCalendarManager:
         
         logger.debug(f"Querying {len(calendar_names)} calendars for events")
         
-        # Query each calendar individually with short timeout
+        # Query each calendar individually with reasonable timeout
         # This way slow calendars don't block everything
         all_events = []
-        per_calendar_timeout = max(3, self.timeout // max(1, min(len(calendar_names), 5)))
+        per_calendar_timeout = max(5, self.timeout)
         
         for cal_name in calendar_names:
             script = f'''
@@ -534,7 +534,7 @@ class AppleCalendarManager:
         end tell
         '''
         
-        result = self._run_applescript(script)
+        result = self._run_applescript(script, timeout=max(10, self.timeout))
         if result:
             logger.info(f"Created calendar event: {title}")
             return result
