@@ -139,7 +139,7 @@ struct ConnectionView: View {
             } header: {
                 Text("Connection Details")
             } footer: {
-                Text("Enter your CursorBot server URL (e.g., https://your-server.com)")
+                Text("Enter your ClaudeBot server URL (e.g., https://your-server.com)")
             }
             
             if let error = errorMessage {

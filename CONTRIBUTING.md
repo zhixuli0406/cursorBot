@@ -1,6 +1,6 @@
-# Contributing to CursorBot
+# Contributing to ClaudeBot
 
-First off, thank you for considering contributing to CursorBot! It's people like you that make CursorBot such a great tool.
+First off, thank you for considering contributing to ClaudeBot! It's people like you that make ClaudeBot such a great tool.
 
 ## Table of Contents
 
@@ -31,12 +31,12 @@ This project and everyone participating in it is governed by our Code of Conduct
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/cursorBot.git
-   cd cursorBot
+   git clone https://github.com/YOUR_USERNAME/claudeBot.git
+   cd claudeBot
    ```
 3. Add the upstream repository:
    ```bash
-   git remote add upstream https://github.com/original-owner/cursorBot.git
+   git remote add upstream https://github.com/original-owner/claudeBot.git
    ```
 
 ## Development Setup
@@ -159,13 +159,13 @@ async def process_message(
 ### Project Structure
 
 ```
-cursorBot/
+claudeBot/
 ├── src/
 │   ├── bot/          # Bot handlers (Telegram)
 │   ├── channels/     # Platform channels
 │   ├── cli/          # CLI tools
 │   ├── core/         # Core functionality
-│   ├── cursor/       # Cursor CLI integration
+│   ├── claude/       # Claude Code CLI integration
 │   ├── platforms/    # Platform-specific code
 │   ├── server/       # API server
 │   ├── utils/        # Utilities
@@ -313,7 +313,7 @@ Brief description of changes
 
 ### Before Submitting
 
-1. Check the [issue tracker](https://github.com/your-repo/cursorBot/issues) for existing reports
+1. Check the [issue tracker](https://github.com/your-repo/claudeBot/issues) for existing reports
 2. Collect information about the bug:
    - OS and Python version
    - Steps to reproduce
@@ -338,7 +338,7 @@ What you expected to happen.
 **Environment:**
 - OS: [e.g., macOS 14.0]
 - Python: [e.g., 3.11.5]
-- CursorBot version: [e.g., 0.4.0]
+- ClaudeBot version: [e.g., 2.0.0]
 
 **Additional context**
 Any other context, screenshots, or logs.
@@ -369,7 +369,7 @@ Contributors will be recognized in:
 - Release notes
 - GitHub contributors page
 
-Thank you for contributing to CursorBot!
+Thank you for contributing to ClaudeBot!
 
 ---
 

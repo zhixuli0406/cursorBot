@@ -1,5 +1,5 @@
 """
-CursorBot Main Entry Point
+ClaudeBot Main Entry Point
 Starts Telegram Bot, Discord Bot, and API Server
 """
 
@@ -19,21 +19,21 @@ except ImportError:
 
 import uvicorn
 
-from .bot.telegram_bot import CursorTelegramBot, get_telegram_bot
+from .bot.telegram_bot import ClaudeTelegramBot, get_telegram_bot
 from .server.api import app
 from .utils.config import settings
 from .utils.logger import logger
 from .utils.task_queue import get_task_queue
 
 
-class CursorBotApp:
+class ClaudeBotApp:
     """
     Main application class that coordinates all services.
     Manages Telegram Bot, Discord Bot, and API Server lifecycle.
     """
 
     def __init__(self):
-        self.telegram_bot: Optional[CursorTelegramBot] = None
+        self.telegram_bot: Optional[ClaudeTelegramBot] = None
         self.discord_channel = None
         self.server_task: Optional[asyncio.Task] = None
         self.bot_task: Optional[asyncio.Task] = None

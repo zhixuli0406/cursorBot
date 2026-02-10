@@ -34,7 +34,7 @@ class ChatMessage:
     timestamp: datetime
 
 
-class CursorBotTUI:
+class ClaudeBotTUI:
     """
     Terminal User Interface for CursorBot.
     """
@@ -374,7 +374,7 @@ Messages in Chat: {len(self._messages)}
 
 async def run_tui():
     """Run the TUI."""
-    tui = CursorBotTUI()
+    tui = ClaudeBotTUI()
     await tui.run()
 
 
@@ -384,7 +384,7 @@ def main():
 
 
 __all__ = [
-    "CursorBotTUI",
+    "ClaudeBotTUI",
     "TUIMode",
     "run_tui",
     "main",

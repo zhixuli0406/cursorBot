@@ -1,13 +1,13 @@
-# CursorBot macOS App
+# ClaudeBot macOS App
 
-Full-featured macOS native application for CursorBot with Talk Mode, Debug Tools, and Remote Gateway support.
+Full-featured macOS native application for ClaudeBot with Talk Mode, Debug Tools, and Remote Gateway support.
 
 ## Features
 
 ### Talk Mode
 - **Speech Recognition**: Real-time voice-to-text using Apple's Speech framework
 - **Text-to-Speech**: Natural voice responses
-- **Voice Wake**: Hands-free activation with customizable wake phrase (default: "Hey Cursor")
+- **Voice Wake**: Hands-free activation with customizable wake phrase (default: "Hey Claude")
 - **Continuous Conversation**: Natural back-and-forth dialogue
 
 ### Debug Tools
@@ -40,9 +40,9 @@ Full-featured macOS native application for CursorBot with Talk Mode, Debug Tools
 The build script creates a proper `.app` bundle with all required permissions:
 
 ```bash
-cd apps/macos/CursorBot
+cd apps/macos/ClaudeBot
 ./build-app.sh
-open CursorBot.app
+open ClaudeBot.app
 ```
 
 ### Using Swift Package Manager (Development Only)
@@ -50,14 +50,14 @@ open CursorBot.app
 For quick development builds (note: Talk Mode may not work due to permission issues):
 
 ```bash
-cd apps/macos/CursorBot
+cd apps/macos/ClaudeBot
 swift build
 ```
 
 ### Using Xcode
 
 1. Open `Package.swift` in Xcode
-2. Select the CursorBot scheme
+2. Select the ClaudeBot scheme
 3. Build and run (⌘R)
 
 ### Installing to Applications
@@ -65,7 +65,7 @@ swift build
 After building, you can install the app:
 
 ```bash
-mv CursorBot.app /Applications/
+mv ClaudeBot.app /Applications/
 ```
 
 ## Configuration
@@ -74,7 +74,7 @@ mv CursorBot.app /Applications/
 
 1. Launch the app
 2. Click the antenna icon in the toolbar
-3. Enter your CursorBot server URL (e.g., `http://localhost:8000`)
+3. Enter your ClaudeBot server URL (e.g., `http://localhost:8000`)
 4. Enter your authentication token (if required)
 5. Click "Connect"
 
@@ -98,10 +98,10 @@ mv CursorBot.app /Applications/
 ## Architecture
 
 ```
-CursorBot/
+ClaudeBot/
 ├── Sources/
 │   ├── App/
-│   │   ├── CursorBotApp.swift      # App entry point
+│   │   ├── ClaudeBotApp.swift      # App entry point
 │   │   └── AppState.swift          # Global state management
 │   ├── Views/
 │   │   ├── ContentView.swift       # Main window
@@ -138,7 +138,7 @@ The app requires the following permissions:
 ### Speech Recognition Not Working
 
 1. Check System Preferences → Privacy & Security → Microphone
-2. Ensure CursorBot is allowed
+2. Ensure ClaudeBot is allowed
 3. Check Speech Recognition permissions as well
 
 ### Gateway Connection Failed

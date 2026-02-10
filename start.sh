@@ -52,7 +52,7 @@ if [ "$USE_DOCKER" = true ]; then
     
     echo ""
     echo "[OK] CursorBot started with Docker"
-    echo "[INFO] View logs: docker compose logs -f cursorbot"
+    echo "[INFO] View logs: docker compose logs -f claudebot"
     echo "[INFO] Stop: docker compose down"
     exit 0
 fi
@@ -63,23 +63,23 @@ if [ "$START_POSTGRES" = true ]; then
     
     if command -v docker &> /dev/null; then
         # Check if PostgreSQL container is already running
-        if docker ps | grep -q "cursorbot-postgres"; then
+        if docker ps | grep -q "claudebot-postgres"; then
             echo "[OK] PostgreSQL container already running"
         else
             echo "[INFO] Starting PostgreSQL container with pgvector..."
             
             # Check if container exists but stopped
-            if docker ps -a | grep -q "cursorbot-postgres"; then
-                docker start cursorbot-postgres
+            if docker ps -a | grep -q "claudebot-postgres"; then
+                docker start claudebot-postgres
             else
                 # Start new PostgreSQL container
                 docker run -d \
-                    --name cursorbot-postgres \
-                    -e POSTGRES_DB=cursorbot \
-                    -e POSTGRES_USER=cursorbot \
-                    -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cursorbot_secret} \
+                    --name claudebot-postgres \
+                    -e POSTGRES_DB=claudebot \
+                    -e POSTGRES_USER=claudebot \
+                    -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-claudebot_secret} \
                     -p 5432:5432 \
-                    -v cursorbot_postgres_data:/var/lib/postgresql/data \
+                    -v claudebot_postgres_data:/var/lib/postgresql/data \
                     -v "$(pwd)/scripts/init_pgvector.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
                     pgvector/pgvector:pg16
             fi
@@ -87,7 +87,7 @@ if [ "$START_POSTGRES" = true ]; then
             # Wait for PostgreSQL to be ready
             echo "[INFO] Waiting for PostgreSQL to be ready..."
             for i in {1..30}; do
-                if docker exec cursorbot-postgres pg_isready -U cursorbot -d cursorbot &> /dev/null; then
+                if docker exec claudebot-postgres pg_isready -U claudebot -d claudebot &> /dev/null; then
                     echo "[OK] PostgreSQL is ready"
                     break
                 fi
@@ -99,9 +99,9 @@ if [ "$START_POSTGRES" = true ]; then
         export POSTGRES_ENABLED=true
         export POSTGRES_HOST=localhost
         export POSTGRES_PORT=5432
-        export POSTGRES_DB=cursorbot
-        export POSTGRES_USER=cursorbot
-        export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cursorbot_secret}
+        export POSTGRES_DB=claudebot
+        export POSTGRES_USER=claudebot
+        export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-claudebot_secret}
         
         echo "[OK] PostgreSQL environment configured"
     else

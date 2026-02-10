@@ -1,4 +1,4 @@
-# CursorBot 開發進度與待辦事項
+# ClaudeBot 開發進度與待辦事項
 
 ## 版本狀態
 
@@ -163,8 +163,8 @@
 
 ```bash
 # 複製專案
-git clone https://github.com/user/cursorbot.git
-cd cursorbot
+git clone https://github.com/user/claudebot.git
+cd claudebot
 
 # 安裝依賴
 pip install -r requirements.txt

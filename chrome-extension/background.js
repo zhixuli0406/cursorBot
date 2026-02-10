@@ -1,8 +1,8 @@
 /**
- * CursorBot Chrome Extension - Background Service Worker
+ * ClaudeBot Chrome Extension - Background Service Worker
  * 
  * Handles:
- * - Communication with CursorBot server
+ * - Communication with ClaudeBot server
  * - Context menu integration
  * - Keyboard shortcuts
  * - Notifications
@@ -36,60 +36,60 @@ async function saveConfig(config) {
 chrome.runtime.onInstalled.addListener(() => {
   // Main menu
   chrome.contextMenus.create({
-    id: 'cursorbot-main',
-    title: 'CursorBot',
+    id: 'claudebot-main',
+    title: 'ClaudeBot',
     contexts: ['selection', 'page'],
   });
 
   // Ask about selection
   chrome.contextMenus.create({
-    id: 'cursorbot-ask',
-    parentId: 'cursorbot-main',
+    id: 'claudebot-ask',
+    parentId: 'claudebot-main',
     title: 'Ask about this',
     contexts: ['selection'],
   });
 
   // Explain selection
   chrome.contextMenus.create({
-    id: 'cursorbot-explain',
-    parentId: 'cursorbot-main',
+    id: 'claudebot-explain',
+    parentId: 'claudebot-main',
     title: 'Explain this',
     contexts: ['selection'],
   });
 
   // Translate selection
   chrome.contextMenus.create({
-    id: 'cursorbot-translate',
-    parentId: 'cursorbot-main',
+    id: 'claudebot-translate',
+    parentId: 'claudebot-main',
     title: 'Translate this',
     contexts: ['selection'],
   });
 
   // Summarize page
   chrome.contextMenus.create({
-    id: 'cursorbot-summarize',
-    parentId: 'cursorbot-main',
+    id: 'claudebot-summarize',
+    parentId: 'claudebot-main',
     title: 'Summarize page',
     contexts: ['page'],
   });
 
   // Separator
   chrome.contextMenus.create({
-    id: 'cursorbot-separator',
-    parentId: 'cursorbot-main',
+    id: 'claudebot-separator',
+    parentId: 'claudebot-main',
     type: 'separator',
     contexts: ['selection', 'page'],
   });
 
   // Settings
   chrome.contextMenus.create({
-    id: 'cursorbot-settings',
-    parentId: 'cursorbot-main',
+    id: 'claudebot-settings',
+    parentId: 'claudebot-main',
     title: 'Settings',
     contexts: ['selection', 'page'],
   });
 
-  console.log('CursorBot context menu created');
+  console.log('ClaudeBot context menu created');
 });
 
 // Handle context menu clicks
@@ -97,16 +97,16 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const config = await getConfig();
 
   switch (info.menuItemId) {
-    case 'cursorbot-ask':
+    case 'claudebot-ask':
       await sendToServer(config, 'ask', info.selectionText, tab);
       break;
-    case 'cursorbot-explain':
+    case 'claudebot-explain':
       await sendToServer(config, 'explain', info.selectionText, tab);
       break;
-    case 'cursorbot-translate':
+    case 'claudebot-translate':
       await sendToServer(config, 'translate', info.selectionText, tab);
       break;
-    case 'cursorbot-summarize':
+    case 'claudebot-summarize':
       // Get page content via content script
       chrome.tabs.sendMessage(tab.id, { action: 'getPageContent' }, async (response) => {
         if (response?.content) {
@@ -114,7 +114,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         }
       });
       break;
-    case 'cursorbot-settings':
+    case 'claudebot-settings':
       chrome.runtime.openOptionsPage();
       break;
   }
@@ -156,7 +156,7 @@ async function sendToServer(config, action, content, tab) {
         prompt = content;
     }
 
-    // Send to CursorBot server
+    // Send to ClaudeBot server
     const response = await fetch(`${config.serverUrl}/api/agent`, {
       method: 'POST',
       headers: {
@@ -183,11 +183,11 @@ async function sendToServer(config, action, content, tab) {
 
     // Show notification
     if (config.notifications) {
-      showNotification('CursorBot', `${action} completed`);
+      showNotification('ClaudeBot', `${action} completed`);
     }
 
   } catch (error) {
-    console.error('CursorBot error:', error);
+    console.error('ClaudeBot error:', error);
     chrome.tabs.sendMessage(tab.id, {
       action: 'showError',
       error: error.message,
@@ -276,4 +276,4 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 });
 
-console.log('CursorBot background service worker loaded');
+console.log('ClaudeBot background service worker loaded');

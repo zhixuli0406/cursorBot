@@ -1,5 +1,5 @@
 // Models.swift
-// Data models for CursorBot iOS Node
+// Data models for ClaudeBot iOS Node
 
 import Foundation
 import SwiftUI

@@ -1,4 +1,4 @@
-# CursorBot Feature Roadmap
+# ClaudeBot Feature Roadmap
 
 對標 [Moltbot/Clawdbot](https://github.com/moltbot/moltbot) 的功能實作進度追蹤。
 
@@ -55,7 +55,7 @@ v0.3.0 (目前) ──▶ v0.4.0 (Final) ──▶ v1.0.0 (正式版)
 
 根據 [Moltbot GitHub](https://github.com/moltbot/moltbot)，支援的通訊平台：
 
-| 狀態 | 功能 | Moltbot 實現 | CursorBot 實現 | 優先級 | 備註 |
+| 狀態 | 功能 | Moltbot 實現 | ClaudeBot 實現 | 優先級 | 備註 |
 |:----:|------|--------------|---------------|:------:|------|
 | ✅ | Telegram | grammY | python-telegram-bot | - | 已完成 |
 | ✅ | Discord | discord.js | discord.py | - | 已完成 |
@@ -368,20 +368,20 @@ v0.3.0 (目前) ──▶ v0.4.0 (Final) ──▶ v1.0.0 (正式版)
 
 | 狀態 | 功能 | 說明 | 優先級 | 備註 |
 |:----:|------|------|:------:|------|
-| ✅ | Status | 狀態查詢 | - | cursorbot status |
-| ✅ | Logs | 日誌查看 | - | cursorbot logs |
+| ✅ | Status | 狀態查詢 | - | claudebot status |
+| ✅ | Logs | 日誌查看 | - | claudebot logs |
 | ✅ | Setup | 安裝設定 | - | 腳本形式 |
-| ✅ | Configure | 配置管理 | - | cursorbot config |
-| ✅ | Doctor | 診斷 | - | cursorbot doctor |
-| ✅ | Message | 發送訊息 | - | cursorbot message |
-| ✅ | Sessions | 會話管理 | - | cursorbot sessions |
-| ✅ | Onboard | 引導設定 | - | cursorbot onboard |
-| ✅ | Dashboard | 儀表板 | - | cursorbot dashboard |
-| ✅ | Reset | 重置 | - | cursorbot reset |
+| ✅ | Configure | 配置管理 | - | claudebot config |
+| ✅ | Doctor | 診斷 | - | claudebot doctor |
+| ✅ | Message | 發送訊息 | - | claudebot message |
+| ✅ | Sessions | 會話管理 | - | claudebot sessions |
+| ✅ | Onboard | 引導設定 | - | claudebot onboard |
+| ✅ | Dashboard | 儀表板 | - | claudebot dashboard |
+| ✅ | Reset | 重置 | - | claudebot reset |
 
 ### 待辦事項
 
-- [ ] 實現 CLI 工具 `cursorbot`
+- [ ] 實現 CLI 工具 `claudebot`
 - [ ] 實現互動式 Onboard 流程
 - [ ] 實現 CLI Dashboard
 - [ ] 添加 Reset 功能
@@ -407,7 +407,7 @@ v0.3.0 (目前) ──▶ v0.4.0 (Final) ──▶ v1.0.0 (正式版)
 
 ### Clawdbot 「開箱即用」功能對照
 
-| 功能 | Clawdbot | CursorBot | 狀態 |
+| 功能 | Clawdbot | ClaudeBot | 狀態 |
 |------|----------|-----------|:----:|
 | 文件管理 | ✅ 整理下載、尋找 PDF | ✅ File Operations | ✅ |
 | 基礎調查 | ✅ 搜尋新聞、總結文章 | ✅ Web Search/Fetch | ✅ |
@@ -418,12 +418,12 @@ v0.3.0 (目前) ──▶ v0.4.0 (Final) ──▶ v1.0.0 (正式版)
 
 ### Clawdbot 「進階功能」對照
 
-| 功能 | Clawdbot | CursorBot | 狀態 |
+| 功能 | Clawdbot | ClaudeBot | 狀態 |
 |------|----------|-----------|:----:|
 | 高階郵件管理 | ✅ 自動分類、智慧過濾 | ⬜ 未實現 | ⬜ |
 | 交易/市場監控 | ✅ 價格警報 | ⬜ 未實現 | ⬜ |
 | 社群媒體自動化 | ✅ 多平台發布 | ⬜ 部分實現 | 🟡 |
-| 複雜代碼項目 | ✅ 建立應用、管理 GitHub | ✅ Cursor Agent | ✅ |
+| 複雜代碼項目 | ✅ 建立應用、管理 GitHub | ✅ Claude Agent | ✅ |
 | 自訂集成 | ✅ 透過 Skills | ✅ Skills 系統 | ✅ |
 
 ### 待辦事項
@@ -482,7 +482,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 
 根據 [Moltbot GitHub](https://github.com/moltbot/moltbot)，支援的原生應用和設備節點：
 
-| 狀態 | 功能 | Moltbot 說明 | CursorBot 實現 | 優先級 | 備註 |
+| 狀態 | 功能 | Moltbot 說明 | ClaudeBot 實現 | 優先級 | 備註 |
 |:----:|------|--------------|---------------|:------:|------|
 | ✅ | macOS Menu Bar | 控制面板、Voice Wake、WebChat | 基本實現 | - | v0.3 新增 |
 | ⬜ | macOS App (完整) | Talk Mode overlay、debug tools、remote gateway | - | 🟡 中 | SwiftUI |
@@ -495,7 +495,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 
 ### Moltbot Node 功能對照
 
-| 功能 | Moltbot | CursorBot | 狀態 |
+| 功能 | Moltbot | ClaudeBot | 狀態 |
 |------|---------|-----------|:----:|
 | `system.run` | 本地命令執行 | Terminal Exec | ✅ |
 | `system.notify` | 系統通知 | - | ⬜ |
@@ -521,7 +521,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 
 根據 [Moltbot GitHub](https://github.com/moltbot/moltbot) 的進階功能：
 
-| 狀態 | 功能 | Moltbot 說明 | CursorBot 實現 | 優先級 | 備註 |
+| 狀態 | 功能 | Moltbot 說明 | ClaudeBot 實現 | 優先級 | 備註 |
 |:----:|------|--------------|---------------|:------:|------|
 | ✅ | Agent Loop | Pi agent runtime | Agent Loop | - | 已完成 |
 | ✅ | Skills Platform | bundled/managed/workspace skills | Skills 系統 | - | 已完成 |
@@ -541,7 +541,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 
 ### Moltbot Chat Commands 對照
 
-| 指令 | Moltbot | CursorBot | 狀態 |
+| 指令 | Moltbot | ClaudeBot | 狀態 |
 |------|---------|-----------|:----:|
 | `/status` | 狀態查詢 | `/status` | ✅ |
 | `/new` or `/reset` | 重置 session | `/new`, `/clear` | ✅ |
@@ -639,7 +639,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 | 狀態 | 項目 | 說明 |
 |:----:|------|------|
 | ✅ | 完整 API 文件 | 所有端點和參數說明 (docs/API.md) |
-| ✅ | 互動式安裝引導 | `cursorbot setup` 引導式設定 (src/cli/setup.py) |
+| ✅ | 互動式安裝引導 | `claudebot setup` 引導式設定 (src/cli/setup.py) |
 | ✅ | 平台設定教學 | 各平台 Webhook 設定圖文教學 (docs/PLATFORM_SETUP.md) |
 | ✅ | 疑難排解指南 | 常見問題 FAQ (docs/FAQ.md) |
 | ✅ | CHANGELOG | 完整版本變更記錄 |
@@ -697,7 +697,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 包含功能：
 - ✅ 9+ 通訊平台支援（Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat、Signal、iMessage）
 - ✅ 10+ AI 模型提供者（OpenAI、Claude、Gemini、OpenRouter、Ollama、Moonshot、GLM、Minimax 等）
-- ✅ 完整 Cursor CLI 整合
+- ✅ 完整 Claude Code CLI 整合
 - ✅ Agent Loop 自主代理
 - ✅ SkillsMP 技能市集
 - ✅ RAG 知識庫
@@ -715,12 +715,12 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 
 ### v1.1.0 - 智慧語音助手 (Voice Assistant)
 
-**目標：讓 CursorBot 成為像 Siri 一樣的個人語音助手**
+**目標：讓 ClaudeBot 成為像 Siri 一樣的個人語音助手**
 
 #### 1. 進階語音喚醒 (Advanced Voice Wake)
 | 狀態 | 項目 | 說明 | 難度 |
 |:----:|------|------|:----:|
-| ✅ | 多喚醒詞支援 | 自訂多個喚醒詞（如「嘿 Cursor」「小助手」） | 🟡 中 |
+| ✅ | 多喚醒詞支援 | 自訂多個喚醒詞（如「嘿 Claude」「小助手」） | 🟡 中 |
 | ✅ | 聲紋識別 | 只回應特定用戶的語音 | 🔴 高 |
 | ✅ | 離線喚醒 | 使用 Vosk/Porcupine 本地偵測，無需網路 | 🟡 中 |
 | ✅ | 喚醒音效 | 喚醒成功/失敗的音效回饋 | 🟢 低 |
@@ -739,7 +739,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 | 狀態 | 項目 | 說明 | 難度 |
 |:----:|------|------|:----:|
 | ✅ | 系統控制 | 「打開設定」「調高音量」「截圖」 | 🟡 中 |
-| ✅ | 應用啟動 | 「打開 Cursor」「啟動 VSCode」 | 🟢 低 |
+| ✅ | 應用啟動 | 「打開 Claude」「啟動 VSCode」 | 🟢 低 |
 | ✅ | 檔案操作 | 「新建檔案」「刪除這個」「重新命名」 | 🟡 中 |
 | ✅ | 程式碼操作 | 「執行測試」「Git 提交」「建置專案」 | 🟡 中 |
 | ✅ | 網頁控制 | 「打開 Google」「搜尋天氣」「播放音樂」 | 🟡 中 |
@@ -815,7 +815,7 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    CursorBot v1.1 語音架構                    │
+│                    ClaudeBot v1.1 語音架構                    │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │ Voice Wake  │──│    STT      │──│   Intent    │         │
@@ -972,4 +972,4 @@ Agent、Ask、CLI 模式的對話會自動存入 RAG，支援：
 - [Moltbot 官方網站](https://molt.bot)
 - [Clawdbot 文檔](https://docs.clawd.bot/)
 - [Clawdbot 終極指南](https://grenade.tw/blog/clawdbot-ai-agent/)
-- [CursorBot GitHub](https://github.com/your-repo/cursorBot)
+- [ClaudeBot GitHub](https://github.com/your-repo/claudeBot)

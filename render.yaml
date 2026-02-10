@@ -1,10 +1,10 @@
-# Render Blueprint Configuration for CursorBot v0.4
+# Render Blueprint Configuration for ClaudeBot v0.4
 # Deploy with Render: https://render.com/docs/deploy-from-repo
 # Documentation: docs/DEPLOYMENT.md
 
 services:
   - type: web
-    name: cursorbot
+    name: claudebot
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .

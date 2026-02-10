@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		001 /* CursorBotNodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101 /* CursorBotNodeApp.swift */; };
+		001 /* ClaudeBotNodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101 /* ClaudeBotNodeApp.swift */; };
 		002 /* NodeAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102 /* NodeAppState.swift */; };
 		003 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103 /* Models.swift */; };
 		004 /* GatewayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104 /* GatewayService.swift */; };
@@ -20,8 +20,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		100 /* CursorBotNode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CursorBotNode.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		101 /* CursorBotNodeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorBotNodeApp.swift; sourceTree = "<group>"; };
+		100 /* ClaudeBotNode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClaudeBotNode.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		101 /* ClaudeBotNodeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeBotNodeApp.swift; sourceTree = "<group>"; };
 		102 /* NodeAppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NodeAppState.swift; sourceTree = "<group>"; };
 		103 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		104 /* GatewayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayService.swift; sourceTree = "<group>"; };
@@ -47,12 +47,12 @@
 		200 = {
 			isa = PBXGroup;
 			children = (
-				201 /* CursorBotNode */,
+				201 /* ClaudeBotNode */,
 				202 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		201 /* CursorBotNode */ = {
+		201 /* ClaudeBotNode */ = {
 			isa = PBXGroup;
 			children = (
 				203 /* Sources/App */,
@@ -60,13 +60,13 @@
 				205 /* Sources/Services */,
 				206 /* Sources/Views */,
 			);
-			path = CursorBotNode;
+			path = ClaudeBotNode;
 			sourceTree = "<group>";
 		};
 		202 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				100 /* CursorBotNode.app */,
+				100 /* ClaudeBotNode.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -74,7 +74,7 @@
 		203 /* Sources/App */ = {
 			isa = PBXGroup;
 			children = (
-				101 /* CursorBotNodeApp.swift */,
+				101 /* ClaudeBotNodeApp.swift */,
 				102 /* NodeAppState.swift */,
 			);
 			path = Sources/App;
@@ -112,9 +112,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		300 /* CursorBotNode */ = {
+		300 /* ClaudeBotNode */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 400 /* Build configuration list for PBXNativeTarget "CursorBotNode" */;
+			buildConfigurationList = 400 /* Build configuration list for PBXNativeTarget "ClaudeBotNode" */;
 			buildPhases = (
 				301 /* Sources */,
 				302 /* Frameworks */,
@@ -124,11 +124,11 @@
 			);
 			dependencies = (
 			);
-			name = CursorBotNode;
+			name = ClaudeBotNode;
 			packageProductDependencies = (
 			);
-			productName = CursorBotNode;
-			productReference = 100 /* CursorBotNode.app */;
+			productName = ClaudeBotNode;
+			productReference = 100 /* ClaudeBotNode.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -146,7 +146,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 501 /* Build configuration list for PBXProject "CursorBotNode" */;
+			buildConfigurationList = 501 /* Build configuration list for PBXProject "ClaudeBotNode" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -161,7 +161,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				300 /* CursorBotNode */,
+				300 /* ClaudeBotNode */,
 			);
 		};
 /* End PBXProject section */
@@ -181,7 +181,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				001 /* CursorBotNodeApp.swift in Sources */,
+				001 /* ClaudeBotNodeApp.swift in Sources */,
 				002 /* NodeAppState.swift in Sources */,
 				003 /* Models.swift in Sources */,
 				004 /* GatewayService.swift in Sources */,
@@ -329,9 +329,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "CursorBot needs camera access for image analysis";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CursorBot needs microphone access for voice commands";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CursorBot needs speech recognition for voice commands";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ClaudeBot needs camera access for image analysis";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ClaudeBot needs microphone access for voice commands";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "ClaudeBot needs speech recognition for voice commands";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -359,9 +359,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "CursorBot needs camera access for image analysis";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CursorBot needs microphone access for voice commands";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CursorBot needs speech recognition for voice commands";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ClaudeBot needs camera access for image analysis";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ClaudeBot needs microphone access for voice commands";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "ClaudeBot needs speech recognition for voice commands";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -383,7 +383,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		400 /* Build configuration list for PBXNativeTarget "CursorBotNode" */ = {
+		400 /* Build configuration list for PBXNativeTarget "ClaudeBotNode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				602 /* Debug */,
@@ -392,7 +392,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		501 /* Build configuration list for PBXProject "CursorBotNode" */ = {
+		501 /* Build configuration list for PBXProject "ClaudeBotNode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				600 /* Debug */,

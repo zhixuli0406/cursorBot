@@ -1,6 +1,6 @@
-# CursorBot
+# ClaudeBot
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](docs/FEATURE_ROADMAP.md)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](docs/FEATURE_ROADMAP.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 您的專屬 AI 秘書，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 及原生應用。具備每日簡報、待辦事項管理、行程安排、訂票協助等秘書功能，以及語音喚醒、自然對話、智慧家居控制等 AI 助手功能。整合 GPT、Claude、Gemini 等 AI 模型。
@@ -129,7 +129,7 @@
 - **使用者權限控制** - 各平台可設定允許的使用者 ID
 
 #### CLI 模型選擇
-- Cursor CLI 支援多種 AI 模型切換
+- Claude Code CLI 支援多種 AI 模型切換
   - GPT-5.2 系列（含 Codex 程式碼專用版）
   - Claude 4.5 Opus / Sonnet（含 Thinking 深度思考版）
   - Gemini 3 Pro / Flash
@@ -147,7 +147,7 @@
 #### TUI 終端介面
 - **互動式終端 UI** - 美觀的終端聊天介面
 - **Rich 支援** - 使用 rich 函式庫提供豐富格式
-- **CLI 工具整合** - `./cursorbot tui` 或 `./cursorbot chat`
+- **CLI 工具整合** - `./claudebot tui` 或 `./claudebot chat`
 
 #### 其他新功能
 - **Session 管理** - ClawdBot 風格的 Session 管理系統
@@ -253,10 +253,10 @@
 
 ### v1.1 語音助手（Voice Assistant）
 
-CursorBot v1.1 新增了類似 Siri 的智慧語音助手功能：
+ClaudeBot v1.1 新增了類似 Siri 的智慧語音助手功能：
 
 #### 核心功能
-- **多喚醒詞支援** - 自訂喚醒詞（「嘿 Cursor」「小助手」「ok cursor」）
+- **多喚醒詞支援** - 自訂喚醒詞（「嘿 Claude」「小助手」「ok claude」）
 - **離線語音辨識** - 使用 Vosk/Whisper 本地辨識，無需網路
 - **自然語音合成** - 支援 Edge TTS、ElevenLabs、OpenAI TTS
 - **環境噪音過濾** - WebRTC VAD 智慧過濾背景噪音
@@ -264,7 +264,7 @@ CursorBot v1.1 新增了類似 Siri 的智慧語音助手功能：
 
 #### 意圖識別與指令
 - **系統控制** - 「調高音量」「截圖」「鎖定螢幕」
-- **應用程式** - 「打開 Cursor」「關閉 Chrome」
+- **應用程式** - 「打開 Claude」「關閉 Chrome」
 - **程式碼操作** - 「Git commit」「執行測試」「建置專案」
 - **網頁搜尋** - 「搜尋天氣」「打開 GitHub」
 - **提醒功能** - 「提醒我10分鐘後喝水」
@@ -317,7 +317,7 @@ python examples/voice_assistant_demo.py --text
 ```env
 # 喚醒設定
 VOICE_WAKE_ENABLED=true
-VOICE_WAKE_WORDS=hey cursor,ok cursor,小助手
+VOICE_WAKE_WORDS=hey claude,ok claude,小助手
 
 # 語音辨識
 VOICE_STT_ENGINE=whisper_local
@@ -391,8 +391,8 @@ VOICE_RESPONSE_STYLE=friendly
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Telegram   │────▶│             │────▶│ Cursor CLI  │
-│  Discord    │────▶│  CursorBot  │────▶│ AI Providers│
+│  Telegram   │────▶│             │────▶│ Claude Code CLI  │
+│  Discord    │────▶│  ClaudeBot  │────▶│ AI Providers│
 │  LINE       │────▶│  (API Server│────▶│ (OpenAI,    │
 │  Slack      │────▶│   + Bot)    │◀────│  Claude,    │
 │  WhatsApp   │◀────│             │◀────│  Gemini...) │
@@ -400,8 +400,8 @@ VOICE_RESPONSE_STYLE=friendly
 ```
 
 1. 你在任何支援的平台發送問題
-2. CursorBot 統一處理指令和訊息
-3. 根據模式調用 Cursor CLI 或 AI 提供者
+2. ClaudeBot 統一處理指令和訊息
+3. 根據模式調用 Claude Code CLI 或 AI 提供者
 4. 完成後自動回傳結果
 
 ## 快速開始
@@ -482,7 +482,7 @@ start.bat
 **手動安裝：**
 
 ```bash
-cd cursorBot
+cd claudeBot
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -509,11 +509,11 @@ DISCORD_ALLOWED_GUILDS=123456789
 DISCORD_ALLOWED_USERS=987654321
 
 # === 工作區設定 ===
-CURSOR_WORKSPACE_PATH=/path/to/your/projects
+CLAUDE_WORKSPACE_PATH=/path/to/your/projects
 
 # === CLI 模式設定（可選）===
-CURSOR_CLI_MODEL=auto
-CURSOR_CLI_TIMEOUT=300
+CLAUDE_CLI_MODEL=auto
+CLAUDE_CLI_TIMEOUT=300
 ```
 
 #### 4. 設定 AI 提供者（多模型支援）
@@ -725,16 +725,16 @@ DEFAULT_LLM_MODEL=gpt-4o
 6. Ollama（如果設定了 `OLLAMA_ENABLED=true`）
 7. 自訂端點（如果設定了 `CUSTOM_API_BASE`）
 
-**方案八：Cursor CLI 模型設定（可選）**
+**方案八：Claude Code CLI 模型設定（可選）**
 
-Cursor CLI 模式 (`/mode cli`) 可以使用不同的模型，這些模型由 Cursor 直接提供。
+Claude Code CLI 模式 (`/mode cli`) 可以使用不同的模型，這些模型由 Claude 直接提供。
 
 ```env
 # CLI 預設模型（可選，不設定則使用 CLI 預設值）
-CURSOR_CLI_MODEL=sonnet-4.5
+CLAUDE_CLI_MODEL=sonnet-4.5
 
 # CLI 超時時間（秒，預設 300）
-CURSOR_CLI_TIMEOUT=300
+CLAUDE_CLI_TIMEOUT=300
 
 # 禁用 CLI 對話記憶（如果 --resume 功能有問題）
 # 設為 1, true 或 yes 來禁用
@@ -756,7 +756,7 @@ CLI_DISABLE_RESUME=
 
 #### 5. Gateway 設定（原生應用連線）
 
-如果需要使用原生應用（macOS/iOS/Android）連接到 CursorBot，需要設定 Gateway。
+如果需要使用原生應用（macOS/iOS/Android）連接到 ClaudeBot，需要設定 Gateway。
 
 ```env
 # Gateway Token（可選，留空則允許所有連線）
@@ -883,13 +883,13 @@ python -m src.main
 ⏱️ 執行時間: 5分30秒
 📝 結果: ...
 
-[🔗 在 Cursor 開啟] [💬 追問] [📋 複製結果]
+[🔗 在 Claude 開啟] [💬 追問] [📋 複製結果]
 ```
 
 **對話模式：**
 
-CursorBot 支援多種對話模式：
-- **CLI 模式** - 使用 Cursor CLI 執行任務
+ClaudeBot 支援多種對話模式：
+- **CLI 模式** - 使用 Claude Code CLI 執行任務
 - **Agent 模式** - 使用 Agent Loop 多步驟推理
 - **Auto 模式** - 自動選擇最佳模式
 
@@ -919,7 +919,7 @@ CursorBot 支援多種對話模式：
 | `/climodel set <model>` | 切換 CLI 模型 |
 | `/climodel reset` | 恢復 CLI 預設模型 |
 | `/mode` | 查看/切換對話模式 |
-| `/mode cli` | 切換到 Cursor CLI 模式 |
+| `/mode cli` | 切換到 Claude Code CLI 模式 |
 | `/mode agent` | 切換到 Agent Loop 模式 |
 | `/new` | 開始新對話 |
 | `/clear` | 清除對話上下文 |
@@ -968,7 +968,7 @@ CursorBot 支援多種對話模式：
 | `/control url` | Web 介面網址 |
 | `/mode` | 查看/切換對話模式 |
 | `/mode auto` | 自動選擇最佳模式 ⭐ (預設) |
-| `/mode cli` | 切換到 Cursor CLI 模式 |
+| `/mode cli` | 切換到 Claude Code CLI 模式 |
 | `/mode agent` | 切換到 Agent Loop 模式 |
 | `/mode auto` | 自動選擇模式 |
 | `/chatinfo` | 查看 CLI 對話上下文資訊 |
@@ -1051,7 +1051,7 @@ CursorBot 支援多種對話模式：
 
 ```
 # 語音喚醒後說...
-「打開 Cursor」          # 啟動應用程式
+「打開 Claude」          # 啟動應用程式
 「調高音量」              # 系統控制
 「截圖」                  # 螢幕截圖
 「跳到第 50 行」         # IDE 導航
@@ -1074,7 +1074,7 @@ CursorBot 支援多種對話模式：
 
 **CLI 對話記憶功能：**
 
-Cursor CLI 模式支援對話記憶，可以延續之前的對話上下文：
+Claude Code CLI 模式支援對話記憶，可以延續之前的對話上下文：
 
 ```
 /mode cli                           # 切換到 CLI 模式
@@ -1086,7 +1086,7 @@ Cursor CLI 模式支援對話記憶，可以延續之前的對話上下文：
 
 **CLI 模型選擇功能：**
 
-Cursor CLI 支援多種 AI 模型，可以根據需求切換：
+Claude Code CLI 支援多種 AI 模型，可以根據需求切換：
 
 ```
 /climodel                           # 查看目前 CLI 模型設定
@@ -1116,9 +1116,9 @@ Cursor CLI 支援多種 AI 模型，可以根據需求切換：
 
 | | CLI 模式 | Agent 模式 |
 |---|--------|----------|
-| 後端 | Cursor CLI | LLM Provider（OpenAI/Claude/Gemini 等） |
+| 後端 | Claude Code CLI | LLM Provider（OpenAI/Claude/Gemini 等） |
 | 用途 | 程式碼相關任務 | 通用 AI 對話和分析 |
-| 需要 | Cursor CLI 安裝 | API Key |
+| 需要 | Claude Code CLI 安裝 | API Key |
 | 特點 | 支援對話記憶、多種模型 | 多步驟推理、工具調用 |
 | 切換 | `/mode cli` | `/mode agent` |
 
@@ -1226,14 +1226,14 @@ Cursor CLI 支援多種 AI 模型，可以根據需求切換：
 1. 前往 [Google Cloud Console](https://console.cloud.google.com/)
 2. 選擇你的專案
 3. 左側選單 →「API 和服務」→「OAuth 同意畫面」
-4. 點擊「編輯應用程式」，將名稱改為 `CursorBot`
+4. 點擊「編輯應用程式」，將名稱改為 `ClaudeBot`
 
 #### Q2: 顯示「未通過 Google 驗證」警告
 
 **這是正常現象**。除非提交應用程式給 Google 審核，否則都會顯示此警告。
 
 **解決方案**：
-- 點擊「進階」→「前往 CursorBot（不安全）」繼續授權
+- 點擊「進階」→「前往 ClaudeBot（不安全）」繼續授權
 - 或將你的 Google 帳號加入專案的「測試使用者」名單
 
 #### Q3: 手機 Telegram 無法完成 OAuth 認證（localhost 問題）
@@ -2013,42 +2013,42 @@ async def call_external_api():
 
 #### CLI 工具
 
-CursorBot 提供命令列工具 `cursorbot` 進行管理：
+ClaudeBot 提供命令列工具 `claudebot` 進行管理：
 
 ```bash
 # 查看系統狀態
-./cursorbot status
+./claudebot status
 
 # 運行診斷
-./cursorbot doctor
+./claudebot doctor
 
 # 查看配置
-./cursorbot config
+./claudebot config
 
 # 查看日誌
-./cursorbot logs -n 100
+./claudebot logs -n 100
 
 # 查看會話
-./cursorbot sessions
+./claudebot sessions
 
 # 啟動 Bot
-./cursorbot start
+./claudebot start
 
 # 啟動 TUI 終端介面
-./cursorbot tui
+./claudebot tui
 
 # 互動式聊天（輕量版 TUI）
-./cursorbot chat
-./cursorbot chat --model opus-4.5
+./claudebot chat
+./claudebot chat --model opus-4.5
 
 # 發送訊息給用戶
-./cursorbot message --user-id 123456 --text "Hello"
+./claudebot message --user-id 123456 --text "Hello"
 
 # 廣播訊息
-./cursorbot broadcast --text "System announcement"
+./claudebot broadcast --text "System announcement"
 
 # 重置 Bot 資料
-./cursorbot reset --confirm
+./claudebot reset --confirm
 ```
 
 #### TUI 終端介面
@@ -2063,10 +2063,10 @@ pip install rich
 **啟動方式：**
 ```bash
 # 完整 TUI 介面
-./cursorbot tui
+./claudebot tui
 
 # 簡易聊天模式
-./cursorbot chat
+./claudebot chat
 
 # 或直接執行模組
 python -m src.cli.tui
@@ -2085,7 +2085,7 @@ python -m src.cli.tui
 ## 專案結構
 
 ```
-cursorBot/
+claudeBot/
 ├── src/
 │   ├── bot/                     # Telegram Bot
 │   │   ├── handlers.py          # 基礎指令處理
@@ -2102,9 +2102,9 @@ cursorBot/
 │   │   └── discord_handlers.py  # Discord 處理器
 │   ├── cli/                     # CLI 工具
 │   │   └── tui.py               # Terminal UI
-│   ├── cursor/                  # Cursor 整合
+│   ├── claude/                  # Claude 整合
 │   │   ├── agent.py             # 工作區管理
-│   │   ├── cli_agent.py         # Cursor CLI Agent
+│   │   ├── cli_agent.py         # Claude Code CLI Agent
 │   │   ├── file_operations.py
 │   │   └── terminal.py
 │   ├── core/                    # 核心功能
@@ -2132,7 +2132,7 @@ cursorBot/
 ├── skills/                      # 自訂技能
 │   └── agent/                   # Agent 技能
 ├── data/                        # 資料儲存
-├── cursorbot                    # CLI 工具入口
+├── claudebot                    # CLI 工具入口
 ├── Dockerfile
 ├── docker-compose.yml
 ├── start.bat / start.sh
@@ -2183,21 +2183,21 @@ DISCORD_ALLOWED_GUILDS=your_guild_id
 
 ## Docker 終端機功能
 
-當 CursorBot 運行在 Docker 容器內時，`/run` 等終端機指令會在**容器內**執行。
+當 ClaudeBot 運行在 Docker 容器內時，`/run` 等終端機指令會在**容器內**執行。
 
 ### 設定工作目錄
 
-在 `.env` 文件中設定 `CURSOR_WORKSPACE_PATH`，Docker 會自動掛載該目錄：
+在 `.env` 文件中設定 `CLAUDE_WORKSPACE_PATH`，Docker 會自動掛載該目錄：
 
 ```env
 # Windows
-CURSOR_WORKSPACE_PATH=C:/Users/YourName/Projects
+CLAUDE_WORKSPACE_PATH=C:/Users/YourName/Projects
 
 # macOS
-CURSOR_WORKSPACE_PATH=/Users/yourname/projects
+CLAUDE_WORKSPACE_PATH=/Users/yourname/projects
 
 # Linux
-CURSOR_WORKSPACE_PATH=/home/yourname/projects
+CLAUDE_WORKSPACE_PATH=/home/yourname/projects
 ```
 
 `docker-compose.yml` 會自動讀取這個路徑並掛載到容器的 `/workspace` 目錄。
@@ -2233,7 +2233,7 @@ CURSOR_WORKSPACE_PATH=/home/yourname/projects
 如需直接進入容器操作：
 
 ```bash
-docker exec -it cursorbot /bin/bash
+docker exec -it claudebot /bin/bash
 ```
 
 ### 容器內可用工具
@@ -2260,7 +2260,7 @@ Docker 映像已包含：
 
 ```yaml
 volumes:
-  - ~/.ssh:/home/cursorbot/.ssh:ro
+  - ~/.ssh:/home/claudebot/.ssh:ro
 ```
 
 ---
@@ -2283,7 +2283,7 @@ volumes:
 
 **診斷步驟：**
 1. 執行 `/diagnose` 查看環境狀態
-2. 確認 `CURSOR_WORKSPACE_PATH` 在 `.env` 中正確設定
+2. 確認 `CLAUDE_WORKSPACE_PATH` 在 `.env` 中正確設定
 3. 確認該路徑在主機上實際存在
 
 **解決方案：**
@@ -2294,7 +2294,7 @@ docker compose down
 docker compose up -d --build
 
 # 2. 檢查掛載是否成功
-docker exec -it cursorbot ls -la /workspace
+docker exec -it claudebot ls -la /workspace
 
 # 3. 如果權限問題，檢查主機目錄權限
 ls -la /path/to/your/workspace
@@ -2347,7 +2347,7 @@ Pre-built packages not available
 
 ## 注意事項
 
-1. **Cursor CLI** - 使用 CLI 模式需安裝 Cursor CLI（`agent` 指令）
+1. **Claude Code CLI** - 使用 CLI 模式需安裝 Claude Code CLI（`agent` 指令）
 2. **AI 提供者** - 至少需要設定一個 AI 提供者（OpenRouter、OpenAI、Gemini 等）
 3. **多平台** - 各平台需要獨立設定 API Token 和 Webhook
 4. **安全性** - 建議設定 `ALLOWED_USERS` 限制使用者

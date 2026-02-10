@@ -22,7 +22,7 @@ from ..utils.logger import logger
 
 async def handle_start(ctx: MessageContext, interaction=None) -> None:
     """Handle /start command."""
-    from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from ..claude.cli_agent import is_cli_available, get_cli_agent
     
     user = ctx.user
     user_id = str(ctx.user.id)
@@ -193,7 +193,7 @@ async def handle_help(ctx: MessageContext, interaction=None) -> None:
 
 async def handle_status(ctx: MessageContext, interaction=None) -> None:
     """Handle /status command."""
-    from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from ..claude.cli_agent import is_cli_available, get_cli_agent
     from ..core.session import get_session_manager, ChatType
     
     user_id = str(ctx.user.id)
@@ -387,7 +387,7 @@ async def handle_agent(ctx: MessageContext, task: str = None, interaction=None) 
 
 async def handle_climodel(ctx: MessageContext, interaction=None) -> None:
     """Handle /climodel command - CLI model settings."""
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     
     if not is_cli_available():
         content = "❌ Cursor CLI 未安裝或未配置"
@@ -499,7 +499,7 @@ async def handle_settings(ctx: MessageContext, interaction=None) -> None:
 async def handle_doctor(ctx: MessageContext, interaction=None) -> None:
     """Handle /doctor command - system diagnostics."""
     from ..utils.config import settings
-    from ..cursor.cli_agent import is_cli_available
+    from ..claude.cli_agent import is_cli_available
     from ..core.llm_providers import get_llm_manager
     
     # Check components
@@ -752,7 +752,7 @@ async def handle_skills(ctx: MessageContext, interaction=None) -> None:
 async def handle_new(ctx: MessageContext, interaction=None) -> None:
     """Handle /new command - start fresh session."""
     from ..core.session import get_session_manager, ChatType
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     
     user_id = str(ctx.user.id)
     session_mgr = get_session_manager()
@@ -896,7 +896,7 @@ async def handle_compact(ctx: MessageContext, interaction=None) -> None:
 
 async def handle_mode(ctx: MessageContext, interaction=None) -> None:
     """Handle /mode command."""
-    from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from ..claude.cli_agent import is_cli_available, get_cli_agent
     
     cli_available = is_cli_available()
     
@@ -1128,7 +1128,7 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
                 )
             
             elif callback_data == "mode_menu":
-                from ..cursor.cli_agent import is_cli_available
+                from ..claude.cli_agent import is_cli_available
                 cli_available = is_cli_available()
                 
                 await send_response(
@@ -1179,7 +1179,7 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
             
             elif callback_data == "new_chat":
                 from ..core.session import get_session_manager, ChatType
-                from ..cursor.cli_agent import get_cli_agent, is_cli_available
+                from ..claude.cli_agent import get_cli_agent, is_cli_available
                 
                 user_id = str(ctx.user.id)
                 session_mgr = get_session_manager()
@@ -1235,7 +1235,7 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
                 await _handle_button_skills(ctx, interaction)
             
             elif callback_data == "set_mode_cli":
-                from ..cursor.cli_agent import is_cli_available
+                from ..claude.cli_agent import is_cli_available
                 if is_cli_available():
                     await send_response(
                         "⌨️ **已切換到 Cursor CLI 模式**\n\n"
@@ -1287,7 +1287,7 @@ def setup_discord_handlers(channel: DiscordChannel) -> None:
 
 async def _handle_button_status(ctx: MessageContext, interaction) -> None:
     """Handle status button click."""
-    from ..cursor.cli_agent import is_cli_available
+    from ..claude.cli_agent import is_cli_available
     from ..core.llm_providers import get_llm_manager
     
     # Check CLI status

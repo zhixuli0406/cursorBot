@@ -1,6 +1,6 @@
-# CursorBot Chrome Extension
+# ClaudeBot Chrome Extension
 
-Browser integration for CursorBot AI Assistant.
+Browser integration for ClaudeBot AI Assistant.
 
 ## Features
 
@@ -22,14 +22,14 @@ Browser integration for CursorBot AI Assistant.
 
 ```bash
 cd chrome-extension
-zip -r cursorbot-extension.zip . -x "*.git*" -x "README.md"
+zip -r claudebot-extension.zip . -x "*.git*" -x "README.md"
 ```
 
 ## Configuration
 
 1. Click the extension icon
 2. Click "Settings"
-3. Enter your CursorBot server URL (default: `http://localhost:8000`)
+3. Enter your ClaudeBot server URL (default: `http://localhost:8000`)
 4. Optionally enter an API key
 
 ## Usage
@@ -43,7 +43,7 @@ zip -r cursorbot-extension.zip . -x "*.git*" -x "README.md"
 ### Context Menu
 
 1. Select text on any webpage
-2. Right-click and choose "CursorBot"
+2. Right-click and choose "ClaudeBot"
 3. Select an action:
    - **Ask about this**: Get AI response about the selection
    - **Explain this**: Get a simple explanation
@@ -58,7 +58,7 @@ zip -r cursorbot-extension.zip . -x "*.git*" -x "README.md"
 
 ## API Integration
 
-The extension communicates with your CursorBot server via REST API:
+The extension communicates with your ClaudeBot server via REST API:
 
 ```
 POST /api/agent
@@ -111,7 +111,7 @@ Create icons in the following sizes:
 
 ### "Server not connected"
 
-- Make sure CursorBot server is running
+- Make sure ClaudeBot server is running
 - Check the server URL in settings
 - Verify CORS is enabled on the server
 

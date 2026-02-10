@@ -1,6 +1,6 @@
-# CursorBot API Reference
+# ClaudeBot API Reference
 
-Complete API documentation for CursorBot v0.4.
+Complete API documentation for ClaudeBot v0.4.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ Complete API documentation for CursorBot v0.4.
 
 ## Overview
 
-CursorBot exposes a RESTful API for health monitoring, webhook handling, and bot management.
+ClaudeBot exposes a RESTful API for health monitoring, webhook handling, and bot management.
 
 **Base URL**: `http://localhost:8000` (default)
 
@@ -51,7 +51,7 @@ Root endpoint with basic information.
 **Response:**
 ```json
 {
-  "name": "CursorBot",
+  "name": "ClaudeBot",
   "version": "0.4.0",
   "status": "running"
 }
@@ -244,14 +244,14 @@ Slack slash command endpoint.
 
 **Request Body:**
 ```
-command=/cursorbot&text=help&user_id=U123456&channel_id=C123456
+command=/claudebot&text=help&user_id=U123456&channel_id=C123456
 ```
 
 **Response:**
 ```json
 {
   "response_type": "in_channel",
-  "text": "CursorBot help message..."
+  "text": "ClaudeBot help message..."
 }
 ```
 

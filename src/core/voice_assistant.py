@@ -105,8 +105,8 @@ class VoiceAssistantConfig:
     wake_enabled: bool = True
     wake_engine: WakeEngine = WakeEngine.VOSK
     wake_words: List[str] = field(default_factory=lambda: [
-        "hey cursor",
-        "ok cursor", 
+        "hey claude",
+        "ok claude", 
         "嘿 cursor",
         "小助手",
     ])

@@ -1,5 +1,5 @@
 /**
- * CursorBot Chrome Extension - Content Script
+ * ClaudeBot Chrome Extension - Content Script
  * 
  * Injected into web pages to provide:
  * - Chat overlay
@@ -18,17 +18,17 @@ function createChatOverlay() {
   if (chatOverlay) return;
 
   chatOverlay = document.createElement('div');
-  chatOverlay.id = 'cursorbot-overlay';
+  chatOverlay.id = 'claudebot-overlay';
   chatOverlay.innerHTML = `
-    <div class="cursorbot-chat">
-      <div class="cursorbot-header">
-        <span class="cursorbot-title">CursorBot</span>
-        <button class="cursorbot-close">&times;</button>
+    <div class="claudebot-chat">
+      <div class="claudebot-header">
+        <span class="claudebot-title">ClaudeBot</span>
+        <button class="claudebot-close">&times;</button>
       </div>
-      <div class="cursorbot-messages"></div>
-      <div class="cursorbot-input-area">
-        <input type="text" class="cursorbot-input" placeholder="Ask anything..." />
-        <button class="cursorbot-send">Send</button>
+      <div class="claudebot-messages"></div>
+      <div class="claudebot-input-area">
+        <input type="text" class="claudebot-input" placeholder="Ask anything..." />
+        <button class="claudebot-send">Send</button>
       </div>
     </div>
   `;
@@ -36,9 +36,9 @@ function createChatOverlay() {
   document.body.appendChild(chatOverlay);
 
   // Event handlers
-  const closeBtn = chatOverlay.querySelector('.cursorbot-close');
-  const input = chatOverlay.querySelector('.cursorbot-input');
-  const sendBtn = chatOverlay.querySelector('.cursorbot-send');
+  const closeBtn = chatOverlay.querySelector('.claudebot-close');
+  const input = chatOverlay.querySelector('.claudebot-input');
+  const sendBtn = chatOverlay.querySelector('.claudebot-send');
 
   closeBtn.addEventListener('click', toggleChat);
   
@@ -56,7 +56,7 @@ function toggleChat() {
   chatOverlay.style.display = chatVisible ? 'block' : 'none';
   
   if (chatVisible) {
-    chatOverlay.querySelector('.cursorbot-input').focus();
+    chatOverlay.querySelector('.claudebot-input').focus();
   }
 }
 
@@ -64,7 +64,7 @@ async function sendMessage(input) {
   const message = input.value.trim();
   if (!message) return;
 
-  const messagesDiv = chatOverlay.querySelector('.cursorbot-messages');
+  const messagesDiv = chatOverlay.querySelector('.claudebot-messages');
   
   // Add user message
   addMessage(messagesDiv, message, 'user');
@@ -98,7 +98,7 @@ function addMessage(container, text, type) {
   const id = `msg-${Date.now()}`;
   const div = document.createElement('div');
   div.id = id;
-  div.className = `cursorbot-message cursorbot-${type}`;
+  div.className = `claudebot-message claudebot-${type}`;
   div.textContent = text;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
@@ -115,16 +115,16 @@ function showResult(result) {
   hideResult();
 
   resultOverlay = document.createElement('div');
-  resultOverlay.id = 'cursorbot-result';
+  resultOverlay.id = 'claudebot-result';
   resultOverlay.innerHTML = `
-    <div class="cursorbot-result-content">
-      <div class="cursorbot-result-header">
-        <span>CursorBot Result</span>
-        <button class="cursorbot-result-close">&times;</button>
+    <div class="claudebot-result-content">
+      <div class="claudebot-result-header">
+        <span>ClaudeBot Result</span>
+        <button class="claudebot-result-close">&times;</button>
       </div>
-      <div class="cursorbot-result-body">${escapeHtml(result)}</div>
-      <div class="cursorbot-result-actions">
-        <button class="cursorbot-copy">Copy</button>
+      <div class="claudebot-result-body">${escapeHtml(result)}</div>
+      <div class="claudebot-result-actions">
+        <button class="claudebot-copy">Copy</button>
       </div>
     </div>
   `;
@@ -132,8 +132,8 @@ function showResult(result) {
   document.body.appendChild(resultOverlay);
 
   // Event handlers
-  resultOverlay.querySelector('.cursorbot-result-close').addEventListener('click', hideResult);
-  resultOverlay.querySelector('.cursorbot-copy').addEventListener('click', () => {
+  resultOverlay.querySelector('.claudebot-result-close').addEventListener('click', hideResult);
+  resultOverlay.querySelector('.claudebot-copy').addEventListener('click', () => {
     navigator.clipboard.writeText(result);
     showToast('Copied to clipboard');
   });
@@ -155,11 +155,11 @@ function showLoading(message) {
   hideResult();
 
   resultOverlay = document.createElement('div');
-  resultOverlay.id = 'cursorbot-result';
+  resultOverlay.id = 'claudebot-result';
   resultOverlay.innerHTML = `
-    <div class="cursorbot-result-content cursorbot-loading">
-      <div class="cursorbot-spinner"></div>
-      <div class="cursorbot-loading-text">${escapeHtml(message)}</div>
+    <div class="claudebot-result-content claudebot-loading">
+      <div class="claudebot-spinner"></div>
+      <div class="claudebot-loading-text">${escapeHtml(message)}</div>
     </div>
   `;
 
@@ -168,8 +168,8 @@ function showLoading(message) {
 
 function showError(error) {
   showResult(`Error: ${error}`);
-  const body = resultOverlay?.querySelector('.cursorbot-result-body');
-  if (body) body.classList.add('cursorbot-error-text');
+  const body = resultOverlay?.querySelector('.claudebot-result-body');
+  if (body) body.classList.add('claudebot-error-text');
 }
 
 // ============================================
@@ -178,16 +178,16 @@ function showError(error) {
 
 function showToast(message) {
   const toast = document.createElement('div');
-  toast.className = 'cursorbot-toast';
+  toast.className = 'claudebot-toast';
   toast.textContent = message;
   document.body.appendChild(toast);
 
   setTimeout(() => {
-    toast.classList.add('cursorbot-toast-show');
+    toast.classList.add('claudebot-toast-show');
   }, 10);
 
   setTimeout(() => {
-    toast.classList.remove('cursorbot-toast-show');
+    toast.classList.remove('claudebot-toast-show');
     setTimeout(() => toast.remove(), 300);
   }, 2000);
 }
@@ -250,4 +250,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-console.log('CursorBot content script loaded');
+console.log('ClaudeBot content script loaded');

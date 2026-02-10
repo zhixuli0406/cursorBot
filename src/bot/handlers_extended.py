@@ -6,10 +6,10 @@ Includes file editing, terminal, task management, and workspace commands
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, ContextTypes
 
-from ..cursor.agent import CursorAgent
-from ..cursor.cli_agent import reset_cli_agent
-from ..cursor.file_operations import FileOperations
-from ..cursor.terminal import TerminalManager
+from ..claude.agent import CursorAgent
+from ..claude.cli_agent import reset_cli_agent
+from ..claude.file_operations import FileOperations
+from ..claude.terminal import TerminalManager
 from ..utils.auth import authorized_only
 from ..utils.config import settings
 from ..utils.logger import logger

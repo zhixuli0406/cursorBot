@@ -94,12 +94,12 @@ goto end
 
 :shell
 echo [INFO] Opening shell in container...
-docker exec -it cursorbot /bin/bash
+docker exec -it claudebot /bin/bash
 goto end
 
 :status
 echo [INFO] Container status:
-docker ps -a --filter "name=cursorbot"
+docker ps -a --filter "name=claudebot"
 goto end
 
 :help

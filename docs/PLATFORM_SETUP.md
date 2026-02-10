@@ -1,6 +1,6 @@
 # Platform Setup Guide
 
-Complete guide for setting up CursorBot on different messaging platforms.
+Complete guide for setting up ClaudeBot on different messaging platforms.
 
 ## Table of Contents
 
@@ -40,7 +40,7 @@ TELEGRAM_ALLOWED_USERS=123456789,987654321  # Comma-separated user IDs
 ### Step 4: Start Bot
 
 ```bash
-./cursorbot start
+./claudebot start
 ```
 
 ### Optional: Webhook Mode
@@ -94,7 +94,7 @@ DISCORD_ALLOWED_USERS=123456789012345678  # Discord user IDs
 ### Step 5: Start Bot
 
 ```bash
-./cursorbot start
+./claudebot start
 ```
 
 ---
@@ -172,9 +172,9 @@ LINE message from U722f9b179e0f56f500adb3d11dae6e99: hello
 
 1. Go to **Slash Commands**
 2. Create new command:
-   - Command: `/cursorbot`
+   - Command: `/claudebot`
    - Request URL: `https://your-domain.com/webhook/slack/commands`
-   - Description: CursorBot AI assistant
+   - Description: ClaudeBot AI assistant
 
 ### Step 4: Configure Event Subscriptions
 
@@ -308,7 +308,7 @@ TEAMS_ALLOWED_USERS=user@domain.com  # Teams user emails or IDs
 
 1. Go to [Google Chat API Configuration](https://console.cloud.google.com/apis/api/chat.googleapis.com/hangouts-chat)
 2. Configure app:
-   - App name: CursorBot
+   - App name: ClaudeBot
    - Avatar URL: (optional)
    - Description: AI coding assistant
    - Functionality: Receive 1:1 messages, Join spaces
@@ -364,7 +364,7 @@ API_SERVER_PORT=8000
 
 ```bash
 # Start with all platforms
-./cursorbot start
+./claudebot start
 
 # Or use Docker
 docker-compose up -d
@@ -393,7 +393,7 @@ Detailed diagnostics:
 1. Check webhook URL is publicly accessible
 2. Verify SSL certificate is valid
 3. Check firewall allows incoming connections
-4. Review logs: `tail -f logs/cursorbot.log`
+4. Review logs: `tail -f logs/claudebot.log`
 
 #### Authentication Errors
 
@@ -404,7 +404,7 @@ Detailed diagnostics:
 #### Rate Limiting
 
 1. Check platform rate limits
-2. Enable rate limiting in CursorBot
+2. Enable rate limiting in ClaudeBot
 3. Add delays between messages
 
 ### Platform-Specific Issues

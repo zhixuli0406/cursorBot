@@ -171,7 +171,7 @@ COMMANDS: dict[str, CommandDefinition] = {
 async def handle_start(ctx: CommandContext) -> CommandResult:
     """Handle /start command."""
     from ..utils.config import settings
-    from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from ..claude.cli_agent import is_cli_available, get_cli_agent
     from .secretary import get_secretary, SecretaryPersona
     
     # Get secretary and preferences
@@ -269,7 +269,7 @@ async def handle_help(ctx: CommandContext) -> CommandResult:
 async def handle_status(ctx: CommandContext) -> CommandResult:
     """Handle /status command."""
     from ..utils.config import settings
-    from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from ..claude.cli_agent import is_cli_available, get_cli_agent
     from ..core.llm_providers import get_llm_manager
     from ..core.session import get_session_manager
     
@@ -343,7 +343,7 @@ async def handle_mode(ctx: CommandContext) -> CommandResult:
 async def handle_new(ctx: CommandContext) -> CommandResult:
     """Handle /new command - start new conversation."""
     from ..core.session import get_session_manager
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     
     session_manager = get_session_manager()
     session_manager.reset_session(ctx.user_id)
@@ -361,7 +361,7 @@ async def handle_new(ctx: CommandContext) -> CommandResult:
 
 async def handle_doctor(ctx: CommandContext) -> CommandResult:
     """Handle /doctor command - system diagnostics."""
-    from ..cursor.cli_agent import is_cli_available
+    from ..claude.cli_agent import is_cli_available
     from ..core.llm_providers import get_llm_manager
     
     checks = []
@@ -426,7 +426,7 @@ async def handle_model(ctx: CommandContext) -> CommandResult:
 
 async def handle_climodel(ctx: CommandContext) -> CommandResult:
     """Handle /climodel command - CLI model selection."""
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     
     if not is_cli_available():
         return CommandResult(success=False, message="❌ Cursor CLI 未安裝")
@@ -479,7 +479,7 @@ async def handle_climodel(ctx: CommandContext) -> CommandResult:
 async def handle_clear(ctx: CommandContext) -> CommandResult:
     """Handle /clear command - clear conversation context."""
     from ..core.session import get_session_manager
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     
     session_manager = get_session_manager()
     session_manager.reset_session(ctx.user_id)
@@ -527,7 +527,7 @@ async def handle_memory(ctx: CommandContext) -> CommandResult:
 
 async def handle_workspace(ctx: CommandContext) -> CommandResult:
     """Handle /workspace command - workspace management."""
-    from ..cursor.agent import WorkspaceAgent
+    from ..claude.agent import WorkspaceAgent
     
     agent = WorkspaceAgent()
     workspaces = await agent.list_workspaces()

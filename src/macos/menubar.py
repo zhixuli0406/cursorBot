@@ -31,7 +31,7 @@ else:
     rumps = None
 
 
-class CursorBotMenuBar:
+class ClaudeBotMenuBar:
     """
     macOS Menu Bar application for CursorBot.
     
