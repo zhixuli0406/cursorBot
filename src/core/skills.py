@@ -194,40 +194,80 @@ class WebSearchAgentSkill(AgentSkill):
             categories=["search", "web"],
         )
     
+    # Keywords that indicate the user wants news results
+    _NEWS_KEYWORDS = {"新聞", "news", "最新", "今日", "今天", "頭條", "headline", "breaking"}
+
     async def execute(self, **kwargs) -> dict:
         query = kwargs.get("query", "")
         if not query:
             return {"error": "No query provided"}
-        
+
         try:
-            import httpx
-            
-            # Use DuckDuckGo instant answer API (no key needed)
-            async with httpx.AsyncClient(timeout=30) as client:
-                response = await client.get(
-                    "https://api.duckduckgo.com/",
-                    params={"q": query, "format": "json", "no_html": 1}
-                )
-                data = response.json()
-                
-                results = []
-                if data.get("Abstract"):
+            import asyncio
+            from ddgs import DDGS
+
+            query_lower = query.lower()
+            use_news = any(kw in query_lower for kw in self._NEWS_KEYWORDS)
+
+            def _search():
+                ddgs = DDGS()
+                news_raw = []
+                text_raw = []
+                region = "tw-tzh"
+
+                # Try news search first if query looks like news
+                if use_news:
+                    try:
+                        news_raw = ddgs.news(query, region=region, timelimit="w", max_results=5)
+                        logger.info(f"DDGS news returned {len(news_raw)} results")
+                    except Exception as e:
+                        logger.warning(f"DDGS news failed: {e}")
+
+                # Supplement with text search if news is insufficient
+                if len(news_raw) < 3:
+                    try:
+                        text_raw = ddgs.text(query, region=region, max_results=5)
+                        logger.info(f"DDGS text (zh) returned {len(text_raw)} results")
+                    except Exception as e:
+                        logger.warning(f"DDGS text (zh) failed: {e}")
+
+                # If still insufficient, try English-augmented query
+                if len(news_raw) + len(text_raw) < 3:
+                    try:
+                        en_raw = ddgs.text(query, region="us-en", max_results=5)
+                        logger.info(f"DDGS text (en) returned {len(en_raw)} results")
+                        text_raw.extend(en_raw)
+                    except Exception as e:
+                        logger.warning(f"DDGS text (en) failed: {e}")
+
+                return news_raw, text_raw
+
+            news_raw, text_raw = await asyncio.to_thread(_search)
+
+            results = []
+            # Add news results first (with date/source metadata)
+            for item in news_raw:
+                results.append({
+                    "title": item.get("title", ""),
+                    "content": item.get("body", ""),
+                    "url": item.get("url", ""),
+                    "date": item.get("date", ""),
+                    "source": item.get("source", ""),
+                })
+            # Supplement with text results (dedup by URL)
+            seen_urls = {r["url"] for r in results}
+            for item in text_raw:
+                url = item.get("href", "")
+                if url not in seen_urls:
                     results.append({
-                        "title": data.get("Heading", ""),
-                        "content": data.get("Abstract"),
-                        "url": data.get("AbstractURL", ""),
+                        "title": item.get("title", ""),
+                        "content": item.get("body", ""),
+                        "url": url,
                     })
-                
-                for topic in data.get("RelatedTopics", [])[:5]:
-                    if isinstance(topic, dict) and topic.get("Text"):
-                        results.append({
-                            "title": topic.get("Text", "")[:50],
-                            "content": topic.get("Text"),
-                            "url": topic.get("FirstURL", ""),
-                        })
-                
-                return {"query": query, "results": results}
-                
+                    seen_urls.add(url)
+
+            return {"query": query, "results": results}
+
         except Exception as e:
             return {"error": str(e)}
 

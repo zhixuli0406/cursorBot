@@ -22,7 +22,8 @@
       "Bash(python3:*)",
       "Bash(cat:*)",
       "Bash(grep:*)",
-      "Bash(python -m py_compile:*)"
+      "Bash(python -m py_compile:*)",
+      "WebFetch(domain:pypi.org)"
     ]
   }
 }

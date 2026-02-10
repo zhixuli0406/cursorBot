@@ -46,6 +46,9 @@ pypdf>=3.0.0
 # TUI (Terminal User Interface)
 rich>=13.0.0
 
+# Web Search
+ddgs>=9.0.0                     # DuckDuckGo search (news, text, images)
+
 # v0.4 Features
 aiohttp>=3.9.0  # For MCP SSE transport and HTTP requests
 

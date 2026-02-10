@@ -1184,21 +1184,11 @@ class WebSearchService:
         """Determine if the user message needs a web search."""
         text_lower = text.lower().strip()
 
-        # Skip intents that are already fully handled
-        # Compare by .value to avoid needing the enum class reference at this point
-        skip_intent_values = {
-            "greeting", "add_task", "list_tasks", "complete_task",
-            "show_calendar", "add_event", "daily_briefing", "reminder", "help",
-        }
-        intent_value = intent.value if hasattr(intent, "value") else str(intent)
-        if intent_value in skip_intent_values:
-            return False
-
-        # Check for explicit skip keywords
+        # Check for explicit skip keywords first
         if any(kw in text_lower for kw in self.SKIP_KEYWORDS):
             return False
 
-        # Check for search trigger keywords
+        # Search trigger keywords override intent-based skipping
         if any(kw in text_lower for kw in self.SEARCH_TRIGGER_KEYWORDS):
             return True
 
@@ -1207,15 +1197,25 @@ class WebSearchService:
             return True
 
         # WEATHER / BOOK / SEARCH intents -> search for real-time info
+        intent_value = intent.value if hasattr(intent, "value") else str(intent)
         search_intent_values = {"weather", "book_ticket", "book_hotel", "search"}
         if intent_value in search_intent_values:
             return True
+
+        # Skip intents that are already fully handled (only if no trigger keyword matched)
+        skip_intent_values = {
+            "greeting", "add_task", "list_tasks", "complete_task",
+            "show_calendar", "add_event", "daily_briefing", "reminder", "help",
+        }
+        if intent_value in skip_intent_values:
+            return False
 
         return False
 
     def build_search_query(self, text: str, intent) -> str:
         """Build an optimized search query from user text."""
         import re
+        from datetime import datetime
 
         intent_value = intent.value if hasattr(intent, "value") else str(intent)
         query = text
@@ -1225,8 +1225,16 @@ class WebSearchService:
             r"^(幫我|請幫我|可以幫我|能不能|可不可以|請問|想問|想請問)",
             r"^(查一下|搜尋|搜一下|找一下|查詢|幫我查)",
             r"^(告訴我|跟我說|讓我知道)",
+            r"^(我需要知道|我想知道)",
         ]
         for pattern in prefixes_to_remove:
+            query = re.sub(pattern, "", query).strip()
+
+        # Remove filler words that don't help search
+        filler_to_remove = [
+            r"(現在|目前|當前)",
+        ]
+        for pattern in filler_to_remove:
             query = re.sub(pattern, "", query).strip()
 
         # Add context based on intent
@@ -1263,21 +1271,31 @@ class WebSearchService:
             if not results:
                 return ""
 
+            # Log search results for debugging
+            for i, item in enumerate(results[:max_results], 1):
+                logger.info(f"Search result {i}: {item.get('title', '')[:80]}")
+
             # Format results for LLM context
             lines = [f"## 網路搜尋結果（查詢：{query}）"]
             for i, item in enumerate(results[:max_results], 1):
                 title = item.get("title", "")
                 content = item.get("content", "")
                 url = item.get("url", "")
+                date = item.get("date", "")
+                source = item.get("source", "")
                 lines.append(f"{i}. **{title}**")
+                if date:
+                    lines.append(f"   日期: {date}")
                 if content:
                     lines.append(f"   {content[:300]}")
-                if url:
+                if source:
+                    lines.append(f"   來源: {source} ({url})")
+                elif url:
                     lines.append(f"   來源: {url}")
 
             lines.append(
-                "\n請根據以上搜尋結果，用自然、簡潔的方式回答用戶的問題。"
-                "如果搜尋結果不足以回答，請坦誠說明。"
+                "\n⚠️ 重要：請嚴格根據以上搜尋結果回答用戶的問題，不要使用你訓練資料中的舊知識。"
+                "如果搜尋結果不足以回答，請坦誠說明並建議用戶嘗試更具體的搜尋。"
             )
 
             return "\n".join(lines)
@@ -1287,48 +1305,32 @@ class WebSearchService:
             return ""
 
     async def _fallback_search(self, query: str, max_results: int = 5) -> list[dict]:
-        """Fallback: scrape DuckDuckGo HTML search results."""
+        """Fallback: use duckduckgo-search text search."""
         try:
-            import re
-            import httpx
+            import asyncio
+            from ddgs import DDGS
 
-            async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-                response = await client.get(
-                    "https://html.duckduckgo.com/html/",
-                    params={"q": query},
-                    headers={"User-Agent": "Mozilla/5.0 (compatible; CursorBot/2.0)"},
-                )
+            def _search():
+                ddgs = DDGS()
+                for region in ("tw-tzh", "us-en"):
+                    try:
+                        raw = ddgs.text(query, region=region, max_results=max_results)
+                        if raw:
+                            logger.info(f"Fallback DDGS text (region={region}) returned {len(raw)} results")
+                            return raw
+                    except Exception as e:
+                        logger.warning(f"Fallback DDGS text (region={region}) failed: {e}")
+                return []
 
-                if response.status_code != 200:
-                    return []
-
-                html = response.text
-                results = []
-
-                # Parse result snippets from HTML
-                snippets = re.findall(
-                    r'class="result__snippet"[^>]*>(.*?)</(?:a|span)',
-                    html,
-                    re.DOTALL,
-                )
-                titles = re.findall(
-                    r'class="result__a"[^>]*>(.*?)</a>',
-                    html,
-                    re.DOTALL,
-                )
-                urls = re.findall(
-                    r'class="result__url"[^>]*href="([^"]*)"',
-                    html,
-                )
-
-                for i in range(min(max_results, len(snippets))):
-                    title = re.sub(r"<[^>]+>", "", titles[i]).strip() if i < len(titles) else ""
-                    content = re.sub(r"<[^>]+>", "", snippets[i]).strip() if i < len(snippets) else ""
-                    url = urls[i] if i < len(urls) else ""
-                    if title or content:
-                        results.append({"title": title, "content": content, "url": url})
-
-                return results
+            raw = await asyncio.to_thread(_search)
+            return [
+                {
+                    "title": item.get("title", ""),
+                    "content": item.get("body", ""),
+                    "url": item.get("href", ""),
+                }
+                for item in raw
+            ]
 
         except Exception as e:
             logger.warning(f"Fallback search failed: {e}")
