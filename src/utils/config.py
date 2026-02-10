@@ -327,6 +327,32 @@ class Settings(BaseSettings):
         description="Default language for secretary",
     )
 
+    # Weather Service Settings
+    weather_provider: str = Field(
+        default="openweathermap",
+        description="Weather provider: openweathermap, weatherapi",
+    )
+    weather_api_key: str = Field(
+        default="",
+        description="Weather API key (from OpenWeatherMap or WeatherAPI.com)",
+    )
+    weather_default_city: str = Field(
+        default="Taipei",
+        description="Default city for weather information",
+    )
+    weather_default_country: str = Field(
+        default="TW",
+        description="Default country code (ISO 3166)",
+    )
+    weather_language: str = Field(
+        default="zh_tw",
+        description="Weather language: zh_tw, zh_cn, en, ja",
+    )
+    weather_units: str = Field(
+        default="metric",
+        description="Temperature units: metric (攝氏), imperial (華氏)",
+    )
+
     # Discord Settings
     discord_bot_token: str = Field(
         default="",

@@ -26,6 +26,7 @@ from typing import Any, Callable, Optional
 
 from ..utils.logger import logger
 from ..utils.config import settings
+from ..integrations.weather_service import get_weather_service
 
 
 class SecretaryMood(Enum):
@@ -794,7 +795,24 @@ class PersonalSecretary:
         date_str = f"📅 今天是 {now.strftime('%Y年%m月%d日')} {weekdays[now.weekday()]}"
         lines.append(date_str)
         lines.append("")
-        
+
+        # Weather
+        try:
+            weather_service = get_weather_service()
+            weather_data = await weather_service.get_weather()
+            if weather_data:
+                weather_text = weather_service.format_weather(weather_data)
+                lines.append(weather_text)
+
+                # Add weather advice
+                weather_advice = weather_service.get_weather_advice(weather_data)
+                if weather_advice:
+                    lines.append(weather_advice)
+
+                lines.append("")
+        except Exception as e:
+            logger.debug(f"Failed to fetch weather for briefing: {e}")
+
         # Calendar events
         events = await self._get_calendar_events(user_id)
         lines.append(f"📋 {persona.calendar_reminder(len(events))}")
