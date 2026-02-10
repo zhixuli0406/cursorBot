@@ -394,7 +394,7 @@ def main() -> None:
         logger.warning("No TELEGRAM_ALLOWED_USERS configured. Bot will reject all users.")
 
     # Run application
-    app_instance = CursorBotApp()
+    app_instance = ClaudeBotApp()
 
     try:
         asyncio.run(app_instance.run())
