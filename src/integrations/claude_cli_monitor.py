@@ -405,10 +405,38 @@ class ClaudeCliMonitor:
         except Exception as e:
             logger.error(f"Error handling conversation file {path}: {e}")
 
+    @staticmethod
+    def _is_conversation_still_processing(jsonl_path: str) -> bool:
+        """
+        Check if the conversation is still being processed by reading
+        the last message entry in the JSONL file.
+
+        If the last user/assistant entry is a 'user' message, it means
+        Claude hasn't responded yet (still processing).
+        """
+        try:
+            last_type = None
+            with open(jsonl_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                        entry_type = entry.get("type", "")
+                        if entry_type in ("user", "assistant"):
+                            last_type = entry_type
+                    except json.JSONDecodeError:
+                        continue
+            return last_type == "user"
+        except OSError:
+            return False
+
     async def _check_conversation_idle(self):
         """
         定期檢查互動式對話是否已閒置（結束）
-        如果對話超過指定時間無新活動，則判定為已結束並發送通知
+        如果對話超過指定時間無新活動，且 Claude 不在處理回應中，
+        則判定為已結束並發送通知
         """
         idle_timeout = 300  # 5 minutes without activity = conversation ended
 
@@ -435,9 +463,20 @@ class ClaudeCliMonitor:
                             pass
 
                     if now - last_activity > idle_timeout:
-                        # Conversation has been idle long enough, mark as completed
+                        # Check 1: Is Claude still processing a response?
+                        if jsonl_path and self._is_conversation_still_processing(
+                            jsonl_path
+                        ):
+                            logger.debug(
+                                f"Conversation {task_id} idle for "
+                                f"{int(now - last_activity)}s but last "
+                                f"entry is user message (still processing)"
+                            )
+                            continue
+
+                        # Conversation is idle and Claude is not processing
                         task.status = "completed"
-                        task.end_time = last_activity
+                        task.end_time = now
                         task.output = (
                             f"對話已結束 (共 {task.metadata.get('message_count', 0)} 則訊息)\n"
                             f"首則訊息: {task.metadata.get('first_message', 'N/A')}"
