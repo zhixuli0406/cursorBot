@@ -1,9 +1,123 @@
 # Changelog
 
-All notable changes to CursorBot will be documented in this file.
+All notable changes to ClaudeBot will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.0.0] - 2026-02-10
+
+### 🚨 BREAKING CHANGES
+
+This is a major breaking release with extensive rebranding and refactoring. **Migration from v1.x is required**.
+
+#### Project Rebranding
+- **Project renamed** from CursorBot to ClaudeBot
+- **Repository renamed** from `cursorBot` to `claudeBot`
+- **GitHub URL** updated (see repository settings)
+- **Package names** changed:
+  - Android: `com.cursorbot.node` → `com.claudebot.node`
+  - iOS/macOS: Bundle ID `com.cursorbot.*` → `com.claudebot.*`
+  - Chrome Extension: Extension ID changed
+
+#### Environment Variables (BREAKING)
+All environment variables have been renamed. **You must update your `.env` file**:
+
+```bash
+# Old (v1.x)          →  New (v2.0)
+CURSOR_API_KEY        →  CLAUDE_API_KEY
+CURSOR_WORKSPACE_PATH →  CLAUDE_WORKSPACE_PATH
+CURSOR_WORKING_DIR    →  CLAUDE_WORKING_DIR
+CURSOR_CLI_MODEL      →  CLAUDE_CLI_MODEL
+CURSOR_CLI_TIMEOUT    →  CLAUDE_CLI_TIMEOUT
+CURSOR_GITHUB_REPO    →  CLAUDE_GITHUB_REPO
+```
+
+**Migration Tool**: Run `python scripts/migrate_env.py` to automatically migrate your `.env` file.
+
+#### Voice Wake Words (BREAKING)
+Wake words have changed:
+- Old: `"hey cursor"`, `"ok cursor"`
+- New: `"hey claude"`, `"ok claude"`
+- Chinese wake word `"小助手"` remains unchanged
+
+#### Database Files (BREAKING)
+Database paths have changed:
+- Old: `./data/cursorbot.db`
+- New: `./data/claudebot.db`
+
+The migration script will automatically copy your existing database.
+
+#### Docker (BREAKING)
+- **Container name**: `cursorbot` → `claudebot`
+- **Volume names**: `cursorbot_*` → `claudebot_*`
+- **Image name**: `cursorbot:latest` → `claudebot:latest`
+
+**Action required**: Stop old containers, remove old volumes if not needed, rebuild with new docker-compose.yml
+
+#### Native Apps (BREAKING)
+**You MUST uninstall old apps and install new ones**:
+- Android: Uninstall "CursorBot" and install "ClaudeBot" (new package name)
+- iOS/macOS: Uninstall "CursorBot" and install "ClaudeBot" (new bundle ID)
+
+Settings and data will NOT be automatically migrated. Export your data before uninstalling if needed.
+
+### Added
+- **Claude Code CLI Integration** - Replaced Cursor CLI with official Claude Code CLI
+  - New `src/claude/` module with full Claude Code support
+  - Chat, Ask, Edit, Generate commands
+  - Per-user session management
+  - Model selection support
+- **Migration Tools**
+  - `scripts/migrate_env.py` - Automatic environment variable migration
+  - `MIGRATION_GUIDE.md` - Comprehensive migration documentation
+- **Compatibility Wrappers** - Backward compatibility for code using old APIs
+  - `WorkspaceAgent` compatibility wrapper
+  - `FileOperations` compatibility wrapper
+  - `TerminalManager` compatibility wrapper
+
+### Changed
+- **Module Structure**
+  - Removed `src/cursor/` module (backed up to `src/cursor.backup-deleted/`)
+  - Added new `src/claude/` module (1,389 lines)
+  - Updated all imports throughout codebase
+- **Configuration**
+  - Updated `src/utils/config.py` with new variable names
+  - Updated `env.example` with Claude-specific variables
+- **Platform-Specific Code**
+  - Android: Renamed package, updated all Kotlin files
+  - iOS/macOS: Renamed directory structure, updated Swift files
+  - Chrome Extension: Updated manifest and branding
+- **Deployment Configs**
+  - Updated `Dockerfile`, `docker-compose.yml`
+  - Updated `railway.json`, `render.yaml`, `fly.toml`
+  - Updated startup scripts (`start.sh`, `start.bat`, `start.ps1`)
+- **Documentation**
+  - Updated README.md with ClaudeBot branding
+  - Updated all documentation files
+  - Updated API documentation
+
+### Removed
+- **src/cursor/** - Complete removal of Cursor CLI integration module
+  - Backup available at `src/cursor.backup-deleted/`
+- **Cursor-specific features** - All Cursor IDE integrations removed
+
+### Migration Guide
+
+See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for detailed migration instructions.
+
+**Quick Migration Steps**:
+1. Backup your data: `cp -r data data.backup`
+2. Pull latest code: `git pull origin main`
+3. Run migration script: `python scripts/migrate_env.py`
+4. Update native apps (uninstall old, install new)
+5. Restart services: `docker compose down && docker compose up -d`
+
+### Deprecation Notice
+
+**v1.x compatibility wrappers** will be removed in v3.0.0. Please update your custom code to use new `src/claude/` module APIs.
+
+---
 
 ## [1.1.0] - 2026-01-29
 
@@ -380,7 +494,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [GitHub Repository](https://github.com/your-repo/cursorBot)
-- [Documentation](https://github.com/your-repo/cursorBot/wiki)
-- [Issue Tracker](https://github.com/your-repo/cursorBot/issues)
+- [GitHub Repository](https://github.com/your-repo/claudeBot)
+- [Documentation](https://github.com/your-repo/claudeBot/wiki)
+- [Issue Tracker](https://github.com/your-repo/claudeBot/issues)
 - [Feature Roadmap](docs/FEATURE_ROADMAP.md)

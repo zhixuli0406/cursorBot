@@ -1,6 +1,6 @@
-# CursorBot Deployment Guide
+# ClaudeBot Deployment Guide
 
-Complete guide for deploying CursorBot to various platforms.
+Complete guide for deploying ClaudeBot to various platforms.
 
 ## Table of Contents
 
@@ -20,8 +20,8 @@ Complete guide for deploying CursorBot to various platforms.
 
 | Platform | Deploy Button |
 |----------|--------------|
-| Railway | [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/cursorbot) |
-| Render | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/your-repo/cursorbot) |
+| Railway | [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/claudebot) |
+| Render | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/your-repo/claudebot) |
 
 ### Minimum Requirements
 
@@ -84,7 +84,7 @@ railway up
 
 1. Go to [Railway Dashboard](https://railway.app/dashboard)
 2. Click **New Project** > **Deploy from GitHub repo**
-3. Select your fork of CursorBot
+3. Select your fork of ClaudeBot
 4. Configure environment variables
 5. Auto-deploy enabled on push
 
@@ -157,7 +157,7 @@ The `render.yaml` blueprint:
 ```yaml
 services:
   - type: web
-    name: cursorbot
+    name: claudebot
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: starter
@@ -237,7 +237,7 @@ jobs:
 The `fly.toml` is pre-configured:
 
 ```toml
-app = "cursorbot"
+app = "claudebot"
 primary_region = "nrt"
 
 [build]
@@ -296,8 +296,8 @@ fly scale count 2
 
 ```bash
 # Clone repository
-git clone https://github.com/your-repo/cursorbot.git
-cd cursorbot
+git clone https://github.com/your-repo/claudebot.git
+cd claudebot
 
 # Copy environment file
 cp env.example .env
@@ -317,16 +317,16 @@ docker-compose down
 
 ```bash
 # Build
-docker build -t cursorbot .
+docker build -t claudebot .
 
 # Run
 docker run -d \
-  --name cursorbot \
+  --name claudebot \
   -p 8000:8000 \
   -e TELEGRAM_BOT_TOKEN=xxx \
   -e TELEGRAM_ALLOWED_USERS=xxx \
   -e OPENAI_API_KEY=xxx \
-  cursorbot
+  claudebot
 ```
 
 ### Docker Compose Configuration
@@ -335,9 +335,9 @@ docker run -d \
 version: '3.8'
 
 services:
-  cursorbot:
+  claudebot:
     build: .
-    container_name: cursorbot
+    container_name: claudebot
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -362,10 +362,10 @@ Using Nginx:
 ```nginx
 server {
     listen 443 ssl;
-    server_name cursorbot.yourdomain.com;
+    server_name claudebot.yourdomain.com;
     
-    ssl_certificate /etc/letsencrypt/live/cursorbot.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/cursorbot.yourdomain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/claudebot.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/claudebot.yourdomain.com/privkey.pem;
     
     location / {
         proxy_pass http://localhost:8000;
@@ -398,8 +398,8 @@ server {
 
 ```bash
 # Clone
-git clone https://github.com/your-repo/cursorbot.git
-cd cursorbot
+git clone https://github.com/your-repo/claudebot.git
+cd claudebot
 
 # Create virtual environment
 python -m venv venv
@@ -422,19 +422,19 @@ python -m src.main
 
 ### Systemd Service (Linux)
 
-Create `/etc/systemd/system/cursorbot.service`:
+Create `/etc/systemd/system/claudebot.service`:
 
 ```ini
 [Unit]
-Description=CursorBot AI Assistant
+Description=ClaudeBot AI Assistant
 After=network.target
 
 [Service]
 Type=simple
-User=cursorbot
-WorkingDirectory=/opt/cursorbot
-Environment="PATH=/opt/cursorbot/venv/bin"
-ExecStart=/opt/cursorbot/venv/bin/python -m src.main
+User=claudebot
+WorkingDirectory=/opt/claudebot
+Environment="PATH=/opt/claudebot/venv/bin"
+ExecStart=/opt/claudebot/venv/bin/python -m src.main
 Restart=always
 RestartSec=10
 
@@ -445,9 +445,9 @@ WantedBy=multi-user.target
 Enable and start:
 
 ```bash
-sudo systemctl enable cursorbot
-sudo systemctl start cursorbot
-sudo systemctl status cursorbot
+sudo systemctl enable claudebot
+sudo systemctl start claudebot
+sudo systemctl status claudebot
 ```
 
 ### PM2 (Node.js Process Manager)
@@ -457,7 +457,7 @@ sudo systemctl status cursorbot
 npm install -g pm2
 
 # Start
-pm2 start "python -m src.main" --name cursorbot
+pm2 start "python -m src.main" --name claudebot
 
 # Save configuration
 pm2 save
@@ -517,7 +517,7 @@ railway logs
 fly logs
 
 # Docker
-docker logs -f cursorbot
+docker logs -f claudebot
 ```
 
 #### Health Monitoring
@@ -532,10 +532,10 @@ Set up external monitoring:
 For persistent data:
 ```bash
 # Backup data directory
-tar -czf cursorbot-backup.tar.gz data/
+tar -czf claudebot-backup.tar.gz data/
 
 # Restore
-tar -xzf cursorbot-backup.tar.gz
+tar -xzf claudebot-backup.tar.gz
 ```
 
 ---
@@ -569,7 +569,7 @@ fly scale memory 1024
 # Upgrade plan in dashboard
 
 # Docker
-docker update --memory 1g cursorbot
+docker update --memory 1g claudebot
 ```
 
 #### Cold Start (Free Tiers)

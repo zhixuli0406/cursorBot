@@ -1,4 +1,4 @@
-# CursorBot FAQ (常見問題)
+# ClaudeBot FAQ (常見問題)
 
 ## 目錄
 
@@ -15,7 +15,7 @@
 
 ### Q: 支援哪些 Python 版本？
 
-**A:** CursorBot 支援 **Python 3.10 - 3.12**。Python 3.13+ 目前不支援，因為部分依賴套件尚未相容。
+**A:** ClaudeBot 支援 **Python 3.10 - 3.12**。Python 3.13+ 目前不支援，因為部分依賴套件尚未相容。
 
 Windows 用戶使用 `start.bat` 啟動時，腳本會自動檢測並安裝適合的 Python 版本。
 
@@ -85,7 +85,7 @@ docker compose logs -f
    ```bash
    docker compose logs -f
    # 或
-   cat logs/cursorbot.log
+   cat logs/claudebot.log
    ```
 4. **網路連線** - 確保可以連接 Telegram API
 
@@ -102,7 +102,7 @@ TELEGRAM_ALLOWED_USERS=123456789,987654321,456789123
 
 ### Q: 沒有設定任何 AI 提供者可以使用嗎？
 
-**A:** 可以使用 **Cursor CLI 模式**，前提是你的電腦已安裝 Cursor 編輯器。使用 `/mode cli` 切換到 CLI 模式。
+**A:** 可以使用 **Claude Code CLI 模式**，前提是你的電腦已安裝 Claude 編輯器。使用 `/mode cli` 切換到 CLI 模式。
 
 ### Q: OpenRouter 有免費模型嗎？
 
@@ -134,9 +134,9 @@ OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
 
 | | CLI 模式 | Agent 模式 |
 |---|---------|----------|
-| 後端 | Cursor CLI | LLM API |
+| 後端 | Claude Code CLI | LLM API |
 | 優點 | 程式碼能力強 | 通用對話、工具調用 |
-| 需要 | Cursor 安裝 | API Key |
+| 需要 | Claude 安裝 | API Key |
 | 適用 | 程式碼相關任務 | 一般 AI 對話 |
 | 切換 | `/mode cli` | `/mode agent` |
 
@@ -237,7 +237,7 @@ docker compose up -d
 **A:**
 1. 啟用 Verbose 模式：`/verbose on`
 2. 設定 DEBUG 日誌等級：`LOG_LEVEL=DEBUG`
-3. 查看日誌檔案：`logs/cursorbot.log`
+3. 查看日誌檔案：`logs/claudebot.log`
 
 ---
 
@@ -279,7 +279,7 @@ Google Chat: https://你的domain/webhook/google-chat
 ### Q: 如何備份資料？
 
 **A:** 備份 `data/` 目錄，包含：
-- `cursorbot.db` - 資料庫
+- `claudebot.db` - 資料庫
 - `memory/` - 記憶系統
 - `sessions/` - 會話資料
 - `rag/` - RAG 向量資料庫
@@ -290,7 +290,7 @@ Google Chat: https://你的domain/webhook/google-chat
 
 如果以上 FAQ 無法解決你的問題：
 
-1. **查看日誌** - `docker compose logs` 或 `logs/cursorbot.log`
+1. **查看日誌** - `docker compose logs` 或 `logs/claudebot.log`
 2. **執行診斷** - `/doctor` 指令
 3. **GitHub Issues** - 提交問題到專案 Issue Tracker
 4. **Discord 社群** - 加入討論社群
