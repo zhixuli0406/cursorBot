@@ -42,25 +42,26 @@ async def handle_start(ctx: MessageContext, interaction=None) -> None:
     
     status = " | ".join(status_items)
 
-    content = f"""**👋 歡迎使用 CursorBot!**
+    content = f"""**👋 歡迎使用 CursorBot v2.0!**
 
 您好, {user.display_name}!
 
-CursorBot 是一個多平台 AI 編程助手，支援 **Telegram**、**Discord**、**Line** 等平台，讓你遠端控制 Cursor AI。
+CursorBot 是一個多平台 AI 秘書助手，支援 **Telegram**、**Discord**、**LINE** 等平台，具備每日簡報、待辦管理、行程安排、天氣查詢等秘書功能。
 
 **📡 狀態:** {status}
 
 **🚀 快速開始:**
-1️⃣ 使用 `/mode` 選擇對話模式 (CLI/Agent)
+1️⃣ 使用 `/mode` 選擇對話模式 (CLI/Agent/秘書)
 2️⃣ 使用 `/climodel` 或 `/model` 切換 AI 模型
 3️⃣ 直接發送問題開始對話
 
-**✨ v0.3 新功能:**
-• **CLI 模型選擇** - GPT-5.2/Claude 4.5/Gemini 3
-• **Session 管理** - 對話記憶與壓縮
-• **多平台** - Line/iMessage/WhatsApp
+**✨ v2.0 新功能:**
+• **天氣整合** - 每日簡報自動包含天氣資訊
+• **Claude CLI 通知** - Claude Code CLI 任務完成通知
+• **多平台** - Telegram/Discord/LINE/Slack/WhatsApp
 
 **✨ 核心功能:**
+• **個人秘書** - 每日簡報、待辦管理、訂票助手
 • **Cursor CLI** - 使用官方 CLI 直接對話
 • **Agent Loop** - 自主代理執行複雜任務
 • **多模型支援** - OpenAI/Claude/Gemini/Copilot
@@ -69,8 +70,9 @@ CursorBot 是一個多平台 AI 編程助手，支援 **Telegram**、**Discord**
 **📋 常用指令:**
 `/help` - 完整指令說明
 `/mode` - 切換對話模式
+`/briefing` - 今日簡報（行程 + 待辦 + 天氣）
+`/todo` - 待辦事項管理
 `/climodel` - CLI 模型設定
-`/model` - Agent 模型設定
 `/new` - 開始新對話
 `/status` - 狀態總覽
 """
@@ -94,7 +96,17 @@ CursorBot 是一個多平台 AI 編程助手，支援 **Telegram**、**Discord**
 
 async def handle_help(ctx: MessageContext, interaction=None) -> None:
     """Handle /help command."""
-    content = """**📖 CursorBot 完整指令說明**
+    content = """**📖 CursorBot v2.0 完整指令說明**
+
+━━━━━━━━━━━━━━━━━━━━━━
+**👩‍💼 個人秘書**
+━━━━━━━━━━━━━━━━━━━━━━
+• `/mode assistant` - 切換秘書模式（推薦）
+• `/briefing` - 今日簡報（行程 + 待辦 + 天氣）
+• `/todo [add|done|list]` - 待辦事項管理
+• `/book [flight|train|hotel]` - 訂票助手
+• `/secretary` - 秘書設定與人設切換
+• `/reminder [on|off|time]` - 每日提醒
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **🔹 基礎指令**
@@ -102,12 +114,13 @@ async def handle_help(ctx: MessageContext, interaction=None) -> None:
 • `/start` - 啟動並顯示歡迎訊息
 • `/help` - 顯示此說明
 • `/status` - 狀態總覽
+• `/doctor` - 系統診斷
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **⚡ 對話模式**
 ━━━━━━━━━━━━━━━━━━━━━━
 • `/mode` - 查看/切換對話模式
-• `/mode auto` - 自動選擇最佳模式
+• `/mode assistant` - 秘書模式
 • `/mode cli` - Cursor CLI 模式
 • `/mode agent` - Agent Loop 模式
 
@@ -125,11 +138,16 @@ async def handle_help(ctx: MessageContext, interaction=None) -> None:
 **CLI 支援:** GPT-5.2, Claude 4.5, Gemini 3
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**💬 Session 管理** (ClawdBot-style)
+**📅 日曆 & 郵件**
+━━━━━━━━━━━━━━━━━━━━━━
+• `/calendar [week|list|add]` - 日曆管理
+• `/gmail [search|unread]` - Gmail 郵件管理
+
+━━━━━━━━━━━━━━━━━━━━━━
+**💬 Session 管理**
 ━━━━━━━━━━━━━━━━━━━━━━
 • `/session` - 查看目前 session
 • `/session list` - 列出所有 sessions
-• `/session stats` - 統計資訊
 • `/new` - 開始新對話 (重置上下文)
 • `/compact` - 壓縮對話歷史
 
@@ -140,48 +158,38 @@ async def handle_help(ctx: MessageContext, interaction=None) -> None:
 自動分解任務、多步驟推理
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**🧠 記憶系統**
+**🧠 記憶 & RAG**
 ━━━━━━━━━━━━━━━━━━━━━━
-• `/memory` - 查看記憶
-• `/memory add <key> <value>` - 新增
-• `/memory get <key>` - 取得
-• `/memory del <key>` - 刪除
-
-━━━━━━━━━━━━━━━━━━━━━━
-**📚 RAG 檢索增強**
-━━━━━━━━━━━━━━━━━━━━━━
+• `/memory [add|get|del|clear]` - 記憶管理
 • `/rag <問題>` - 基於索引內容回答
 • `/index <檔案>` - 索引檔案
-• `/search_rag <關鍵字>` - 搜尋索引
-• `/ragstats` - RAG 統計資訊
-💡 Agent/Ask 對話會自動存入 RAG
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**🎯 技能系統**
+**🎤 語音助手**
 ━━━━━━━━━━━━━━━━━━━━━━
-• `/skills` - 查看技能
-• `/skills agent` - Agent 技能
+• `/voice` - 語音助手設定
+• `/meeting` - 會議助手
+• `/smarthome` - 智慧家居控制
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**📁 檔案/工作區**
+**🔔 開發者工具**
 ━━━━━━━━━━━━━━━━━━━━━━
-• `/workspace` - 工作區資訊
-• `/workspace list` - 列出工作區
-• `/file read <路徑>` - 讀取檔案
-• `/run <命令>` - 執行命令
+• `/claude_notify [on|off|status]` - Claude CLI 任務通知
+• `/health` - 健康檢查
+• `/analytics` - 使用分析
 
 ━━━━━━━━━━━━━━━━━━━━━━
-**⏰ 排程系統**
+**🌤️ 天氣整合**
 ━━━━━━━━━━━━━━━━━━━━━━
-• `/schedule` - 查看排程
-• `/remind <時間> <訊息>` - 設定提醒
+• 每日簡報自動包含天氣資訊
+• 支援 OpenWeatherMap / WeatherAPI
 
 ━━━━━━━━━━━━━━━━━━━━━━
 **💡 使用提示**
 ━━━━━━━━━━━━━━━━━━━━━━
 • `/new` 開始全新對話
 • `/status` 查看目前狀態
-• `/compact` 壓縮過長的對話
+• 秘書模式下可用自然語言聊天
 • 直接發送訊息與 AI 對話
 """
 

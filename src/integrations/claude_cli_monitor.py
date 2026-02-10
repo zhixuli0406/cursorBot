@@ -29,6 +29,7 @@ class ClaudeTask:
     error: Optional[str] = None
     user_id: Optional[str] = None
     platform: str = "local"  # local, telegram, discord, etc.
+    task_type: str = "cli_task"  # cli_task, interactive_conversation
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -50,6 +51,7 @@ class ClaudeTask:
             "error": self.error,
             "user_id": self.user_id,
             "platform": self.platform,
+            "task_type": self.task_type,
             "metadata": self.metadata,
         }
 
@@ -62,6 +64,19 @@ class ClaudeDirectoryHandler(FileSystemEventHandler):
 
     def __init__(self, monitor: "ClaudeCliMonitor"):
         self.monitor = monitor
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def set_event_loop(self, loop: asyncio.AbstractEventLoop):
+        """Set the event loop to schedule coroutines on."""
+        self._loop = loop
+
+    def _schedule_async(self, coro):
+        """Schedule an async coroutine from the watchdog thread."""
+        loop = self._loop
+        if loop is not None and loop.is_running():
+            asyncio.run_coroutine_threadsafe(coro, loop)
+        else:
+            logger.warning("No running event loop, skipping file change handler")
 
     def on_modified(self, event):
         """文件修改事件"""
@@ -69,7 +84,7 @@ class ClaudeDirectoryHandler(FileSystemEventHandler):
             return
 
         if self._is_task_file(event.src_path):
-            asyncio.create_task(self.monitor.handle_file_change(event.src_path))
+            self._schedule_async(self.monitor.handle_file_change(event.src_path))
 
     def on_created(self, event):
         """文件創建事件"""
@@ -77,16 +92,21 @@ class ClaudeDirectoryHandler(FileSystemEventHandler):
             return
 
         if self._is_task_file(event.src_path):
-            asyncio.create_task(self.monitor.handle_file_change(event.src_path))
+            self._schedule_async(self.monitor.handle_file_change(event.src_path))
 
     def _is_task_file(self, path: str) -> bool:
         """判斷是否為任務相關文件"""
         path_obj = Path(path)
         # 監控 tasks/, sessions/, output/ 目錄
-        return any(
+        if any(
             part in path_obj.parts
             for part in ["tasks", "sessions", "output", "results"]
-        )
+        ):
+            return True
+        # 監控 projects/ 目錄下的 .jsonl 互動式對話文件
+        if "projects" in path_obj.parts and path_obj.suffix == ".jsonl":
+            return True
+        return False
 
 
 class ClaudeCliMonitor:
@@ -129,12 +149,16 @@ class ClaudeCliMonitor:
 
         # 設置文件系統監控
         event_handler = ClaudeDirectoryHandler(self)
+        event_handler.set_event_loop(asyncio.get_running_loop())
         self.observer = Observer()
         self.observer.schedule(event_handler, str(self.claude_dir), recursive=True)
         self.observer.start()
 
         # 掃描現有任務
         await self._scan_existing_tasks()
+
+        # 啟動互動式對話閒置檢測
+        self._idle_check_task = asyncio.create_task(self._check_conversation_idle())
 
         logger.info("Claude CLI Monitor started successfully")
 
@@ -145,6 +169,14 @@ class ClaudeCliMonitor:
 
         self._running = False
         logger.info("Stopping Claude CLI Monitor...")
+
+        # 取消閒置檢測任務
+        if hasattr(self, "_idle_check_task") and self._idle_check_task:
+            self._idle_check_task.cancel()
+            try:
+                await self._idle_check_task
+            except asyncio.CancelledError:
+                pass
 
         if self.observer:
             self.observer.stop()
@@ -167,7 +199,9 @@ class ClaudeCliMonitor:
                 return
 
             # 根據文件類型處理
-            if path.name.endswith(".json"):
+            if path.name.endswith(".jsonl") and "projects" in path.parts:
+                await self._handle_conversation_file(path)
+            elif path.name.endswith(".json"):
                 await self._handle_json_file(path)
             elif path.name.endswith(".log"):
                 await self._handle_log_file(path)
@@ -276,6 +310,149 @@ class ClaudeCliMonitor:
         except Exception as e:
             logger.error(f"Error handling output file {path}: {e}")
 
+    async def _handle_conversation_file(self, path: Path):
+        """
+        處理互動式對話 JSONL 文件
+        監控 ~/.claude/projects/<project>/<session-id>.jsonl
+        """
+        try:
+            session_id = path.stem
+            now = time.time()
+
+            # Parse the JSONL to extract conversation metadata
+            project_name = ""
+            first_user_message = ""
+            message_count = 0
+            last_timestamp = ""
+            cwd = ""
+            version = ""
+
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                        entry_type = entry.get("type", "")
+
+                        if entry_type in ("user", "assistant"):
+                            message_count += 1
+
+                        if entry_type == "user":
+                            if not cwd:
+                                cwd = entry.get("cwd", "")
+                            if not version:
+                                version = entry.get("version", "")
+                            if not first_user_message:
+                                msg = entry.get("message", {})
+                                content = msg.get("content", "")
+                                if isinstance(content, list):
+                                    for c in content:
+                                        if isinstance(c, dict) and c.get("type") == "text":
+                                            first_user_message = c.get("text", "")[:100]
+                                            break
+                                elif isinstance(content, str):
+                                    first_user_message = content[:100]
+                            last_timestamp = entry.get("timestamp", last_timestamp)
+
+                        elif entry_type == "assistant":
+                            last_timestamp = entry.get("timestamp", last_timestamp)
+
+                    except json.JSONDecodeError:
+                        continue
+
+            # Extract project name from parent directory
+            if path.parent.name != "projects":
+                project_name = path.parent.name.replace("-", "/").lstrip("/")
+
+            # Check if this conversation is already tracked
+            existing_task = self.tasks.get(session_id)
+
+            if existing_task:
+                # Update the existing conversation tracking
+                existing_task.metadata["message_count"] = message_count
+                existing_task.metadata["last_activity"] = now
+                existing_task.metadata["last_timestamp"] = last_timestamp
+                # Reset idle timer since there's new activity
+                return
+
+            # Register a new interactive conversation
+            task = ClaudeTask(
+                task_id=session_id,
+                status="running",
+                start_time=now,
+                user_id=None,
+                platform="local",
+                task_type="interactive_conversation",
+                metadata={
+                    "project": project_name,
+                    "cwd": cwd,
+                    "first_message": first_user_message,
+                    "message_count": message_count,
+                    "version": version,
+                    "last_activity": now,
+                    "last_timestamp": last_timestamp,
+                    "jsonl_path": str(path),
+                },
+            )
+            self.tasks[session_id] = task
+            logger.info(
+                f"Tracking interactive conversation: {session_id} "
+                f"(project: {project_name}, messages: {message_count})"
+            )
+
+        except Exception as e:
+            logger.error(f"Error handling conversation file {path}: {e}")
+
+    async def _check_conversation_idle(self):
+        """
+        定期檢查互動式對話是否已閒置（結束）
+        如果對話超過指定時間無新活動，則判定為已結束並發送通知
+        """
+        idle_timeout = 300  # 5 minutes without activity = conversation ended
+
+        while self._running:
+            try:
+                now = time.time()
+                for task_id, task in list(self.tasks.items()):
+                    if (
+                        task.task_type != "interactive_conversation"
+                        or task.status != "running"
+                    ):
+                        continue
+
+                    last_activity = task.metadata.get("last_activity", task.start_time)
+
+                    # Also check file modification time as a secondary signal
+                    jsonl_path = task.metadata.get("jsonl_path")
+                    if jsonl_path:
+                        try:
+                            file_mtime = Path(jsonl_path).stat().st_mtime
+                            last_activity = max(last_activity, file_mtime)
+                            task.metadata["last_activity"] = last_activity
+                        except OSError:
+                            pass
+
+                    if now - last_activity > idle_timeout:
+                        # Conversation has been idle long enough, mark as completed
+                        task.status = "completed"
+                        task.end_time = last_activity
+                        task.output = (
+                            f"對話已結束 (共 {task.metadata.get('message_count', 0)} 則訊息)\n"
+                            f"首則訊息: {task.metadata.get('first_message', 'N/A')}"
+                        )
+                        logger.info(
+                            f"Interactive conversation {task_id} ended "
+                            f"(idle for {int(now - last_activity)}s)"
+                        )
+                        await self._send_notification(task)
+
+            except Exception as e:
+                logger.error(f"Error checking conversation idle: {e}")
+
+            await asyncio.sleep(60)  # Check every 60 seconds
+
     async def _scan_existing_tasks(self):
         """掃描現有任務"""
         try:
@@ -290,6 +467,18 @@ class ClaudeCliMonitor:
             if sessions_dir.exists():
                 for session_file in sessions_dir.glob("*.json"):
                     await self._handle_json_file(session_file)
+
+            # 掃描 projects 目錄下的互動式對話
+            projects_dir = self.claude_dir / "projects"
+            if projects_dir.exists():
+                for jsonl_file in projects_dir.glob("**/*.jsonl"):
+                    # Only track recently active conversations (modified in last 10 min)
+                    try:
+                        mtime = jsonl_file.stat().st_mtime
+                        if time.time() - mtime < 600:
+                            await self._handle_conversation_file(jsonl_file)
+                    except OSError:
+                        continue
 
             logger.info(f"Scanned existing tasks: {len(self.tasks)} found")
 
@@ -333,10 +522,26 @@ class ClaudeCliMonitor:
             f"{task.duration:.1f}秒" if task.duration else "未知"
         )
 
-        message = f"{status_emoji} **Claude Code CLI 任務完成**\n\n"
-        message += f"**任務ID**: `{task.task_id}`\n"
-        message += f"**狀態**: {task.status}\n"
-        message += f"**執行時長**: {duration_str}\n"
+        if task.task_type == "interactive_conversation":
+            # Interactive conversation notification format
+            project = task.metadata.get("project", "未知專案")
+            msg_count = task.metadata.get("message_count", 0)
+            first_msg = task.metadata.get("first_message", "")
+
+            message = f"{status_emoji} **Claude Code 互動式對話結束**\n\n"
+            message += f"**會話ID**: `{task.task_id[:8]}...`\n"
+            message += f"**專案**: `{project}`\n"
+            message += f"**訊息數**: {msg_count}\n"
+            message += f"**執行時長**: {duration_str}\n"
+
+            if first_msg:
+                message += f"\n**首則訊息**: {first_msg}\n"
+        else:
+            # CLI task notification format
+            message = f"{status_emoji} **Claude Code CLI 任務完成**\n\n"
+            message += f"**任務ID**: `{task.task_id}`\n"
+            message += f"**狀態**: {task.status}\n"
+            message += f"**執行時長**: {duration_str}\n"
 
         if task.output:
             output_preview = task.output[:200]
@@ -382,12 +587,15 @@ class ClaudeCliMonitor:
         """獲取任務信息"""
         return self.tasks.get(task_id)
 
-    def list_tasks(self, status: Optional[str] = None) -> list[ClaudeTask]:
+    def list_tasks(
+        self, status: Optional[str] = None, task_type: Optional[str] = None
+    ) -> list[ClaudeTask]:
         """
         列出任務
 
         Args:
             status: 過濾狀態（可選）
+            task_type: 過濾類型（可選）: cli_task, interactive_conversation
 
         Returns:
             任務列表
@@ -395,6 +603,8 @@ class ClaudeCliMonitor:
         tasks = list(self.tasks.values())
         if status:
             tasks = [t for t in tasks if t.status == status]
+        if task_type:
+            tasks = [t for t in tasks if t.task_type == task_type]
         return tasks
 
 

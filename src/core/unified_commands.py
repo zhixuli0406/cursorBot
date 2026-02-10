@@ -136,6 +136,9 @@ COMMANDS: dict[str, CommandDefinition] = {
     "calendar": CommandDefinition("calendar", "日曆管理", CommandCategory.CALENDAR, aliases=["cal"]),
     "reminder": CommandDefinition("reminder", "每日行程提醒", CommandCategory.CALENDAR),
     "gmail": CommandDefinition("gmail", "Gmail 郵件管理", CommandCategory.INTEGRATION),
+
+    # Claude CLI Integration
+    "claude_notify": CommandDefinition("claude_notify", "Claude CLI 任務完成通知", CommandCategory.INTEGRATION),
     
     # Secretary Commands
     "secretary": CommandDefinition("secretary", "秘書設定", CommandCategory.BASIC, aliases=["sec"]),
@@ -202,7 +205,7 @@ async def handle_start(ctx: CommandContext) -> CommandResult:
 📱 平台: {ctx.platform}
 
 👩‍💼 **秘書服務：**
-• /briefing - 今日簡報（行程 + 待辦）
+• /briefing - 今日簡報（行程 + 待辦 + 天氣）
 • /todo add <任務> - 新增待辦事項
 • /book - 訂票助手（機票、火車、飯店）
 • /calendar - 查看行程
@@ -216,6 +219,9 @@ async def handle_start(ctx: CommandContext) -> CommandResult:
 🎤 **語音控制：**
 • 說「Hey Cursor」喚醒語音助手
 
+🔔 **開發者工具：**
+• /claude_notify - Claude Code CLI 任務完成通知
+
 📋 更多指令請輸入 /help
 
 —— {prefs.secretary_name}，隨時為您服務！💕
@@ -226,12 +232,12 @@ async def handle_start(ctx: CommandContext) -> CommandResult:
 
 async def handle_help(ctx: CommandContext) -> CommandResult:
     """Handle /help command."""
-    message = """📖 CursorBot v1.1 指令說明
+    message = """📖 CursorBot v2.0 指令說明
 
 👩‍💼 個人秘書
 ━━━━━━━━━━━━━━━━━━━━━━
 /mode assistant - 切換秘書模式（推薦）
-/briefing - 今日簡報
+/briefing - 今日簡報（行程 + 待辦 + 天氣）
 /todo [add|done|list] - 待辦事項
 /book [flight|train|hotel] - 訂票助手
 /secretary - 秘書設定
@@ -259,8 +265,17 @@ async def handle_help(ctx: CommandContext) -> CommandResult:
 /meeting - 會議助手
 /smarthome - 智慧家居
 
+🔔 開發者工具
+/claude_notify [on|off|status] - Claude CLI 任務通知
+/doctor - 系統診斷
+/health - 健康檢查
+
+🌤️ 天氣整合
+• 每日簡報自動包含天氣資訊
+• 支援 OpenWeatherMap / WeatherAPI
+
 💡 秘書模式下可用自然語言聊天
-💡 「幫我記開會」「今天有什麼行程」
+💡 「幫我記開會」「今天有什麼行程」「今天天氣如何」
 """
     
     return CommandResult(success=True, message=message)

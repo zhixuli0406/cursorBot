@@ -225,7 +225,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 <b>👩‍💼 秘書服務：</b>
 • /mode assistant - 切換秘書模式（推薦！）
-• /briefing - 今日簡報（行程 + 待辦）
+• /briefing - 今日簡報（行程 + 待辦 + 天氣）
 • /todo add &lt;任務&gt; - 新增待辦事項
 • /book - 訂票助手（機票、火車、飯店）
 • /calendar - 查看行程
@@ -239,6 +239,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 <b>⚙️ 其他模式：</b>
 • /mode cli - 程式碼模式
 • /mode agent - AI Agent 模式
+
+<b>🔔 開發者工具：</b>
+• /claude_notify - Claude Code CLI 任務完成通知
 
 📋 更多指令請輸入 /help
 
@@ -282,7 +285,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     status_info = " | ".join(status_parts)
 
-    help_text = f"""<b>📖 CursorBot v1.1 指令說明</b>
+    help_text = f"""<b>📖 CursorBot v2.0 指令說明</b>
 {status_info}
 
 <b>👩‍💼 個人秘書 - {secretary_name_safe}</b>
@@ -293,7 +296,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 <b>🎀 秘書指令</b>
 /mode assistant - 切換秘書模式 👈
-/briefing - 今日簡報
+/briefing - 今日簡報（行程 + 待辦 + 天氣）
 /todo [add|done|list] - 待辦事項
 /book [flight|train|hotel] - 訂票助手
 
@@ -331,11 +334,21 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /voice - 語音設定
 /meeting - 會議助手
 
+<b>🔔 開發者工具</b>
+/claude_notify [on|off|status] - Claude CLI 任務通知
+/doctor - 系統診斷
+/health - 健康檢查
+
+<b>🌤️ 天氣整合</b>
+• 每日簡報自動包含天氣資訊
+• 支援 OpenWeatherMap / WeatherAPI
+
 <b>💡 秘書模式可用自然語言：</b>
 • 「幫我記開會」→ 新增待辦
 • 「今天有什麼行程」→ 查詢日曆
 • 「訂機票去東京」→ 訂票建議
 • 「早安」→ 今日簡報
+• 「今天天氣如何」→ 天氣查詢
 
 —— {secretary_name_safe} 💕
 """

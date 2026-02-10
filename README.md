@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](docs/FEATURE_ROADMAP.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-您的專屬 AI 秘書，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 及原生應用。具備每日簡報、待辦事項管理、行程安排、訂票協助等秘書功能，以及語音喚醒、自然對話、智慧家居控制等 AI 助手功能。整合 GPT、Claude、Gemini 等 AI 模型。
+您的專屬 AI 秘書，支援 Telegram、Discord、LINE、Slack、WhatsApp、Teams、Google Chat 及原生應用。具備每日簡報（含天氣）、待辦事項管理、行程安排、訂票協助等秘書功能，以及語音喚醒、自然對話、智慧家居控制、Claude Code CLI 任務通知等 AI 助手功能。整合 GPT、Claude、Gemini 等 AI 模型。
 
 靈感來自 [cursor-telegram-bot](https://github.com/Hormold/cursor-telegram-bot) 和 [ClawdBot](https://clawd.bot/)。
 
@@ -20,6 +20,7 @@
   - [進階功能](#進階功能對標-clawdbot)
   - [v0.3 新增功能](#v03-新增功能)
   - [v0.4 新增功能](#v04-新增功能)
+  - [v2.0 新增功能](#v20-新增功能)
   - [v1.1 語音助手](#v11-語音助手voice-assistant)
 - [運作原理](#運作原理)
 - [快速開始](#快速開始)
@@ -34,6 +35,7 @@
   - [系統管理](#系統管理v03)
   - [v0.4 新功能指令](#v04-新功能指令)
   - [v1.1 語音助手指令](#v11-語音助手指令)
+  - [v2.0 新功能指令](#v20-新功能指令)
   - [每日行程提醒](#每日行程提醒)
   - [Google Calendar 整合](#google-calendar-整合)
   - [Apple Calendar 整合](#apple-calendar-整合-macos)
@@ -58,13 +60,15 @@
 
 ### 👩‍💼 個人秘書功能
 - **秘書模式** - 用自然語言與秘書聊天和下指令
-- **每日簡報** - 自動發送今日行程、待辦事項（支援多時段：早報、午報、晚報）
+- **每日簡報** - 自動發送今日行程、待辦事項、天氣資訊（支援多時段：早報、午報、晚報）
+- **天氣整合** - 每日簡報自動包含天氣（支援 OpenWeatherMap / WeatherAPI）
 - **待辦事項管理** - 新增、完成、刪除待辦，支援優先級設定
 - **重複提醒** - 每日/每週/平日/每月的重複任務提醒
 - **行程管理** - 整合 Google Calendar 與 Apple Calendar
 - **訂票助手** - 協助訂機票、火車票、飯店預訂
 - **個人化人設** - 可自訂秘書名稱，親切的女秘書對話風格
 - **智慧提醒** - 根據時間自動發送貼心關懷訊息
+- **Claude CLI 通知** - Claude Code CLI 任務完成自動推送通知
 
 ```
 /mode assistant   # 切換秘書模式（推薦）
@@ -250,6 +254,34 @@
 - **Android Node** - Kotlin/Jetpack Compose 原生應用，完整功能支援
 - **WebSocket Gateway** - 透過 `/ws/node` 端點即時連線
 - **跨平台同步** - Canvas、訊息、設定多裝置同步
+
+### v2.0 新增功能
+
+#### Claude Code CLI 任務通知
+- **任務完成通知** - Claude Code CLI 任務完成時自動發送通知到 Telegram/Discord
+- **多任務類型** - 支援 CLI 任務和互動式對話監控
+- **檔案系統監控** - 使用 watchdog 即時監控 `~/.claude/` 目錄變更
+- **狀態查詢** - 查看運行中和已完成的任務統計
+- 使用 `/claude_notify` 指令管理
+
+```
+/claude_notify on        # 啟用 CLI 任務通知
+/claude_notify off       # 停用通知
+/claude_notify status    # 查看通知狀態與任務統計
+```
+
+#### 天氣整合
+- **每日簡報天氣** - 每日簡報自動包含當日天氣資訊
+- **多提供者支援** - 支援 OpenWeatherMap 和 WeatherAPI
+- **自訂城市** - 可設定預設城市和國家
+- **多語言** - 支援繁體中文天氣描述
+
+```env
+WEATHER_API_KEY=your_api_key
+WEATHER_PROVIDER=openweathermap    # 或 weatherapi
+WEATHER_DEFAULT_CITY=Taipei
+WEATHER_DEFAULT_COUNTRY=TW
+```
 
 ### v1.1 語音助手（Voice Assistant）
 
@@ -904,6 +936,10 @@ ClaudeBot 支援多種對話模式：
 | `/status` | 系統狀態 |
 | `/doctor` | 系統診斷 |
 | `/sessions` | 會話管理 |
+| `/briefing` | 今日簡報（行程 + 待辦 + 天氣） |
+| `/todo [add\|done\|list]` | 待辦事項管理 |
+| `/book [flight\|train\|hotel]` | 訂票助手 |
+| `/secretary` | 秘書設定與人設切換 |
 
 ### AI 對話
 
@@ -1059,6 +1095,36 @@ ClaudeBot 支援多種對話模式：
 「開燈」                  # 智慧家居控制
 「翻譯成英文」            # 即時翻譯
 「提醒我 10 分鐘後開會」  # 提醒設定
+```
+
+### v2.0 新功能指令
+
+| 指令 | 說明 |
+|------|------|
+| `/claude_notify` | Claude CLI 任務通知狀態 |
+| `/claude_notify on` | 啟用 Claude Code CLI 任務完成通知 |
+| `/claude_notify off` | 停用通知 |
+| `/claude_notify status` | 查看通知狀態與任務統計 |
+| `/briefing` | 今日簡報（包含天氣資訊） |
+
+**天氣環境變數設定：**
+
+```env
+WEATHER_API_KEY=your_api_key
+WEATHER_PROVIDER=openweathermap    # 或 weatherapi
+WEATHER_DEFAULT_CITY=Taipei
+WEATHER_DEFAULT_COUNTRY=TW
+```
+
+**Claude CLI 通知使用範例：**
+
+```
+/claude_notify on         # 啟用通知
+# 在電腦端執行 Claude Code CLI 任務...
+# 任務完成後，Bot 自動發送通知：
+# ✅ Claude Code CLI 任務完成
+# 任務 ID: abc123
+# 執行時間: 2分30秒
 ```
 
 **模型切換範例：**
@@ -2094,6 +2160,7 @@ claudeBot/
 │   │   ├── media_handlers.py    # 語音/圖片處理
 │   │   ├── core_handlers.py     # 核心功能處理
 │   │   ├── google_handlers.py   # Google/Skills 處理
+│   │   ├── claude_cli_handlers.py # Claude CLI 通知處理
 │   │   └── keyboards.py         # 按鈕佈局
 │   ├── channels/                # 多平台支援
 │   │   ├── base.py              # Channel 抽象層
@@ -2125,6 +2192,10 @@ claudeBot/
 │   │   ├── whatsapp_bot.py      # WhatsApp Bot
 │   │   ├── teams_bot.py         # MS Teams Bot
 │   │   └── google_chat_bot.py   # Google Chat Bot
+│   ├── integrations/            # 整合模組
+│   │   ├── claude_cli_monitor.py  # Claude CLI 任務監控
+│   │   ├── claude_cli_notifier.py # CLI 完成通知
+│   │   └── weather_service.py   # 天氣服務整合
 │   ├── server/                  # API Server
 │   │   ├── api.py               # FastAPI 主程式
 │   │   └── social_webhooks.py   # 社群平台 Webhook
@@ -2360,6 +2431,7 @@ Pre-built packages not available
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v2.0.0 | 2026-02-10 | Claude CLI 任務通知、天氣整合、每日簡報增強 |
 | v1.1.0 | 2026-01-29 | 語音助手、喚醒詞、聲紋識別、智慧家居、會議助手、無障礙支援 |
 | v1.0.0 | 2026-01-28 | 正式版本、Live Canvas、原生應用、Multi-Gateway |
 | v0.4.0 | 2026-01-27 | MCP、Workflow、Analytics、進階功能 |

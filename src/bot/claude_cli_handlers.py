@@ -5,9 +5,9 @@ Claude Code CLI notification handlers for Telegram
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from ...integrations.claude_cli_notifier import get_claude_cli_notifier
-from ...integrations.claude_cli_monitor import get_claude_cli_monitor
-from ...utils.logger import logger
+from ..integrations.claude_cli_notifier import get_claude_cli_notifier
+from ..integrations.claude_cli_monitor import get_claude_cli_monitor
+from ..utils.logger import logger
 
 
 async def cmd_claude_notify(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -49,21 +49,36 @@ async def cmd_claude_notify(update: Update, context: ContextTypes.DEFAULT_TYPE):
         monitor = get_claude_cli_monitor()
         is_enabled = user_id in notifier.user_platform_map
 
-        running_tasks = monitor.list_tasks(status="running")
-        completed_tasks = monitor.list_tasks(status="completed")
+        running_tasks = monitor.list_tasks(status="running", task_type="cli_task")
+        completed_tasks = monitor.list_tasks(status="completed", task_type="cli_task")
+        running_convos = monitor.list_tasks(status="running", task_type="interactive_conversation")
+        completed_convos = monitor.list_tasks(status="completed", task_type="interactive_conversation")
 
         status_msg = (
             f"📊 **Claude CLI 通知狀態**\n\n"
             f"通知狀態: {'✅ 已啟用' if is_enabled else '❌ 未啟用'}\n"
-            f"監控目錄: `~/.claude/`\n"
-            f"運行中任務: {len(running_tasks)}\n"
-            f"已完成任務: {len(completed_tasks)}\n"
+            f"監控目錄: `~/.claude/`\n\n"
+            f"**CLI 任務**: {len(running_tasks)} 運行中 / {len(completed_tasks)} 已完成\n"
+            f"**互動式對話**: {len(running_convos)} 進行中 / {len(completed_convos)} 已結束\n"
         )
 
         if running_tasks:
-            status_msg += "\n**運行中的任務:**\n"
-            for task in running_tasks[:5]:  # 最多顯示5個
+            status_msg += "\n**運行中的 CLI 任務:**\n"
+            for task in running_tasks[:5]:
                 status_msg += f"• `{task.task_id}` (已運行 {int(task.duration or 0)}秒)\n"
+
+        if running_convos:
+            status_msg += "\n**進行中的互動式對話:**\n"
+            for task in running_convos[:5]:
+                project = task.metadata.get("project", "未知")
+                msg_count = task.metadata.get("message_count", 0)
+                first_msg = task.metadata.get("first_message", "")[:30]
+                status_msg += (
+                    f"• 💬 `{task.task_id[:8]}...`\n"
+                    f"  專案: {project} | {msg_count} 則訊息\n"
+                )
+                if first_msg:
+                    status_msg += f"  首則: {first_msg}...\n"
 
         await update.message.reply_text(status_msg, parse_mode="Markdown")
 
@@ -80,22 +95,25 @@ async def cmd_claude_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     查看 Claude Code CLI 任務列表
 
-    Usage: /claude_tasks [running|completed|all]
+    Usage: /claude_tasks [running|completed|all|conversations]
     """
     args = context.args
     filter_status = args[0].lower() if args else "all"
 
     monitor = get_claude_cli_monitor()
 
-    if filter_status == "running":
+    if filter_status == "conversations":
+        tasks = monitor.list_tasks(task_type="interactive_conversation")
+        title = "💬 **互動式對話**"
+    elif filter_status == "running":
         tasks = monitor.list_tasks(status="running")
-        title = "🏃 **運行中的任務**"
+        title = "🏃 **運行中的任務與對話**"
     elif filter_status == "completed":
         tasks = monitor.list_tasks(status="completed")
-        title = "✅ **已完成的任務**"
+        title = "✅ **已完成的任務與對話**"
     else:
         tasks = monitor.list_tasks()
-        title = "📋 **所有任務**"
+        title = "📋 **所有任務與對話**"
 
     if not tasks:
         await update.message.reply_text(f"{title}\n\n暫無任務")
@@ -113,10 +131,23 @@ async def cmd_claude_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         duration = f"{int(task.duration)}秒" if task.duration else "進行中"
 
-        message += (
-            f"{i}. {status_emoji} `{task.task_id}`\n"
-            f"   狀態: {task.status} | 時長: {duration}\n"
-        )
+        if task.task_type == "interactive_conversation":
+            # Conversation display format
+            project = task.metadata.get("project", "未知")
+            msg_count = task.metadata.get("message_count", 0)
+            first_msg = task.metadata.get("first_message", "")[:40]
+            message += (
+                f"{i}. {status_emoji} 💬 `{task.task_id[:8]}...`\n"
+                f"   專案: {project} | {msg_count} 則訊息 | {duration}\n"
+            )
+            if first_msg:
+                message += f"   首則: {first_msg}\n"
+        else:
+            # CLI task display format
+            message += (
+                f"{i}. {status_emoji} `{task.task_id}`\n"
+                f"   狀態: {task.status} | 時長: {duration}\n"
+            )
 
         if task.error:
             message += f"   ⚠️ 錯誤: {task.error[:50]}...\n"

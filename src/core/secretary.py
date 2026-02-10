@@ -1144,6 +1144,198 @@ class PersonalSecretary:
 
 
 # ============================================
+# Web Search Service
+# ============================================
+
+class WebSearchService:
+    """
+    Web search service for assistant mode.
+    Reuses WebSearchAgentSkill from skills.py.
+    """
+
+    # Keywords that strongly indicate a web search is needed
+    SEARCH_TRIGGER_KEYWORDS = [
+        "搜尋", "查一下", "幫我查", "查詢", "找一下", "搜一下", "search", "google",
+        "什麼是", "是什麼", "怎麼做", "為什麼",
+        "最新", "新聞", "現在", "目前",
+        "哪裡", "多少錢", "價格", "票價", "時刻表",
+        "航班", "班機", "評價", "推薦",
+        "匯率", "股價", "股票",
+    ]
+
+    # Keywords that do NOT need web search (handled by existing features)
+    SKIP_KEYWORDS = [
+        "幫我記", "新增待辦", "記一下", "完成了", "做完了",
+        "你好", "嗨", "早安", "午安", "晚安",
+        "簡報", "怎麼用", "功能", "幫助",
+    ]
+
+    def __init__(self):
+        self._search_skill = None
+
+    def _get_search_skill(self):
+        """Lazy-load WebSearchAgentSkill."""
+        if self._search_skill is None:
+            from .skills import WebSearchAgentSkill
+            self._search_skill = WebSearchAgentSkill()
+        return self._search_skill
+
+    def needs_search(self, text: str, intent) -> bool:
+        """Determine if the user message needs a web search."""
+        text_lower = text.lower().strip()
+
+        # Skip intents that are already fully handled
+        # Compare by .value to avoid needing the enum class reference at this point
+        skip_intent_values = {
+            "greeting", "add_task", "list_tasks", "complete_task",
+            "show_calendar", "add_event", "daily_briefing", "reminder", "help",
+        }
+        intent_value = intent.value if hasattr(intent, "value") else str(intent)
+        if intent_value in skip_intent_values:
+            return False
+
+        # Check for explicit skip keywords
+        if any(kw in text_lower for kw in self.SKIP_KEYWORDS):
+            return False
+
+        # Check for search trigger keywords
+        if any(kw in text_lower for kw in self.SEARCH_TRIGGER_KEYWORDS):
+            return True
+
+        # If it looks like a question, search
+        if text.rstrip().endswith("?") or text.rstrip().endswith("？"):
+            return True
+
+        # WEATHER / BOOK / SEARCH intents -> search for real-time info
+        search_intent_values = {"weather", "book_ticket", "book_hotel", "search"}
+        if intent_value in search_intent_values:
+            return True
+
+        return False
+
+    def build_search_query(self, text: str, intent) -> str:
+        """Build an optimized search query from user text."""
+        import re
+
+        intent_value = intent.value if hasattr(intent, "value") else str(intent)
+        query = text
+
+        # Remove common conversational prefixes
+        prefixes_to_remove = [
+            r"^(幫我|請幫我|可以幫我|能不能|可不可以|請問|想問|想請問)",
+            r"^(查一下|搜尋|搜一下|找一下|查詢|幫我查)",
+            r"^(告訴我|跟我說|讓我知道)",
+        ]
+        for pattern in prefixes_to_remove:
+            query = re.sub(pattern, "", query).strip()
+
+        # Add context based on intent
+        if intent_value == "weather" and "天氣" not in query:
+            query = f"{query} 天氣"
+        elif intent_value == "book_ticket":
+            if "票價" not in query and "時刻" not in query:
+                query = f"{query} 票價 時刻表"
+        elif intent_value == "book_hotel":
+            if "飯店" not in query and "住宿" not in query:
+                query = f"{query} 飯店 推薦"
+
+        return query.strip() or text
+
+    async def search(self, query: str, max_results: int = 5) -> str:
+        """
+        Perform web search and return formatted results for LLM context.
+        Returns formatted string, or empty string on failure.
+        """
+        try:
+            skill = self._get_search_skill()
+            result = await skill.execute(query=query)
+
+            if "error" in result:
+                logger.warning(f"Web search failed: {result['error']}")
+                return ""
+
+            results = result.get("results", [])
+
+            # If DuckDuckGo Instant Answer API returns no results, try HTML fallback
+            if not results:
+                results = await self._fallback_search(query, max_results)
+
+            if not results:
+                return ""
+
+            # Format results for LLM context
+            lines = [f"## 網路搜尋結果（查詢：{query}）"]
+            for i, item in enumerate(results[:max_results], 1):
+                title = item.get("title", "")
+                content = item.get("content", "")
+                url = item.get("url", "")
+                lines.append(f"{i}. **{title}**")
+                if content:
+                    lines.append(f"   {content[:300]}")
+                if url:
+                    lines.append(f"   來源: {url}")
+
+            lines.append(
+                "\n請根據以上搜尋結果，用自然、簡潔的方式回答用戶的問題。"
+                "如果搜尋結果不足以回答，請坦誠說明。"
+            )
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            logger.error(f"Web search error: {e}")
+            return ""
+
+    async def _fallback_search(self, query: str, max_results: int = 5) -> list[dict]:
+        """Fallback: scrape DuckDuckGo HTML search results."""
+        try:
+            import re
+            import httpx
+
+            async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+                response = await client.get(
+                    "https://html.duckduckgo.com/html/",
+                    params={"q": query},
+                    headers={"User-Agent": "Mozilla/5.0 (compatible; CursorBot/2.0)"},
+                )
+
+                if response.status_code != 200:
+                    return []
+
+                html = response.text
+                results = []
+
+                # Parse result snippets from HTML
+                snippets = re.findall(
+                    r'class="result__snippet"[^>]*>(.*?)</(?:a|span)',
+                    html,
+                    re.DOTALL,
+                )
+                titles = re.findall(
+                    r'class="result__a"[^>]*>(.*?)</a>',
+                    html,
+                    re.DOTALL,
+                )
+                urls = re.findall(
+                    r'class="result__url"[^>]*href="([^"]*)"',
+                    html,
+                )
+
+                for i in range(min(max_results, len(snippets))):
+                    title = re.sub(r"<[^>]+>", "", titles[i]).strip() if i < len(titles) else ""
+                    content = re.sub(r"<[^>]+>", "", snippets[i]).strip() if i < len(snippets) else ""
+                    url = urls[i] if i < len(urls) else ""
+                    if title or content:
+                        results.append({"title": title, "content": content, "url": url})
+
+                return results
+
+        except Exception as e:
+            logger.warning(f"Fallback search failed: {e}")
+            return []
+
+
+# ============================================
 # Natural Language Understanding
 # ============================================
 
@@ -1160,6 +1352,7 @@ class AssistantIntent(Enum):
     DAILY_BRIEFING = "daily_briefing"  # 每日簡報
     REMINDER = "reminder"              # 設定提醒
     WEATHER = "weather"                # 查天氣
+    SEARCH = "search"                  # 網路搜尋
     CHAT = "chat"                      # 一般聊天
     HELP = "help"                      # 求助
     UNKNOWN = "unknown"                # 無法辨識
@@ -1225,6 +1418,16 @@ class AssistantNLU:
         AssistantIntent.WEATHER: [
             "天氣", "下雨", "氣溫", "穿什麼", "會不會下雨",
             "熱嗎", "冷嗎",
+        ],
+        AssistantIntent.SEARCH: [
+            "搜尋", "查一下", "幫我查", "查詢", "找一下", "搜一下",
+            "search", "google", "查找",
+            "什麼是", "是什麼", "怎麼做", "為什麼",
+            "最新", "新聞", "現在", "目前",
+            "哪裡", "多少錢", "價格", "票價", "時刻表",
+            "航班", "班機", "火車時刻", "高鐵時刻",
+            "評價", "推薦", "比較",
+            "匯率", "股價", "股票",
         ],
         AssistantIntent.HELP: [
             "怎麼用", "可以做什麼", "功能", "幫助", "help",
@@ -1329,6 +1532,7 @@ class AssistantMode:
     def __init__(self, secretary: "PersonalSecretary"):
         self.secretary = secretary
         self.nlu = AssistantNLU()
+        self.web_search = WebSearchService()
         # In-memory conversation history (backup)
         self._conversation_history: dict[str, list[dict]] = {}
         # RAG instance (lazy loaded)
@@ -1434,22 +1638,41 @@ class AssistantMode:
             from .llm_providers import get_llm_manager
             manager = get_llm_manager()
             
-            # Get context and RAG in parallel for better performance
+            # Recognize intent for search decision
+            intent_result = self.nlu.recognize_intent(text)
+
+            # Get context, RAG, and web search in parallel
             import time as time_module
             parallel_start = time_module.time()
-            
+
             context_task = asyncio.create_task(self._build_context(user_id, text))
             rag_task = asyncio.create_task(self._get_rag_context(user_id, text))
-            
-            context, rag_context = await asyncio.gather(context_task, rag_task)
-            
+
+            # Run web search in parallel if needed
+            search_task = None
+            if self.web_search.needs_search(text, intent_result.intent):
+                search_query = self.web_search.build_search_query(text, intent_result.intent)
+                search_task = asyncio.create_task(self.web_search.search(search_query))
+                logger.info(f"Web search triggered for: {search_query}")
+
+            # Gather all parallel tasks
+            search_context = ""
+            if search_task:
+                context, rag_context, search_context = await asyncio.gather(
+                    context_task, rag_task, search_task
+                )
+            else:
+                context, rag_context = await asyncio.gather(context_task, rag_task)
+
             parallel_elapsed = time_module.time() - parallel_start
-            logger.info(f"Context + RAG parallel fetch took {parallel_elapsed:.2f}s")
-            
+            logger.info(f"Context + RAG + Search parallel fetch took {parallel_elapsed:.2f}s")
+
             # Combine contexts
             full_context = context
             if rag_context:
                 full_context += f"\n\n## 相關歷史對話\n{rag_context}"
+            if search_context:
+                full_context += f"\n\n{search_context}"
             
             # Get current persona template
             persona = prefs.get_current_persona()
@@ -1479,7 +1702,7 @@ class AssistantMode:
 2. **行程管理**：查詢、新增日曆行程
 3. **訂票協助**：提供機票、火車票、飯店預訂的建議和資訊
 4. **日常對話**：回答問題、聊天、提供建議
-5. **資訊查詢**：天氣、航班、旅遊資訊等
+5. **資訊查詢**：可即時搜尋網路取得天氣、航班、票價、新聞等最新資訊
 
 ## 回應規則
 1. 理解用戶的實際需求，提供有用的回應
@@ -1487,8 +1710,11 @@ class AssistantMode:
 3. 提供具體、可行的建議
 4. 回覆結尾署名「{persona.signature}」
 5. 保持簡潔但完整（3-8句話）
+6. 如果提供了網路搜尋結果，自然地將搜尋資訊融入回覆，不要直接列出原始搜尋格式
 
 ## 特別指示
+- 如果有網路搜尋結果，優先參考搜尋結果回答，但仍用自己的話回答，保持秘書的語氣
+- 如果搜尋結果和問題不完全相關，請誠實說明並提供你知道的資訊
 - 如果用戶詢問機票/旅遊，提供實用的建議（最佳訂票時機、推薦航空公司、大致價格範圍等）
 - 如果用戶想新增待辦，確認內容後幫他記錄（系統會自動執行）
 - 如果用戶想新增行程到日曆，確認時間和標題後告訴用戶已加入（系統會自動加入日曆）
@@ -2103,6 +2329,7 @@ AI 回覆：{llm_response}
             AssistantIntent.BOOK_TICKET: self._handle_book_ticket,
             AssistantIntent.BOOK_HOTEL: self._handle_book_hotel,
             AssistantIntent.HELP: self._handle_help,
+            AssistantIntent.SEARCH: self._handle_search,
             AssistantIntent.CHAT: self._handle_chat,
         }
         
@@ -2215,6 +2442,37 @@ AI 回覆：{llm_response}
 —— {prefs.secretary_name}，隨時為您服務！💕
 """
     
+    async def _handle_search(self, user_id: str, result: IntentResult) -> str:
+        """Handle search intent - perform web search and return results."""
+        prefs = self.secretary.get_preferences(user_id)
+        text = result.original_text or ""
+
+        if not text:
+            return f"請問您想查什麼呢？告訴我關鍵字，我馬上幫您搜尋！\n\n—— {prefs.secretary_name}"
+
+        try:
+            query = self.web_search.build_search_query(text, result.intent)
+            search_result = await self.web_search.search(query)
+
+            if search_result:
+                return (
+                    f"🔍 為您搜尋了「{query}」的相關資訊：\n\n"
+                    f"{search_result}\n\n"
+                    f"—— {prefs.secretary_name}"
+                )
+            else:
+                return (
+                    f"抱歉，目前搜尋不到「{query}」的相關結果，"
+                    f"您可以換個關鍵字再試試看喔！\n\n"
+                    f"—— {prefs.secretary_name}"
+                )
+        except Exception as e:
+            logger.error(f"Search handler error: {e}")
+            return (
+                f"搜尋時遇到了一點問題，請稍後再試～\n\n"
+                f"—— {prefs.secretary_name}"
+            )
+
     async def _handle_chat(self, user_id: str, result: IntentResult) -> str:
         """Handle general chat - use LLM."""
         prefs = self.secretary.get_preferences(user_id)
