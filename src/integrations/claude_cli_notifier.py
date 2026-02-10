@@ -61,10 +61,29 @@ class ClaudeCliNotifier:
             if user_id and user_id in self.user_platform_map:
                 platform = self.user_platform_map[user_id]
 
+            # For "local" platform tasks (e.g. interactive conversations),
+            # fall back to the first registered user
+            if platform == "local" and self.user_platform_map:
+                fallback_uid = next(iter(self.user_platform_map))
+                platform = self.user_platform_map[fallback_uid]
+                task = ClaudeTask(
+                    task_id=task.task_id,
+                    status=task.status,
+                    start_time=task.start_time,
+                    end_time=task.end_time,
+                    output=task.output,
+                    error=task.error,
+                    user_id=fallback_uid,
+                    platform=platform,
+                    task_type=task.task_type,
+                    metadata=task.metadata,
+                )
+                logger.info(f"Local task routed to registered user {fallback_uid} on {platform}")
+
             # 根據平台發送通知
-            if platform == "telegram" and self.telegram_bot:
+            if platform == "telegram":
                 await self._send_telegram_notification(task, message)
-            elif platform == "discord" and self.discord_bot:
+            elif platform == "discord":
                 await self._send_discord_notification(task, message)
             else:
                 logger.info(f"No notification handler for platform: {platform}")
@@ -72,10 +91,26 @@ class ClaudeCliNotifier:
         except Exception as e:
             logger.error(f"Error sending notification: {e}")
 
+    def _get_telegram_bot(self):
+        """Lazily resolve the Telegram bot instance."""
+        if self.telegram_bot:
+            return self.telegram_bot
+        try:
+            from ..bot.telegram_bot import get_telegram_bot
+            tg = get_telegram_bot()
+            if tg and tg.bot:
+                self.telegram_bot = tg.bot
+                return self.telegram_bot
+        except Exception:
+            pass
+        return None
+
     async def _send_telegram_notification(self, task: ClaudeTask, message: str):
         """發送 Telegram 通知"""
         try:
-            if not self.telegram_bot:
+            bot = self._get_telegram_bot()
+            if not bot:
+                logger.warning("Telegram bot not available for notification")
                 return
 
             chat_id = self.user_chat_map.get(task.user_id)
@@ -84,7 +119,7 @@ class ClaudeCliNotifier:
                 return
 
             # 發送消息
-            await self.telegram_bot.send_message(
+            await bot.send_message(
                 chat_id=chat_id,
                 text=message,
                 parse_mode="Markdown",
@@ -136,10 +171,20 @@ async def initialize_claude_cli_notifications(telegram_bot=None, discord_bot=Non
         telegram_bot: Telegram Bot 實例
         discord_bot: Discord Bot 實例
     """
+    import os
+
     notifier = get_claude_cli_notifier()
 
     if telegram_bot:
         notifier.set_telegram_bot(telegram_bot)
+
+    # Auto-register allowed Telegram users so local tasks get routed
+    # (even if telegram_bot is not yet available — it will be resolved lazily)
+    allowed = os.getenv("TELEGRAM_ALLOWED_USERS", "")
+    for uid in (u.strip() for u in allowed.split(",") if u.strip()):
+        if uid not in notifier.user_platform_map:
+            notifier.register_user(uid, "telegram", uid)
+            logger.info(f"Auto-registered Telegram user {uid} for CLI notifications")
 
     if discord_bot:
         notifier.set_discord_bot(discord_bot)
