@@ -10,7 +10,12 @@
       "Bash(find:*)",
       "Bash(while read proj)",
       "Bash(do sed -i '' 's/CursorBot/ClaudeBot/g' \"$proj/project.pbxproj\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git tag:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(echo:*)",
+      "Bash(src/bot/handlers.py << 'EOF'\n\n\n# ============================================================================\n# Claude Code CLI Monitoring Commands\n# ============================================================================\n\nasync def cmd_claude_notify\\(update: Update, context: ContextTypes.DEFAULT_TYPE\\):\n    \"\"\"Enable/disable Claude Code CLI task completion notifications\"\"\"\n    from .handlers.claude_cli_handlers import cmd_claude_notify as handler\n    await handler\\(update, context\\)\n\n\nasync def cmd_claude_tasks\\(update: Update, context: ContextTypes.DEFAULT_TYPE\\):\n    \"\"\"List Claude Code CLI tasks\"\"\"\n    from .handlers.claude_cli_handlers import cmd_claude_tasks as handler\n    await handler\\(update, context\\)\n\n\nasync def cmd_claude_task_detail\\(update: Update, context: ContextTypes.DEFAULT_TYPE\\):\n    \"\"\"View Claude Code CLI task details\"\"\"\n    from .handlers.claude_cli_handlers import cmd_claude_task_detail as handler\n    await handler\\(update, context\\)\nEOF)"
     ]
   }
 }

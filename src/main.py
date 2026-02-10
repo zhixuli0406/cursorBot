@@ -225,6 +225,22 @@ class ClaudeBotApp:
         except Exception as e:
             logger.warning(f"Failed to start recurring task scheduler: {e}")
 
+    async def _start_claude_cli_monitoring(self) -> None:
+        """Start the Claude Code CLI monitoring system."""
+        try:
+            from .integrations.claude_cli_notifier import initialize_claude_cli_notifications
+            
+            # Initialize with bot references
+            await initialize_claude_cli_notifications(
+                telegram_bot=self.telegram_bot.bot if self.telegram_bot else None,
+                discord_bot=self.discord_channel.client if self.discord_channel else None,
+            )
+            logger.info("Claude CLI monitoring system started")
+            
+        except Exception as e:
+            logger.warning(f"Failed to start Claude CLI monitoring: {e}")
+
+
     async def run(self) -> None:
         """
         Run all services concurrently.
@@ -253,6 +269,9 @@ class ClaudeBotApp:
             
             # Initialize and start recurring task scheduler
             await self._start_recurring_task_scheduler()
+
+            # Initialize and start Claude CLI monitoring
+            await self._start_claude_cli_monitoring()
 
             # Start services concurrently
             tasks = []
@@ -312,6 +331,13 @@ class ClaudeBotApp:
     async def shutdown(self) -> None:
         """Gracefully shutdown all services."""
         logger.info("Shutting down CursorBot...")
+
+        # Stop Claude CLI monitoring
+        try:
+            from .integrations.claude_cli_monitor import stop_claude_cli_monitor
+            await stop_claude_cli_monitor()
+        except Exception as e:
+            logger.debug(f"Error stopping Claude CLI monitor: {e}")
 
         # Stop reminder service
         try:

@@ -1279,6 +1279,11 @@ def setup_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("help", help_handler))
     app.add_handler(CommandHandler("status", status_handler))
 
+    # Claude Code CLI Monitoring
+    app.add_handler(CommandHandler("claude_notify", authorized_only(cmd_claude_notify)))
+    app.add_handler(CommandHandler("claude_tasks", authorized_only(cmd_claude_tasks)))
+    app.add_handler(CommandHandler("claude_task", authorized_only(cmd_claude_task_detail)))
+
     # Workspace handlers
     app.add_handler(CommandHandler("file", file_handler))
     app.add_handler(CommandHandler("search", search_handler))
@@ -1332,3 +1337,25 @@ def setup_handlers(app: Application) -> None:
 
 
 __all__ = ["setup_handlers"]
+
+
+# ============================================================================
+# Claude Code CLI Monitoring Commands
+# ============================================================================
+
+async def cmd_claude_notify(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Enable/disable Claude Code CLI task completion notifications"""
+    from .handlers.claude_cli_handlers import cmd_claude_notify as handler
+    await handler(update, context)
+
+
+async def cmd_claude_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """List Claude Code CLI tasks"""
+    from .handlers.claude_cli_handlers import cmd_claude_tasks as handler
+    await handler(update, context)
+
+
+async def cmd_claude_task_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View Claude Code CLI task details"""
+    from .handlers.claude_cli_handlers import cmd_claude_task_detail as handler
+    await handler(update, context)
