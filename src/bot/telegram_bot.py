@@ -15,7 +15,7 @@ from ..utils.logger import logger
 from .handlers import setup_handlers
 
 
-class CursorTelegramBot:
+class ClaudeTelegramBot:
     """
     Main Telegram Bot manager for remote Cursor Agent control.
     Handles bot lifecycle, message routing, and integration with Cursor Agent.
@@ -163,15 +163,15 @@ class CursorTelegramBot:
 
 
 # Global bot instance
-telegram_bot: Optional[CursorTelegramBot] = None
+telegram_bot: Optional[ClaudeTelegramBot] = None
 
 
-def get_telegram_bot() -> CursorTelegramBot:
+def get_telegram_bot() -> ClaudeTelegramBot:
     """Get or create the global Telegram bot instance."""
     global telegram_bot
     if telegram_bot is None:
-        telegram_bot = CursorTelegramBot()
+        telegram_bot = ClaudeTelegramBot()
     return telegram_bot
 
 
-__all__ = ["CursorTelegramBot", "get_telegram_bot"]
+__all__ = ["ClaudeTelegramBot", "get_telegram_bot"]

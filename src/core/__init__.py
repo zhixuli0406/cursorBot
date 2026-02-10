@@ -298,7 +298,7 @@ from .health import (
     register_default_checks,
 )
 from .errors import (
-    ErrorCode, ERROR_MESSAGES, ErrorContext, CursorBotError,
+    ErrorCode, ERROR_MESSAGES, ErrorContext, ClaudeBotError,
     ValidationError, AuthenticationError, PermissionError,
     ElevationRequiredError, NotFoundError, RateLimitError,
     LLMError, CommandError, ErrorHandler,
@@ -762,7 +762,7 @@ __all__ = [
     "ErrorCode",
     "ERROR_MESSAGES",
     "ErrorContext",
-    "CursorBotError",
+    "ClaudeBotError",
     "ValidationError",
     "AuthenticationError",
     "PermissionError",

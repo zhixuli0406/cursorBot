@@ -644,7 +644,7 @@ class AsyncTaskManager:
             task.progress.message = "Starting Cursor CLI..."
             
             try:
-                from ..cursor.cli_agent import get_cli_agent
+                from ..claude.cli_agent import get_cli_agent
                 
                 cli = get_cli_agent()
                 prompt = task.input_data.get("prompt", "")

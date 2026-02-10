@@ -1,5 +1,5 @@
 """
-Configuration management for CursorBot
+Configuration management for ClaudeBot
 Load settings from environment variables with validation
 """
 
@@ -31,7 +31,7 @@ def get_effective_workspace_path() -> str:
     """
     Get the effective workspace path.
     In Docker: returns /workspace
-    On host: returns CURSOR_WORKSPACE_PATH from environment
+    On host: returns CLAUDE_WORKSPACE_PATH from environment
     """
     if is_running_in_docker():
         # In Docker, workspace is mounted at /workspace
@@ -40,9 +40,9 @@ def get_effective_workspace_path() -> str:
             return docker_workspace
         # Fallback to /app if /workspace doesn't exist
         return "/app"
-    
+
     # On host, use environment variable
-    return os.environ.get("CURSOR_WORKSPACE_PATH", "")
+    return os.environ.get("CLAUDE_WORKSPACE_PATH", "")
 
 
 class Settings(BaseSettings):
@@ -69,15 +69,15 @@ class Settings(BaseSettings):
     )
 
     # Workspace Settings (raw value from .env)
-    cursor_workspace_path: str = Field(
+    claude_workspace_path: str = Field(
         default="",
         description="Path to local workspace directory",
     )
-    
+
     @property
     def effective_workspace_path(self) -> str:
         """Get the effective workspace path (Docker-aware)."""
-        return get_effective_workspace_path() or self.cursor_workspace_path
+        return get_effective_workspace_path() or self.claude_workspace_path
     
     @property
     def is_docker(self) -> bool:
@@ -110,7 +110,7 @@ class Settings(BaseSettings):
 
     # Database Settings
     database_path: str = Field(
-        default="./data/cursorbot.db",
+        default="./data/claudebot.db",
         description="SQLite database file path",
     )
 
@@ -120,30 +120,44 @@ class Settings(BaseSettings):
         description="Logging level",
     )
     log_file_path: str = Field(
-        default="./logs/cursorbot.log",
+        default="./logs/claudebot.log",
         description="Log file path",
     )
 
-    # Cursor Background Agent Settings
-    cursor_api_key: str = Field(
+    # Claude Code CLI Settings
+    claude_api_key: str = Field(
         default="",
-        description="Cursor API key from https://cursor.com/dashboard?tab=background-agents",
+        description="Claude API key from Anthropic Console (console.anthropic.com)",
     )
+    claude_working_dir: str = Field(
+        default="",
+        description="Working directory for Claude Code CLI operations",
+    )
+    claude_cli_model: str = Field(
+        default="claude-sonnet-4.5",
+        description="Default Claude model: claude-opus-4.6, claude-sonnet-4.5, claude-haiku-4.5",
+    )
+    claude_cli_timeout: int = Field(
+        default=300,
+        description="Timeout for Claude CLI operations in seconds (0 = no timeout)",
+    )
+    claude_github_repo: str = Field(
+        default="",
+        description="Optional GitHub repository URL for Claude Code tasks",
+    )
+
+    # Legacy: Background Agent Settings (deprecated, use Claude CLI instead)
     background_agent_enabled: bool = Field(
         default=False,
-        description="Enable Background Agent integration (requires valid API key)",
+        description="[Deprecated] Enable Background Agent integration",
     )
     background_agent_timeout: int = Field(
         default=300,
-        description="Timeout for background agent tasks in seconds",
+        description="[Deprecated] Timeout for background agent tasks in seconds",
     )
     background_agent_poll_interval: int = Field(
         default=5,
-        description="Poll interval for checking task status in seconds",
-    )
-    cursor_github_repo: str = Field(
-        default="",
-        description="Optional GitHub repository URL for Background Agent tasks",
+        description="[Deprecated] Poll interval for checking task status in seconds",
     )
 
     # ============================================

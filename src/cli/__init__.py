@@ -5,10 +5,10 @@ Provides:
 - TUI: Terminal User Interface
 """
 
-from .tui import CursorBotTUI, TUIMode, run_tui, main
+from .tui import ClaudeBotTUI, TUIMode, run_tui, main
 
 __all__ = [
-    "CursorBotTUI",
+    "ClaudeBotTUI",
     "TUIMode",
     "run_tui",
     "main",

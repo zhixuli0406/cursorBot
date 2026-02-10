@@ -168,12 +168,12 @@ class ErrorContext:
 
 
 @dataclass
-class CursorBotError(Exception):
+class ClaudeBotError(Exception):
     """
     Base exception class for CursorBot.
     
     Usage:
-        raise CursorBotError(
+        raise ClaudeBotError(
             code=ErrorCode.INVALID_INPUT,
             message="User ID is required",
             details={"field": "user_id"},
@@ -240,15 +240,15 @@ class CursorBotError(Exception):
             )
         
         if level == "error":
-            logger.error(f"CursorBotError: {log_data}")
+            logger.error(f"ClaudeBotError: {log_data}")
         elif level == "warning":
-            logger.warning(f"CursorBotError: {log_data}")
+            logger.warning(f"ClaudeBotError: {log_data}")
         else:
-            logger.info(f"CursorBotError: {log_data}")
+            logger.info(f"ClaudeBotError: {log_data}")
 
 
 # Convenience error classes
-class ValidationError(CursorBotError):
+class ValidationError(ClaudeBotError):
     """Validation error."""
     def __init__(self, message: str = "", field: str = None, **kwargs):
         details = kwargs.pop("details", {})
@@ -262,7 +262,7 @@ class ValidationError(CursorBotError):
         )
 
 
-class AuthenticationError(CursorBotError):
+class AuthenticationError(ClaudeBotError):
     """Authentication error."""
     def __init__(self, message: str = "", **kwargs):
         super().__init__(
@@ -272,7 +272,7 @@ class AuthenticationError(CursorBotError):
         )
 
 
-class PermissionError(CursorBotError):
+class PermissionError(ClaudeBotError):
     """Permission error."""
     def __init__(self, message: str = "", action: str = None, **kwargs):
         details = kwargs.pop("details", {})
@@ -286,7 +286,7 @@ class PermissionError(CursorBotError):
         )
 
 
-class ElevationRequiredError(CursorBotError):
+class ElevationRequiredError(ClaudeBotError):
     """Elevation required error."""
     def __init__(self, action: str = None, **kwargs):
         details = kwargs.pop("details", {})
@@ -299,7 +299,7 @@ class ElevationRequiredError(CursorBotError):
         )
 
 
-class NotFoundError(CursorBotError):
+class NotFoundError(ClaudeBotError):
     """Resource not found error."""
     def __init__(self, resource: str = "", **kwargs):
         details = kwargs.pop("details", {})
@@ -314,7 +314,7 @@ class NotFoundError(CursorBotError):
         )
 
 
-class RateLimitError(CursorBotError):
+class RateLimitError(ClaudeBotError):
     """Rate limit error."""
     def __init__(self, retry_after: int = 0, **kwargs):
         details = kwargs.pop("details", {})
@@ -326,7 +326,7 @@ class RateLimitError(CursorBotError):
         )
 
 
-class LLMError(CursorBotError):
+class LLMError(ClaudeBotError):
     """LLM provider error."""
     def __init__(self, provider: str = "", message: str = "", **kwargs):
         details = kwargs.pop("details", {})
@@ -340,7 +340,7 @@ class LLMError(CursorBotError):
         )
 
 
-class CommandError(CursorBotError):
+class CommandError(ClaudeBotError):
     """Command execution error."""
     def __init__(self, command: str = "", message: str = "", **kwargs):
         details = kwargs.pop("details", {})
@@ -397,7 +397,7 @@ class ErrorHandler:
         locale = locale or self._locale
         show_details = show_details if show_details is not None else self._show_details
         
-        if isinstance(error, CursorBotError):
+        if isinstance(error, ClaudeBotError):
             message = error.get_localized_message(locale)
             
             # Add emoji based on error type
@@ -428,7 +428,7 @@ class ErrorHandler:
         
         Returns dict suitable for JSON response.
         """
-        if isinstance(error, CursorBotError):
+        if isinstance(error, ClaudeBotError):
             result = error.to_dict()
         else:
             result = {
@@ -465,23 +465,23 @@ class ErrorHandler:
         error: Exception,
         context: ErrorContext = None,
         log: bool = True,
-    ) -> CursorBotError:
+    ) -> ClaudeBotError:
         """
         Handle and optionally log an error.
         
-        Wraps non-CursorBotError in CursorBotError.
+        Wraps non-ClaudeBotError in ClaudeBotError.
         """
         self._error_count += 1
         
-        if isinstance(error, CursorBotError):
+        if isinstance(error, ClaudeBotError):
             if context:
                 error.context = context
             if log:
                 error.log()
             return error
         else:
-            # Wrap in CursorBotError
-            wrapped = CursorBotError(
+            # Wrap in ClaudeBotError
+            wrapped = ClaudeBotError(
                 code=ErrorCode.UNKNOWN,
                 message=str(error),
                 context=context,
@@ -520,7 +520,7 @@ __all__ = [
     "ErrorCode",
     "ERROR_MESSAGES",
     "ErrorContext",
-    "CursorBotError",
+    "ClaudeBotError",
     "ValidationError",
     "AuthenticationError",
     "PermissionError",

@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from ..bot.telegram_bot import get_telegram_bot
-from ..cursor.agent import WorkspaceAgent
+from ..claude.agent import WorkspaceAgent
 from ..utils.config import settings
 from ..utils.logger import logger
 

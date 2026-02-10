@@ -431,7 +431,7 @@ async def new_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     )
     
     # Also clear CLI chat context
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     if is_cli_available():
         cli = get_cli_agent()
         cli.clear_user_chat(user_id)
@@ -544,7 +544,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Check CLI status
     cli_status = "❌ 未安裝"
-    from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from ..claude.cli_agent import is_cli_available, get_cli_agent
     if is_cli_available():
         cli = get_cli_agent()
         cli_chat = cli.get_user_chat_id(user_id)
@@ -1598,7 +1598,7 @@ async def climodel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         /climodel set <model_id> - Set CLI model for this user
         /climodel reset - Reset to CLI default model
     """
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     
     if not is_cli_available():
         await update.message.reply_text(
@@ -1830,7 +1830,7 @@ def _create_climodel_list_view(
 @authorized_only
 async def climodel_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle CLI model callback queries."""
-    from ..cursor.cli_agent import get_cli_agent
+    from ..claude.cli_agent import get_cli_agent
     
     query = update.callback_query
     await query.answer()
@@ -3821,7 +3821,7 @@ async def mode_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """
     from . import handlers as handlers_module
     from .handlers import get_user_chat_mode, set_user_chat_mode, get_best_available_mode
-    from ..cursor.cli_agent import is_cli_available, get_cli_agent
+    from ..claude.cli_agent import is_cli_available, get_cli_agent
     from ..core.secretary import get_secretary
     
     logger.info(f"mode_handler called with args: {context.args}")
@@ -4020,7 +4020,7 @@ async def newchat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     Usage:
         /newchat - Clear current chat context and start fresh
     """
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     from .handlers import get_user_chat_mode
     
     user_id = update.effective_user.id
@@ -4068,7 +4068,7 @@ async def chatinfo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     Usage:
         /chatinfo - Show current chat context info
     """
-    from ..cursor.cli_agent import get_cli_agent, is_cli_available
+    from ..claude.cli_agent import get_cli_agent, is_cli_available
     from .handlers import get_user_chat_mode
     
     user_id = update.effective_user.id

@@ -161,7 +161,7 @@ class TeamsBot:
         self._adapter.on_turn_error = on_error
         
         # Create bot logic
-        class CursorTeamsBot:
+        class ClaudeTeamsBot:
             def __init__(self, parent):
                 self.parent = parent
             

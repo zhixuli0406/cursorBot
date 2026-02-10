@@ -86,7 +86,7 @@ class TalkConfig:
     max_conversation_turns: int = 50
     
     # Wake word (if using voice wake)
-    wake_words: list[str] = field(default_factory=lambda: ["hey cursor", "ok cursor"])
+    wake_words: list[str] = field(default_factory=lambda: ["hey claude", "ok claude"])
 
 
 @dataclass

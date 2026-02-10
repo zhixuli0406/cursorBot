@@ -125,7 +125,7 @@ def get_best_available_mode() -> str:
     Priority: CLI -> Agent
     All modes use async execution by default.
     """
-    from ..cursor.cli_agent import is_cli_available
+    from ..claude.cli_agent import is_cli_available
     
     # Prefer CLI if available
     if is_cli_available():
@@ -169,7 +169,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     
     # Check Cursor CLI status
     try:
-        from ..cursor.cli_agent import is_cli_available, get_cli_agent
+        from ..claude.cli_agent import is_cli_available, get_cli_agent
         if is_cli_available():
             cli = get_cli_agent()
             cli_model = cli.get_user_model(str(user.id)) or "auto"
@@ -355,7 +355,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Check CLI status
     cli_status = "⚪ CLI 未安裝"
     try:
-        from ..cursor.cli_agent import is_cli_available, get_cli_agent
+        from ..claude.cli_agent import is_cli_available, get_cli_agent
         if is_cli_available():
             cli = get_cli_agent()
             user_id = str(update.effective_user.id)
@@ -731,7 +731,7 @@ async def _handle_media_task_input(
         
         # Submit task based on user's mode
         if chat_mode == "cli":
-            from ..cursor.cli_agent import is_cli_available
+            from ..claude.cli_agent import is_cli_available
             if is_cli_available():
                 task_id = await manager.submit_cli_task(
                     user_id=str(user_id),
@@ -864,7 +864,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return  # Ensure we don't fall through
     elif chat_mode == "cli":
         # Use Cursor CLI mode (async)
-        from ..cursor.cli_agent import is_cli_available
+        from ..claude.cli_agent import is_cli_available
         if is_cli_available():
             await _handle_async_cli_mode(update, message_text, user_id, username, chat_id)
         else:
@@ -1060,7 +1060,7 @@ async def _handle_cli_mode(
     chat_id: int,
 ) -> None:
     """Handle message using Cursor CLI mode."""
-    from ..cursor.cli_agent import get_cli_agent
+    from ..claude.cli_agent import get_cli_agent
     
     try:
         cli = get_cli_agent()

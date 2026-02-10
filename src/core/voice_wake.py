@@ -38,7 +38,7 @@ class ListeningState(Enum):
 class WakeConfig:
     """Voice wake configuration."""
     engine: WakeWordEngine = WakeWordEngine.VOSK
-    wake_words: list[str] = field(default_factory=lambda: ["hey cursor", "ok cursor"])
+    wake_words: list[str] = field(default_factory=lambda: ["hey claude", "ok claude"])
     sensitivity: float = 0.5  # 0.0 to 1.0
     timeout_seconds: int = 10  # After wake, listen for this long
     sample_rate: int = 16000

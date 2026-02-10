@@ -147,7 +147,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 async def handle_status(query, user_id: int) -> None:
     """Show status."""
-    from ..cursor.cli_agent import is_cli_available
+    from ..claude.cli_agent import is_cli_available
     from ..core.llm_providers import get_llm_manager
     
     # Check CLI status
