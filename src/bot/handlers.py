@@ -1345,17 +1345,17 @@ __all__ = ["setup_handlers"]
 
 async def cmd_claude_notify(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Enable/disable Claude Code CLI task completion notifications"""
-    from .handlers.claude_cli_handlers import cmd_claude_notify as handler
+    from .claude_cli_handlers import cmd_claude_notify as handler
     await handler(update, context)
 
 
 async def cmd_claude_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """List Claude Code CLI tasks"""
-    from .handlers.claude_cli_handlers import cmd_claude_tasks as handler
+    from .claude_cli_handlers import cmd_claude_tasks as handler
     await handler(update, context)
 
 
 async def cmd_claude_task_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """View Claude Code CLI task details"""
-    from .handlers.claude_cli_handlers import cmd_claude_task_detail as handler
+    from .claude_cli_handlers import cmd_claude_task_detail as handler
     await handler(update, context)
