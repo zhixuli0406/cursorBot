@@ -1,8 +1,8 @@
-# Fly.io Configuration for CursorBot v0.4
+# Fly.io Configuration for ClaudeBot v0.4
 # Deploy: fly launch / fly deploy
 # Documentation: docs/DEPLOYMENT.md
 
-app = "cursorbot"
+app = "claudebot"
 primary_region = "nrt"  # Tokyo - change to nearest region
 
 [build]

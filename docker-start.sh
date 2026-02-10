@@ -88,11 +88,11 @@ case "${1:-start}" in
         ;;
     shell)
         echo "[INFO] Opening shell in container..."
-        docker exec -it cursorbot /bin/bash
+        docker exec -it claudebot /bin/bash
         ;;
     status)
         echo "[INFO] Container status:"
-        docker ps -a --filter "name=cursorbot"
+        docker ps -a --filter "name=claudebot"
         ;;
     *)
         echo "Usage: $0 {start|stop|restart|logs|build|shell|status}"

@@ -22,7 +22,7 @@ build/
 .vscode/
 *.swp
 *.swo
-.cursor/
+.claude/
 
 # Environment
 .env
@@ -65,4 +65,4 @@ temp/
 *.bak
 
 # Cursor specific
-.cursorbot/
+.claudebot/

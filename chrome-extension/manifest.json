@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CursorBot Assistant",
+  "name": "ClaudeBot Assistant",
   "version": "1.0.0",
-  "description": "Browser integration for CursorBot AI Assistant",
+  "description": "Browser integration for ClaudeBot AI Assistant",
   "permissions": [
     "activeTab",
     "storage",

@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.cursorbot.node"
+    namespace = "com.claudebot.node"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.cursorbot.node"
+        applicationId = "com.claudebot.node"
         minSdk = 28
         targetSdk = 34
         versionCode = 1

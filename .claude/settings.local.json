@@ -7,7 +7,10 @@
       "Bash(chmod:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(while read proj)",
+      "Bash(do sed -i '' 's/CursorBot/ClaudeBot/g' \"$proj/project.pbxproj\")",
+      "Bash(done)"
     ]
   }
 }

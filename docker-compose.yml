@@ -8,11 +8,11 @@
 version: '3.8'
 
 services:
-  cursorbot:
+  claudebot:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cursorbot
+    container_name: claudebot
     restart: unless-stopped
     depends_on:
       postgres:
@@ -30,14 +30,14 @@ services:
       # PostgreSQL connection for RAG
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=cursorbot
-      - POSTGRES_USER=cursorbot
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cursorbot_secret}
+      - POSTGRES_DB=claudebot
+      - POSTGRES_USER=claudebot
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-claudebot_secret}
     
     # Persistent data storage and workspace access
     volumes:
       # Data persistence
-      - cursorbot_data:/app/data
+      - claudebot_data:/app/data
       
       # Workspace mounting (reads from .env CURSOR_WORKSPACE_PATH)
       # This allows /run commands to access your project files
@@ -46,7 +46,7 @@ services:
       
       # Optional: Mount SSH keys for git operations (read-only for security)
       # Uncomment the following line if you need git SSH authentication:
-      # - ~/.ssh:/home/cursorbot/.ssh:ro
+      # - ~/.ssh:/home/claudebot/.ssh:ro
     
     # Port mapping (for API server)
     ports:
@@ -55,7 +55,7 @@ services:
     # Working directory for terminal commands
     working_dir: /app
     
-    # Run as user 1000 (matches cursorbot user in container)
+    # Run as user 1000 (matches claudebot user in container)
     # This helps with file permission issues on mounted volumes
     user: "1000:1000"
     
@@ -96,19 +96,19 @@ services:
   # PostgreSQL with pgvector for RAG conversation memory
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: cursorbot-postgres
+    container_name: claudebot-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: cursorbot
-      POSTGRES_USER: cursorbot
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cursorbot_secret}
+      POSTGRES_DB: claudebot
+      POSTGRES_USER: claudebot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-claudebot_secret}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init_pgvector.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cursorbot -d cursorbot"]
+      test: ["CMD-SHELL", "pg_isready -U claudebot -d claudebot"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -116,7 +116,7 @@ services:
 
 # Named volume for data persistence
 volumes:
-  cursorbot_data:
+  claudebot_data:
     driver: local
   postgres_data:
     driver: local

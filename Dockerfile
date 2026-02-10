@@ -1,4 +1,4 @@
-# CursorBot Dockerfile - v0.4
+# ClaudeBot Dockerfile - v0.4
 # Multi-stage build for optimized image size
 # Stage 1: Build dependencies
 # Stage 2: Runtime image
@@ -37,9 +37,9 @@ RUN pip install --upgrade pip && \
 # ============================================
 FROM python:3.12-slim-bookworm AS runtime
 
-LABEL maintainer="CursorBot Team"
+LABEL maintainer="ClaudeBot Team"
 LABEL version="0.4.0"
-LABEL description="CursorBot - Multi-platform AI Assistant"
+LABEL description="ClaudeBot - Multi-platform AI Assistant"
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -108,21 +108,21 @@ COPY env.example .
 COPY CHANGELOG.md README.md ./
 
 # Create non-root user
-RUN useradd -m -u 1000 -s /bin/bash cursorbot && \
-    chown -R cursorbot:cursorbot /app /workspace && \
-    mkdir -p /home/cursorbot/.config && \
-    chown -R cursorbot:cursorbot /home/cursorbot
+RUN useradd -m -u 1000 -s /bin/bash claudebot && \
+    chown -R claudebot:claudebot /app /workspace && \
+    mkdir -p /home/claudebot/.config && \
+    chown -R claudebot:claudebot /home/claudebot
 
 # Switch to non-root user
-USER cursorbot
+USER claudebot
 
 # Configure git
 RUN git config --global --add safe.directory '*' && \
-    git config --global user.name "CursorBot" && \
-    git config --global user.email "bot@cursorbot.local"
+    git config --global user.name "ClaudeBot" && \
+    git config --global user.email "bot@claudebot.local"
 
 # Set home environment
-ENV HOME=/home/cursorbot \
+ENV HOME=/home/claudebot \
     SHELL=/bin/bash
 
 # Expose API port
@@ -138,9 +138,9 @@ CMD ["python", "-m", "src.main"]
 # ============================================
 # Build Info
 # ============================================
-# Build: docker build -t cursorbot:0.4.0 .
-# Run:   docker run -d --name cursorbot -p 8000:8000 --env-file .env cursorbot:0.4.0
+# Build: docker build -t claudebot:0.4.0 .
+# Run:   docker run -d --name claudebot -p 8000:8000 --env-file .env claudebot:0.4.0
 # Size:  ~1.2GB (with Playwright)
 # 
 # Without Playwright (smaller ~600MB):
-# docker build --build-arg INSTALL_PLAYWRIGHT=false -t cursorbot:0.4.0-slim .
+# docker build --build-arg INSTALL_PLAYWRIGHT=false -t claudebot:0.4.0-slim .

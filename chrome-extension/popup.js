@@ -1,5 +1,5 @@
 /**
- * CursorBot Chrome Extension - Popup Script
+ * ClaudeBot Chrome Extension - Popup Script
  */
 
 // Load configuration and update UI

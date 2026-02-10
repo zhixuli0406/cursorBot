@@ -89,7 +89,7 @@ struct ChatView: View {
                     sendMessage()
                 }
             }
-            .navigationTitle("CursorBot")
+            .navigationTitle("ClaudeBot")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

@@ -1,10 +1,10 @@
-// CursorBotNode iOS App
+// ClaudeBotNode iOS App
 // SwiftUI-based node application with Canvas, Voice Wake, Talk Mode, and Camera
 
 import SwiftUI
 
 @main
-struct CursorBotNodeApp: App {
+struct ClaudeBotNodeApp: App {
     @StateObject private var appState = NodeAppState.shared
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
