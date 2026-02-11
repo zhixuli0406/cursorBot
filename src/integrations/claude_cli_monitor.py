@@ -312,17 +312,24 @@ class ClaudeCliMonitor:
 
     async def _handle_conversation_file(self, path: Path):
         """
-        處理互動式對話 JSONL 文件
+        處理 JSONL 文件
         監控 ~/.claude/projects/<project>/<session-id>.jsonl
+        根據人類訊息輪數自動區分 CLI 任務與互動式對話
         """
         try:
             session_id = path.stem
+
+            # Skip subagent files — they are internal and not user sessions
+            if "subagents" in path.parts or session_id.startswith("agent-"):
+                return
+
             now = time.time()
 
             # Parse the JSONL to extract conversation metadata
             project_name = ""
             first_user_message = ""
             message_count = 0
+            human_turns = 0
             last_timestamp = ""
             cwd = ""
             version = ""
@@ -344,9 +351,21 @@ class ClaudeCliMonitor:
                                 cwd = entry.get("cwd", "")
                             if not version:
                                 version = entry.get("version", "")
+
+                            # Count human-initiated turns (not tool_result)
+                            msg = entry.get("message", {})
+                            content = msg.get("content", "")
+                            is_tool_result = False
+                            if isinstance(content, list):
+                                is_tool_result = any(
+                                    isinstance(c, dict)
+                                    and c.get("type") == "tool_result"
+                                    for c in content
+                                )
+                            if not is_tool_result:
+                                human_turns += 1
+
                             if not first_user_message:
-                                msg = entry.get("message", {})
-                                content = msg.get("content", "")
                                 if isinstance(content, list):
                                     for c in content:
                                         if isinstance(c, dict) and c.get("type") == "text":
@@ -366,30 +385,38 @@ class ClaudeCliMonitor:
             if path.parent.name != "projects":
                 project_name = path.parent.name.replace("-", "/").lstrip("/")
 
+            # Determine task type: single human turn = CLI task
+            task_type = (
+                "cli_task" if human_turns <= 1 else "interactive_conversation"
+            )
+
             # Check if this conversation is already tracked
             existing_task = self.tasks.get(session_id)
 
             if existing_task:
                 # Update the existing conversation tracking
                 existing_task.metadata["message_count"] = message_count
+                existing_task.metadata["human_turns"] = human_turns
                 existing_task.metadata["last_activity"] = now
                 existing_task.metadata["last_timestamp"] = last_timestamp
-                # Reset idle timer since there's new activity
+                # Re-evaluate task type as conversation evolves
+                existing_task.task_type = task_type
                 return
 
-            # Register a new interactive conversation
+            # Register a new task
             task = ClaudeTask(
                 task_id=session_id,
                 status="running",
                 start_time=now,
                 user_id=None,
                 platform="local",
-                task_type="interactive_conversation",
+                task_type=task_type,
                 metadata={
                     "project": project_name,
                     "cwd": cwd,
                     "first_message": first_user_message,
                     "message_count": message_count,
+                    "human_turns": human_turns,
                     "version": version,
                     "last_activity": now,
                     "last_timestamp": last_timestamp,
@@ -398,8 +425,9 @@ class ClaudeCliMonitor:
             )
             self.tasks[session_id] = task
             logger.info(
-                f"Tracking interactive conversation: {session_id} "
-                f"(project: {project_name}, messages: {message_count})"
+                f"Tracking {task_type}: {session_id} "
+                f"(project: {project_name}, messages: {message_count}, "
+                f"human_turns: {human_turns})"
             )
 
         except Exception as e:
@@ -434,21 +462,24 @@ class ClaudeCliMonitor:
 
     async def _check_conversation_idle(self):
         """
-        定期檢查互動式對話是否已閒置（結束）
-        如果對話超過指定時間無新活動，且 Claude 不在處理回應中，
-        則判定為已結束並發送通知
+        定期檢查任務是否已閒置（結束）
+        CLI 任務使用較短的超時（60 秒），互動式對話使用較長的超時（300 秒）
         """
-        idle_timeout = 300  # 5 minutes without activity = conversation ended
+        CLI_IDLE_TIMEOUT = 60  # CLI task: 1 minute without activity
+        CONVERSATION_IDLE_TIMEOUT = 300  # Interactive: 5 minutes
 
         while self._running:
             try:
                 now = time.time()
                 for task_id, task in list(self.tasks.items()):
-                    if (
-                        task.task_type != "interactive_conversation"
-                        or task.status != "running"
-                    ):
+                    if task.status != "running":
                         continue
+
+                    idle_timeout = (
+                        CLI_IDLE_TIMEOUT
+                        if task.task_type == "cli_task"
+                        else CONVERSATION_IDLE_TIMEOUT
+                    )
 
                     last_activity = task.metadata.get("last_activity", task.start_time)
 
@@ -463,18 +494,18 @@ class ClaudeCliMonitor:
                             pass
 
                     if now - last_activity > idle_timeout:
-                        # Check 1: Is Claude still processing a response?
+                        # Is Claude still processing a response?
                         if jsonl_path and self._is_conversation_still_processing(
                             jsonl_path
                         ):
                             logger.debug(
-                                f"Conversation {task_id} idle for "
+                                f"Task {task_id} idle for "
                                 f"{int(now - last_activity)}s but last "
                                 f"entry is user message (still processing)"
                             )
                             continue
 
-                        # Conversation is idle and Claude is not processing
+                        # Task/conversation is idle and Claude is not processing
                         task.status = "completed"
                         task.end_time = now
                         task.output = (
@@ -482,7 +513,7 @@ class ClaudeCliMonitor:
                             f"首則訊息: {task.metadata.get('first_message', 'N/A')}"
                         )
                         logger.info(
-                            f"Interactive conversation {task_id} ended "
+                            f"{task.task_type} {task_id} ended "
                             f"(idle for {int(now - last_activity)}s)"
                         )
                         await self._send_notification(task)
